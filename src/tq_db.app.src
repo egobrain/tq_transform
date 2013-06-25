@@ -1,0 +1,12 @@
+{application, tq_db,
+ [
+  {description, "Easy sql models generator fo pgsql"},
+  {vsn, "0.0.1"},
+  {registered, []},
+  {applications, [
+                  kernel,
+                  stdlib
+                 ]},
+  {mod, { tq_db_app, []}},
+  {env, []}
+ ]}.
