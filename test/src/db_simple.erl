@@ -43,14 +43,14 @@
 
 set_custom_in_record(V, Model) ->
 	Model2 = Model#?MODULE{custom_in_record = V},
-	{ok, Model2}.
+	Model2.
 
 custom_in_record(Model) ->
 	Model#?MODULE.custom_in_record.
 
 set_custom_not_in_record(V, Model) ->
 	put(test, V),
-	{ok, Model}.
+	Model.
 
 custom_not_in_record(_Model) ->
 	get(test).
@@ -72,7 +72,7 @@ getter_setters_test_() ->
 			 {custom_not_in_record, 4}],
 	[{atom_to_list(F), fun() ->
 							   SF = ?prefix_set(F),
-							   {ok, Model2} = Model:SF(V),
+							   Model2 = Model:SF(V),
 							   V = Model2:F()
 					   end} || {F, V} <- Tests].
 

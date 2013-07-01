@@ -78,6 +78,9 @@ transform_node(Node={attribute, Line, model, Opts}, Model) ->
 			Node2 = error_ast(Line, "Wrong model spec"),
 			{Node2, Model}
 	end;
+transform_node(Node={attribute, _Line, init, InitFun}, Model) ->
+	Model2 = Model#model{init_fun = InitFun},
+	{Node, Model2};
 transform_node(Node={attribute, _Line, module, Module}, Model) ->
 	Model2 = Model#model{module = Module},
 	{Node, Model2};

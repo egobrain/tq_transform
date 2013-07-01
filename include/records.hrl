@@ -37,7 +37,8 @@
 -record(model, {
 		  module :: atom(),
 		  fields = [] :: [#field{}],
-		  table :: atom()
+		  table :: atom(),
+		  init_fun :: atom() | {atom(), atom()}
 		 }).
 
 -type field_type() :: {atom(),atom()} | integer | non_neg_integer | binary.

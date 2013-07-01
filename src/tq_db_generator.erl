@@ -89,11 +89,11 @@ setter(Module, #field{name=Name, stores_in_database=InDb}) ->
 				 true ->
 					 ?cases(?eeq(?var('Val'),?access(?var('Model'), Module, Name)),
 							[?clause([?atom(true)], none,
-									 [?ok(?var('Model'))]),
+									 [?var('Model')]),
 							 ?clause([?atom(false)], none,
-									 [?ok(?record(?var('Model'),Module,
+									 [?record(?var('Model'),Module,
 												  [?field(Name,?var('Val')),
-												   ?field(?changed_suffix(Name),?atom(true))]))])]);
+												   ?field(?changed_suffix(Name),?atom(true))])])]);
 				 false ->
 					 ?ok(?record(?var('Model'), Module, [?field(Name,?var('Val'))]))
 			 end,
@@ -132,7 +132,7 @@ from_proplist_functions(#model{fields=Fields}) ->
 	Fun_ = ?function(from_proplist_,
 					 [?clause(
 						 [?tuple([?atom(F#field.name),?var('Val')]), ?var('Model')], none,
-						 [?apply(?prefix_set(F#field.name), [?var('Val'), ?var('Model')])])
+						 [?ok(?apply(?prefix_set(F#field.name), [?var('Val'), ?var('Model')]))])
 					  || F <- Fields,
 						 F#field.setter =/= undefined,
 						 F#field.mode#access_mode.sw] ++ DefaultClasuse),
@@ -160,7 +160,7 @@ from_bin_proplist_function(#model{fields=Fields}) ->
 								 [?clause([?ok(?var('Val'))], none,
 										  %% [?cases(?apply_(?apply(validator,[?atom(F#field.name)]),[?var('Val')]),
 										  %% 		  [?clause([?atom(ok)], none,
-														   [?apply(?prefix_set(F#field.name), [?var('Val'), ?var('Model')])]),
+														   [?ok(?apply(?prefix_set(F#field.name), [?var('Val'), ?var('Model')]))]),
 												   %% EClause(F)])]),
 								  EClause(F)])])
 					  || F <- Fields,
@@ -209,20 +209,26 @@ constructor0_function() ->
 			  [?clause([], none,
 					   [?apply(constructor, [?apply('$meta$', [?atom(db_fields)])])])]).
 
-constructor1_function(#model{module=Module}) ->
+constructor1_function(#model{init_fun=InitFun, module=Module}) ->
+	SetIsNotNew = ?record(?var('Model'), Module, [?field('$is_new$', ?atom(false))]),
+	FinalForm = case InitFun of
+					undefined -> SetIsNotNew;
+					{Mod, Fun} -> ?apply(Mod, Fun, [SetIsNotNew]);
+					Fun -> ?apply(Fun, [SetIsNotNew])
+				end,
 	?function(constructor,
 			  [?clause([?var('Fields')], none,
 					   [?match(?var('Constructors'),
 							   ?list_comp(?apply(field_constructor,[?var('F')]),
 										  [?generator(?var('F'), ?var('Fields'))])),
-						?func([?clause([?var('Tuple')], none,
+						?func([?clause([?var('List')], none,
 									   [?match(?var('Model'),
 											   ?apply(lists, foldl,
 													  [?func([?clause([?tuple([?var('F'), ?var('A')]), ?var('M')], none,
 																	  [?apply_(?var('F'), [?var('A'), ?var('M')])])]),
 												  ?apply(new, []),
-												  ?apply(lists,zip,[?var('Constructors'),?apply(tuple_to_list,[?var('Tuple')])])])),
-								   ?record(?var('Model'), Module, [?field('$is_new$', ?atom(false))])
+												  ?apply(lists,zip,[?var('Constructors'),?var('List')])])),
+										FinalForm
 								  ]
 									  )])])]).
 
