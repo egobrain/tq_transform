@@ -35,10 +35,10 @@ parse_transform(Ast, _Options)->
 							   FBlock2 = lists:reverse(FBlock),
 							   revert(lists:flatten([ModuleBlock, IBlock2, InfoBlock, FBlock2, FunctionsBlock]));
 						   {error, Reasons} ->
-							   Ast2 ++ [{error,{1, erl_parse, R}} || R <- Reasons]
+							   Ast2 ++ [global_error_ast(1, R) || R <- Reasons]
 					   end;
 				   {error, Reasons} ->
-					   Ast2 ++ [{error,{1, erl_parse, R}} || R <- Reasons]
+					   Ast2 ++ [global_error_ast(1, R) || R <- Reasons]
 			   end,
 		%% ?DBG("~n~p~n<<<<~n", [Ast3]),
 		Ast3 = lists:flatten(lists:filter(fun(Node)-> Node =/= nil end, Ast3)),
@@ -47,7 +47,7 @@ parse_transform(Ast, _Options)->
 		Ast3
 	catch T:E ->
 			Reason = io_lib:format("~p:~p | ~p ~n", [T, E, erlang:get_stacktrace()]),
-			[{error, {1, erl_parse, Reason}} | Ast]
+			[global_error_ast(1, Reason) | Ast]
 	end.
 
 split_ast(Ast) ->
@@ -88,8 +88,11 @@ transform_node(Node={attribute, Line, field, FieldOpts}, #model{fields=Fields} =
 				{ok, Field} ->
 					Model2 = Model#model{fields=[Field | Fields]},
 					{Node, Model2};
-				{error, Reason} ->
-					Node2 = error_ast(Line, Reason),
+				{error, Reasons} ->
+					Node2 = [begin
+								 io:format("ERROR: ~s~n", [R]),
+								 global_error_ast(Line, R)
+							 end || R <- Reasons],
 					{Node2, Model}
 			end;
 		_ ->
@@ -115,8 +118,7 @@ create_field(Name, Opts) ->
 				end,
 	case tq_db_utils:error_writer_foldl(OptionFun, Field, Opts) of
 		{ok, Field2} ->
-			Field3 = normalize_field(Field2),
-			{ok, Field3};
+			normalize_field(Field2);
 		{error, _} = Err ->
 			Err
 	end.	
@@ -151,25 +153,25 @@ option(default, DefaultValue, #field{record_options=RecOptions} = Field) ->
 	RecOptions2 = RecOptions#record_options{default_value = DefaultValue},
 	Field2 = Field#field{record_options=RecOptions2},
 	{ok, Field2};
-option(init, Init, #field{record_options=RecOptions} = Field) ->
-	RecOptions2 = RecOptions#record_options{init = Init},
-	Field2 = Field#field{record_options=RecOptions2},
+option(init, Init, Field) ->
+	Field2 = Field#field{init = Init},
 	{ok, Field2};
-option(mode, Mode, #field{record_options=RecOptions} = Field) ->
-	RecOptions2 = RecOptions#record_options{mode = mode_to_acl(Mode)},
-	Field2 = Field#field{record_options = RecOptions2},
+option(mode, Mode, Field) ->
+	Field2 = Field#field{mode = mode_to_acl(Mode)},
 	{ok, Field2};
 option(type, Type, #field{record_options=RecOptions} = Field) ->
 	RecOptions2 = RecOptions#record_options{type = Type},
 	Field2 = Field#field{record_options = RecOptions2},
 	{ok, Field2};
-option(get, Getter, #field{record_options=RecOptions} = Field) ->
-	RecOptions2 = RecOptions#record_options{getter = Getter},
+option(type_constructor, TypeConstructor, #field{record_options=RecOptions} = Field) ->
+	RecOptions2 = RecOptions#record_options{type_constructor = TypeConstructor},
 	Field2 = Field#field{record_options = RecOptions2},
 	{ok, Field2};
-option(set, Setter, #field{record_options=RecOptions} = Field) ->
-	RecOptions2 = RecOptions#record_options{setter = Setter},
-	Field2 = Field#field{record_options = RecOptions2},
+option(get, Getter, Field) ->
+	Field2 = Field#field{getter = Getter},
+	{ok, Field2};
+option(set, Setter, Field) ->
+	Field2 = Field#field{setter = Setter},
 	{ok, Field2};
 option(record, StoresInRecord, Field) ->
 	Field2 = Field#field{stores_in_record = StoresInRecord},
@@ -192,25 +194,55 @@ normalize_field(Field) ->
 	Rules = [
 			 fun index_is_required_rule/1,
 			 fun default_alias_name_rule/1,
-			 fun get_set_needs_record_rule/1
+			 fun get_set_record_rule/1,
+			 fun type_constructor_rule/1
 			],
-	lists:foldl(fun(F, D) -> F(D) end, Field, Rules).
+	tq_db_utils:error_writer_foldl(fun(R, F) -> R(F) end, Field, Rules).
 
 index_is_required_rule(Field=#field{is_index=true}) ->
-	Field#field{is_required = true};
-index_is_required_rule(Field) -> Field.
+	{ok, Field#field{is_required = true}};
+index_is_required_rule(Field) -> {ok, Field}.
 
 default_alias_name_rule(Field=#field{name=Name, stores_in_database = true, db_options=DbOptions}) when
 	  DbOptions#db_options.alias =:= undefined ->
 	DbOptions2 = DbOptions#db_options{alias = atom_to_binary(Name)},
-	Field#field{db_options=DbOptions2};
-default_alias_name_rule(Field) -> Field.
+	{ok, Field#field{db_options=DbOptions2}};
+default_alias_name_rule(Field) -> {ok, Field}.
 
-get_set_needs_record_rule(Field=#field{record_options=#record_options{getter=Getter, setter=Setter}}) when
-	  Getter orelse Setter ->
-	Field#field{stores_in_record=true};
-get_set_needs_record_rule(Field) -> Field.
 
+get_set_record_rule(Field=#field{stores_in_record=false, getter=Getter, setter=Setter}) ->
+	case {Getter, Setter} of
+		{true, true} ->
+			{error, "Storing in record required for default getter and setter"};
+		{true, _} ->
+			{error, "Storing in record required for default getter"};
+		{_, true} ->
+			{error, "Storing in record required for default setter"};
+		{_, _} ->
+			{ok, Field}
+	end;
+get_set_record_rule(Field) ->
+	{ok, Field#field{stores_in_record=true}}.
+
+type_constructor_rule(#field{record_options=
+								 #record_options{type_constructor=undefined, type=Type}=RecOptions
+							}=Field) ->
+	case type_constructor(Type) of
+		{ok, TypeConstructor} ->
+			RecOptions2 = RecOptions#record_options{type_constructor={tq_db_utils, TypeConstructor}},
+			Field2 = Field#field{record_options=RecOptions2},
+			{ok, Field2};
+		{error, undefined} ->
+			Reason = lists:flatten(io_lib:format("type_constructor required for type: ~p", [Type])),
+			{error, Reason}
+	end;
+type_constructor_rule(Field) ->
+	{ok, Field}.
+
+type_constructor(binary) -> {ok, binary_to_binary};
+type_constructor(integer) -> {ok, binary_to_integer};
+type_constructor(float) -> {ok, binary_to_float};
+type_constructor(_) -> {error, undefined}.
 
 %% Validators.
 
@@ -260,6 +292,9 @@ ast_split_with(_Fun, [], Opt, Acc) ->
 error_ast(Line, Reason) ->
 	{error, {Line, Reason}}.
 
+global_error_ast(Line, Reason) ->
+	{error, {Line, erl_parse, Reason}}.
+
 -spec revert(parse_trans:forms()) ->
 					parse_trans:forms().
 revert(Tree) ->
@@ -289,7 +324,7 @@ index_is_required_rule_test_() ->
 			 {{false, false}, {false, false}}
 			],
 	F = fun(From, To) ->
-				R = index_is_required_rule(C(From)),
+				{ok, R} = index_is_required_rule(C(From)),
 				R = C(To)
 		end,
 	[fun() -> F(From, To) end || {From, To} <- Tests].
@@ -305,28 +340,35 @@ default_alias_name_rule_test_() ->
 			 {{name, false, <<"test">>}, {name, false, <<"test">>}}
 			],
 	F = fun(From, To) ->
-				R = default_alias_name_rule(C(From)),
+				{ok, R} = default_alias_name_rule(C(From)),
 				R = C(To)
 		end,
 	[fun() -> F(From, To) end || {From, To} <- Tests].
 
 
 
-get_set_needs_record_rule_test_() ->
-	C = fun({Stored, Getter, Setter}) -> #field{stores_in_record=Stored, record_options=#record_options{getter=Getter, setter=Setter}} end,
-	Tests = [
-			 {{false, true, true}, {true, true, true}},
-			 {{false, true, false}, {true, true, false}},
-			 {{false, false, true}, {true, false, true}},
-			 {{false, false, false}, {false, false, false}},
-			 {{true, true, true}, {true, true, true}},
-			 {{true, true, false}, {true, true, false}},
-			 {{true, false, true}, {true, false, true}},
-			 {{true, false, false}, {true, false, false}}
-			],
+get_set_record_rule_test_() ->
+	C = fun({Stored, Getter, Setter}) -> #field{stores_in_record=Stored, getter=Getter, setter=Setter} end,
+	Default = fun(undefined) -> true;
+				 (V) -> V
+			  end,
+	Values = [true, false, custom],
+	Tests1 = [{C({St, G, S}), {ok, C({Default(St), Default(G), Default(S)})}} || St <- [undefined, true], G <- Values, S <- Values],
+
+	%% Test case when stores_in_record manually set to false.
+	Tests2 = [{C({false, G, S}), case {Default(G), Default(S)} of
+								  {true, true} ->
+									  {error, "Storing in record required for default getter and setter"};
+								  {true, _} ->
+									  {error, "Storing in record required for default getter"};
+								  {_, true} ->
+									  {error, "Storing in record required for default setter"};
+								  {G1, S1} ->
+									  {ok, C({false, G1, S1})}
+								 end} || G <- Values, S <- Values],
+	Tests = Tests1 ++ Tests2,
 	F = fun(From, To) ->
-				R = get_set_needs_record_rule(C(From)),
-				R = C(To)
+				?assertEqual(To,get_set_record_rule(From))
 		end,
 	[fun() -> F(From, To) end || {From, To} <- Tests].
 

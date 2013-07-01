@@ -14,9 +14,13 @@
 
 -module(tq_db_utils).
 
--export([error_writer_foldl/3,
-		 constructors_foldl/3
-		]).
+-export([error_writer_foldl/3]).
+
+-export([valid/1]).
+
+-export([binary_to_binary/1,
+		 binary_to_integer/1,
+		 binary_to_float/1]).
 
 -spec error_writer_foldl(Fun, State, List) -> {ok, NewState} | {error, Reasons} when
 	  List :: [Elem],
@@ -41,15 +45,25 @@ error_writer_foldl(Fun, InitState, Opts) ->
 		_ -> {error, ResultErrors}
 	end.
 
--spec constructors_foldl(Constractors, Model, Args) -> Model when
-	  Args :: [Arg],
-	  Constractors :: fun((Arg, Model) -> Model).
-constructors_foldl(Constractors, Model, Args) ->
-	lists:foldl(fun({F, A}, M) -> F(A, M) end, Model, lists:zip(Constractors, Args)).
+
+binary_to_binary(Bin) when is_binary(Bin) ->
+	{ok, Bin}.
+
+binary_to_integer(Bin) when is_binary(Bin) ->
+	case string:to_integer(binary_to_list(Bin)) of
+		{Res, []} -> {ok, Res};
+		_ -> {error, wrong_format}
+	end.
+
+binary_to_float(Bin) when is_binary(Bin) ->
+	case string:to_float(binary_to_list(Bin)) of
+		{Res, []} -> {ok, Res};
+		_ -> {error, wrong_format}
+	end.
 
 valid(List) ->
-	error_writer_foldl(fun({Field, Validador, Value}, State) ->
-							   case Validador(Value) of
+	error_writer_foldl(fun({Field, Validator, Value}, State) ->
+							   case Validator(Value) of
 								   ok -> {ok, State};
 								   {error, Reason} -> {error, {Reason, Field}}
 							   end
@@ -71,16 +85,6 @@ error_writer_foldl_test_() ->
 			 {[1], {ok, 1}}
 			],
 	F = fun(D, R) -> R = error_writer_foldl(Sum, 0, D) end,
-	[fun() -> F(From, To) end || {From, To} <- Tests].
-
-constructors_foldl_test_() ->
-	Cs = fun(Data) -> [fun(A, Acc) -> [A*D|Acc] end || D <- Data] end,
-	Tests = [
-			 {[1,2,3], [9,4,1]},
-			 {[], []},
-			 {[2], [4]}
-			],
-	F = fun(D, R) -> R = constructors_foldl(Cs(D), [], D) end,
 	[fun() -> F(From, To) end || {From, To} <- Tests].
 
 -endif.

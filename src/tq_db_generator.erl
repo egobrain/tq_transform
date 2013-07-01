@@ -34,7 +34,7 @@ build_model(Model) ->
 	Builders = [
 				fun build_main_record/1,
 				fun build_getter_and_setters/1,
-				fun build_from_proplist/1,
+				fun build_proplists/1,
 				fun build_internal_functions/1,
 				fun build_validators/1
 			   ],
@@ -65,17 +65,20 @@ build_main_record(#model{module=Module, fields=Fields}) ->
 build_getter_and_setters(#model{module=Module, fields=Fields}) ->
 	NewFun = ?function(new, [?clause([], none, [?record(Module,[])])]),
 	NewExport = ?export(new, 0),
-	GetterFields = [F || F <- Fields, F#field.record_options#record_options.getter],
+	GetterFields = [F || F <- Fields, F#field.getter],
 	GetterFuns = [getter(Module, F) || F <- GetterFields],
 	GetterExports = export_funs(GetterFuns),
-	SetterFields = [F || F <- Fields, F#field.record_options#record_options.setter],
+	CustomGettersExports = ?export_all([{F#field.name, 1} || F <- Fields, F#field.getter =:= custom]),
+
+	SetterFields = [F || F <- Fields, F#field.setter],
 	SetterFuns = [setter(Module, F) || F <- SetterFields],
 	SetterExports = export_funs(SetterFuns),
+	CustomSettersExports = ?export_all([{?prefix_set(F#field.name), 2} || F <- Fields, F#field.setter =:= custom]),
 
 	IsNewFun = ?function(is_new, [?clause([?var('Model')], none, [?access(?var('Model'), Module, '$is_new$')])]),
 	IsNewExport = ?export(is_new, 1),
 	Funs = [NewFun, GetterFuns, SetterFuns, IsNewFun],
-	Exports = [NewExport, GetterExports, SetterExports, IsNewExport],
+	Exports = [NewExport, GetterExports, CustomGettersExports, SetterExports, CustomSettersExports, IsNewExport],
 	{ok, {Exports, Funs}}.
 
 getter(Module, #field{name=Name}) ->
@@ -96,7 +99,7 @@ setter(Module, #field{name=Name, stores_in_database=InDb}) ->
 			 end,
 	?function(FunctionName, [?clause([?var('Val'),?var('Model')], none, [Setter])]).
 
-build_from_proplist(Model) ->
+build_proplists(Model) ->
 	Funs = lists:flatten(
 			 [to_proplist_function(Model),
 			  from_proplist_functions(Model),
@@ -104,6 +107,15 @@ build_from_proplist(Model) ->
 			 ]),
 	Exports = export_funs(Funs),
 	{ok, {Exports, Funs}}.
+
+to_proplist_function(#model{fields=Fields}) ->
+	?function(to_proplist,
+			  [?clause([?var('Model')], none,
+					   [?list([?tuple([?atom(F#field.name),?apply(F#field.name, [?var('Model')])]) ||
+								  F <- Fields,
+								  F#field.mode#access_mode.sr,
+								  F#field.getter =/= false
+							  ])])]).
 
 from_proplist_functions(#model{fields=Fields}) ->	
 	Fun1 = ?function(from_proplist,
@@ -115,17 +127,15 @@ from_proplist_functions(#model{fields=Fields}) ->
 									  [?func(from_proplist_,2),
 									   ?var('Model'),
 									   ?var('Proplist')])])]),
-	SetterFieldNames = [F#field.name || F <- Fields,
-										F#field.record_options#record_options.setter,
-										F#field.record_options#record_options.mode#access_mode.sw],
-
 	DefaultClasuse = [?clause([?tuple([?var('Field'),?underscore]), ?underscore], none,
 							  [?error(?atom(unknown), ?var('Field'))])],
 	Fun_ = ?function(from_proplist_,
 					 [?clause(
-						 [?tuple([?atom(F),?var('Val')]), ?var('Model')], none,
-						 [?apply(?prefix_set(F), [?var('Val'), ?var('Model')])])
-					  || F <- SetterFieldNames] ++ DefaultClasuse),
+						 [?tuple([?atom(F#field.name),?var('Val')]), ?var('Model')], none,
+						 [?apply(?prefix_set(F#field.name), [?var('Val'), ?var('Model')])])
+					  || F <- Fields,
+						 F#field.setter =/= undefined,
+						 F#field.mode#access_mode.sw] ++ DefaultClasuse),
 	[Fun1, Fun2, Fun_].
 
 from_bin_proplist_function(#model{fields=Fields}) ->
@@ -138,9 +148,6 @@ from_bin_proplist_function(#model{fields=Fields}) ->
 									  [?func(from_bin_proplist_,2),
 									   ?var('Model'),
 									   ?var('BinProplist')])])]),
-	SetterFields = [F || F <- Fields,
-							 F#field.record_options#record_options.setter,
-							 F#field.record_options#record_options.mode#access_mode.w],
 	DefaultClasuse = [?clause([?tuple([?var('Field'),?underscore]), ?underscore], none,
 							  [?error(?atom(unknown), ?var('Field'))])],
 	EClause = fun(F) -> ?clause([?error(?var('Reason'))], none,
@@ -151,12 +158,14 @@ from_bin_proplist_function(#model{fields=Fields}) ->
 						 [?tuple([?abstract(atom_to_binary(F#field.name)),?var('Bin')]), ?var('Model')], none,
 						 [?cases(type_constructor(F,?var('Bin')),
 								 [?clause([?ok(?var('Val'))], none,
-										  [?cases(?apply_(?apply(validator,[?atom(F#field.name)]),[?var('Val')]),
-												  [?clause([?ok(?var('Val2'))], none,
-														   [?apply(?prefix_set(F#field.name), [?var('Val2'), ?var('Model')])]),
-												   EClause(F)])]),
+										  %% [?cases(?apply_(?apply(validator,[?atom(F#field.name)]),[?var('Val')]),
+										  %% 		  [?clause([?atom(ok)], none,
+														   [?apply(?prefix_set(F#field.name), [?var('Val'), ?var('Model')])]),
+												   %% EClause(F)])]),
 								  EClause(F)])])
-					  || F <- SetterFields] ++ DefaultClasuse),
+					  || F <- Fields,
+						 F#field.setter =/= undefined,
+						 F#field.mode#access_mode.w] ++ DefaultClasuse),
 	[Fun1, Fun2, Fun_].
 
 type_constructor(Field, A) ->
@@ -167,12 +176,6 @@ type_constructor(Field, A) ->
 			?apply(F, [A])
 	end.
 
-to_proplist_function(#model{fields=Fields}) ->
-	?function(to_proplist,
-			  [?clause([?var('Model')], none,
-					   [?list([?tuple([?atom(F#field.name),?apply(F#field.name, [?var('Model')])]) ||
-								  F <- Fields,
-								  F#field.record_options#record_options.mode#access_mode.sr])])]).
 build_internal_functions(Model) ->
 	Funs = [changed_fields_function(Model),
 			meta1_function(Model),
@@ -187,8 +190,8 @@ build_internal_functions(Model) ->
 changed_fields_function(#model{module=Module, fields=Fields}) ->
 	AllowedFields = [F#field.name || F <- Fields,
 									 F#field.stores_in_database,
-									 F#field.record_options#record_options.setter,
-									 F#field.record_options#record_options.mode#access_mode.sw],
+									 F#field.setter,
+									 F#field.mode#access_mode.sw],
 	ListAst = ?list([?tuple([?atom(F),
 							 ?access(?var('Model'), Module, F),
 							 ?access(?var('Model'), Module, ?changed_suffix(F))
@@ -196,10 +199,10 @@ changed_fields_function(#model{module=Module, fields=Fields}) ->
 					 || F <- AllowedFields]),
 	?function(get_changed_fields,
 			  [?clause([?var('Model')], none,
-					   [?list_comp(?tuple([?var('A'), ?var('B')]),
-								   [?generator(?tuple([?var('A'), ?var('B'), ?var('C')]),
+					   [?list_comp(?tuple([?var('Name'), ?var('Val')]),
+								   [?generator(?tuple([?var('Name'), ?var('Val'), ?var('Changed')]),
 											   ListAst),
-									?var('C')]
+									?var('Changed')]
 								  )])]).
 constructor0_function() ->
 	?function(constructor,
@@ -213,11 +216,12 @@ constructor1_function(#model{module=Module}) ->
 							   ?list_comp(?apply(field_constructor,[?var('F')]),
 										  [?generator(?var('F'), ?var('Fields'))])),
 						?func([?clause([?var('Tuple')], none,
-								  [?match(?var('Model'),
-										  ?apply(tq_db_utils, constructors_foldl,
-												 [?var('Constructors'),
+									   [?match(?var('Model'),
+											   ?apply(lists, foldl,
+													  [?func([?clause([?tuple([?var('F'), ?var('A')]), ?var('M')], none,
+																	  [?apply_(?var('F'), [?var('A'), ?var('M')])])]),
 												  ?apply(new, []),
-												  ?apply(tuple_to_list,[?var('Tuple')])])),
+												  ?apply(lists,zip,[?var('Constructors'),?apply(tuple_to_list,[?var('Tuple')])])])),
 								   ?record(?var('Model'), Module, [?field('$is_new$', ?atom(false))])
 								  ]
 									  )])])]).
@@ -253,7 +257,7 @@ field_constructor_function(#model{fields=Fields}) ->
 									   [?apply(?prefix_set(F#field.name), [?var('Val'), ?var('Model')])])])]) ||
 				  F <- Fields,
 				  F#field.stores_in_database,
-				  F#field.record_options#record_options.setter
+				  F#field.setter
 			  ] ++ [DefaultClasuse]).
 
 
@@ -286,11 +290,11 @@ validator(_Validators, IsRequired, IsWriteOnly) ->
 					 acc_if(IsRequired, Req_clause,
 							[Main_clause])),
 	?func(Clauses).
-					   
+
 %% Internal helpers.
 
 is_write_only(Field) ->
-	AccessMode = Field#field.record_options#record_options.mode,
+	AccessMode = Field#field.mode,
 	not AccessMode#access_mode.sw.
 
 def_record(Name, Fields) ->

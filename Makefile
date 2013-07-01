@@ -9,8 +9,8 @@ deps:
 	@rebar compile
 	
 test:
-	@mkdir -p logs
-	@ct_run -dir test -logdir logs -cover test/cover.spec -pa ebin/
+#	@mkdir -p logs
+#	@ct_run -dir test -logdir logs -cover test/cover.spec -pa ebin/
 
 eunit:
 	@rebar eunit skip_deps=true

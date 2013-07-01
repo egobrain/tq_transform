@@ -12,47 +12,15 @@
 %% ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 %% OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
--module(build_SUITE).
+-module(tq_db_test).
+-export([all_test_/0]).
 
--include_lib("common_test/include/ct.hrl").
+all_test_() ->
+    %% Modules = [],
+	[].
+    %% [{Mod,Fun} || Mod <- Modules,
+    %%               Fun <- extract_tests(Mod)].
 
-%% ct.
--export([all/0]).
--export([groups/0]).
--export([init_per_suite/1]).
--export([end_per_suite/1]).
-
-%% Tests.
-
--export([simple_build/1]).
-
-%% ct.
-
-all() ->
-	[
-	 {group, build}
-	].
-
-groups() ->
-	Tests = [
-			 simple_build
-			],
-	[
-	 {build, [parallel], Tests}
-	].
-
-init_per_suite(Config) ->
-	Models = [db_simple],
-	[{models, Models} | Config].
-
-end_per_suite(Config) ->
-	ok.
-
-
-simple_build(Config) ->
-	Models = ?config(models, Config),
-	DataDir = ?config(data_dir, Config),
-	lists:foreach(fun(Module) ->
-						  Filename = filename:join(DataDir, atom_to_list(Module)++".erl"),
-						  {ok, Module} = compile:file(Filename, [{parse_transform, tq_db_transform}])
-				  end, Models).
+%% extract_tests(Mod) ->
+%%     [Fun || {Fun, 0} <- Mod:module_info(exports),
+%%             lists:prefix("test_", atom_to_list(Fun))].
