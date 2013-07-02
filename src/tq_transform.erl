@@ -14,9 +14,9 @@
 
 -module(tq_transform).
 
--export([parse_transform/2]).
+-export([parse_transform/2,
+		 pretty_print/1]).
 
-%% -include("include/records.hrl").
 -include("include/ast_helpers.hrl").
 
 -record(state,{
@@ -37,26 +37,43 @@ start() ->
 parse_transform(Ast, _Options)->
 	try
 		ok = start(),
+		State = #state{},
 		%% ?DBG("~n~p~n=======~n", [Ast]),
 		%% ?DBG("~n~s~n=======~n", [pretty_print(Ast)]),
-		{Ast2, State2} = lists:mapfoldl(fun transform_node/2, #state{}, Ast),
-		{ModuleBlock, InfoBlock, FunctionsBlock} = split_ast(Ast2),
-		Ast3 = case normalize_models(State2) of
-				   {ok, State3} ->
-					   {IBlock, FBlock} = build_models(State3),
-					   revert(lists:flatten([ModuleBlock, IBlock, InfoBlock, FBlock, FunctionsBlock]));
-				   {error, Reasons} ->
-					   Ast2 ++ [global_error_ast(1, R) || R <- Reasons]
-			   end,
-		%% ?DBG("~n~p~n<<<<~n", [Ast3]),
-		Ast3 = lists:flatten(lists:filter(fun(Node)-> Node =/= nil end, Ast3)),
-		?DBG("~n~s~n>>>>~n", [pretty_print(Ast3)]),
-		%% ?DBG("Model:~n ~p~n", [Model]),
-		Ast3
-	catch T:E ->
+		case error_map_foldl(fun transform_node/2, State, Ast) of
+			{error, {Ast2, _State2}} ->
+				lists:flatten(Ast2);
+			{ok, {Ast2, State2}} ->
+				{ModuleBlock, InfoBlock, FunctionsBlock} = split_ast(Ast2),
+				Ast3 = case normalize_models(State2) of
+						   {ok, State3} ->
+							   {IBlock, FBlock} = build_models(State3),
+							   revert(lists:flatten([ModuleBlock, IBlock, InfoBlock, FBlock, FunctionsBlock]));
+						   {error, Reasons} ->
+							   Ast2 ++ [global_error_ast(1, R) || R <- Reasons]
+					   end,
+				Ast3 = lists:flatten(lists:filter(fun(Node)-> Node =/= nil end, Ast3)),
+				%% ?DBG("~n~p~n<<<<~n", [Ast3]),
+				%% ?DBG("~n~s~n>>>>~n", [pretty_print(Ast3)]),
+				Ast3
+		end
+    catch T:E ->
 			Reason = io_lib:format("~p:~p | ~p ~n", [T, E, erlang:get_stacktrace()]),
 			[global_error_ast(1, Reason) | Ast]
 	end.
+
+error_map_foldl(Fun, State, List) ->
+	FoldFun = fun(A, {St, IsError}) ->
+					  {Res, {Data, St2}} = Fun(A, St),
+					  IsError2 = case Res of
+									 ok -> IsError;
+									 error -> error
+								 end,
+					  {Data, {St2, IsError2}}
+			  end,
+	{List2, {State2, IsError}} = lists:mapfoldl(FoldFun, {State, ok}, List),
+	{IsError, {List2, State2}}.
+
 
 split_ast(Ast) ->
 	{ok, {ModuleBlock, RestBlock}} = ast_split_with(fun({attribute, _, module, _}) -> true;
@@ -72,20 +89,20 @@ transform_node(Node={attribute, Line, model, Opts}, State) ->
 		true ->
 			case model_options(Opts, State) of
 				{ok, State2} ->
-					{Node, State2};
-				{error, _} = Err ->
-					{error_ast(Line, Err), State}
+					{ok, {Node, State2}};
+				{error, Reason} ->
+					{error, {global_error_ast(Line, Reason), State}}
 			end;
 		false ->
-			Node2 = error_ast(Line, "Wrong model spec"),
-			{Node2, State}
+			Node2 = global_error_ast(Line, "Wrong model spec"),
+			{ok, {Node2, State}}
 	end;
 
 transform_node(Node={attribute, _Line, module, Module}, State) ->
 	{ok, Plugins} = application:get_env(tq_transform, plugins),
 	Plugins2 = [{P, P:create_model(Module)} || P <- Plugins],
 	State2 = State#state{plugins = Plugins2},
-	{Node, State2};
+	{ok, {Node, State2}};
 transform_node(Node={attribute, Line, field, FieldOpts}, State) ->
 	case FieldOpts of
 		{Name, Opts} when is_atom(Name) andalso is_list(Opts) ->
@@ -93,19 +110,19 @@ transform_node(Node={attribute, Line, field, FieldOpts}, State) ->
 				{ok, Fields} ->
 					Plugins = [{P, P:set_field(F, S)} || {P, F, S} <- Fields],
 					State2 = State#state{plugins=Plugins},
-					{Node, State2};
+					{ok, {Node, State2}};
 				{error, Reasons} ->
 					Node2 = [begin
 								 io:format("ERROR: ~s~n", [R]),
 								 global_error_ast(Line, R)
 							 end || R <- Reasons],
-					{Node2, State}
+					{error, {Node2, State}}
 			end;
 		_ ->
-			{error_ast(Line, "Wrong field spec"), State}
+			{error, {error_ast(Line, "Wrong field spec"), State}}
 	end;
 transform_node(Node, State) ->
-	{Node, State}.
+	{ok, {Node, State}}.
 
 create_fields(Name, Opts, #state{plugins=Plugins}) ->
 	Fields0 = [{P, P:create_field(Name), S} || {P, S} <- Plugins],

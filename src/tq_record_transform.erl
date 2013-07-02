@@ -120,8 +120,7 @@ normalize_model(Model) ->
 	{ok, Model}.
 
 build_model(Model) ->
-	io:format("!!! ~p ~n",[Model]),
-	{Exports, Funs} = tq_transform_generator:build_model(Model),
+	{Exports, Funs} = tq_record_generator:build_model(Model),
 	{lists:reverse(Exports), lists:reverse(Funs)}.
 
 mode_to_acl(r)    -> #access_mode{r=true,  sr=true,  w=false, sw=false};
@@ -136,29 +135,29 @@ mode_to_acl(srw)  -> #access_mode{r=false, sr=true,  w=true,  sw=true}.
 -ifdef(TEST).
 -include_lib("eunit/include/eunit.hrl").
 
-%% get_set_record_rule_test_() ->
-%% 	C = fun({Stored, Getter, Setter}) -> #field{stores_in_record=Stored, getter=Getter, setter=Setter} end,
-%% 	Default = fun(undefined) -> true;
-%% 				 (V) -> V
-%% 			  end,
-%% 	Values = [true, false, custom],
-%% 	Tests1 = [{C({St, G, S}), {ok, C({Default(St), Default(G), Default(S)})}} || St <- [undefined, true], G <- Values, S <- Values],
+get_set_record_rule_test_() ->
+	C = fun({Stored, Getter, Setter}) -> #field{stores_in_record=Stored, getter=Getter, setter=Setter} end,
+	Default = fun(undefined) -> true;
+				 (V) -> V
+			  end,
+	Values = [true, false, custom],
+	Tests1 = [{C({St, G, S}), {ok, C({Default(St), Default(G), Default(S)})}} || St <- [undefined, true], G <- Values, S <- Values],
 
-%% 	%% Test case when stores_in_record manually set to false.
-%% 	Tests2 = [{C({false, G, S}), case {Default(G), Default(S)} of
-%% 								  {true, true} ->
-%% 									  {error, "Storing in record required for default getter and setter"};
-%% 								  {true, _} ->
-%% 									  {error, "Storing in record required for default getter"};
-%% 								  {_, true} ->
-%% 									  {error, "Storing in record required for default setter"};
-%% 								  {G1, S1} ->
-%% 									  {ok, C({false, G1, S1})}
-%% 								 end} || G <- Values, S <- Values],
-%% 	Tests = Tests1 ++ Tests2,
-%% 	F = fun(From, To) ->
-%% 				?assertEqual(To,get_set_record_rule(From))
-%% 		end,
-%% 	[fun() -> F(From, To) end || {From, To} <- Tests].
+	%% Test case when stores_in_record manually set to false.
+	Tests2 = [{C({false, G, S}), case {Default(G), Default(S)} of
+								  {true, true} ->
+									  {error, "Storing in record required for default getter and setter"};
+								  {true, _} ->
+									  {error, "Storing in record required for default getter"};
+								  {_, true} ->
+									  {error, "Storing in record required for default setter"};
+								  {G1, S1} ->
+									  {ok, C({false, G1, S1})}
+								 end} || G <- Values, S <- Values],
+	Tests = Tests1 ++ Tests2,
+	F = fun(From, To) ->
+				?assertEqual(To,get_set_record_rule(From))
+		end,
+	[fun() -> F(From, To) end || {From, To} <- Tests].
 
 -endif.

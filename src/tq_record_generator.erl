@@ -12,7 +12,7 @@
 %% ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 %% OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
--module(tq_transform_generator).
+-module(tq_record_generator).
 
 -include("include/records.hrl").
 -include("include/ast_helpers.hrl").
