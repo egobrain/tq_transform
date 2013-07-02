@@ -19,12 +19,12 @@
 
 -include("include/ast_helpers.hrl").
 
--record(state,{
+-record(state, {
 		  module,
 		  plugins
 		 }).
 
--define(DBG(F, D), io:format("~p:~p "++F++"~n", [?FILE, ?LINE| D])).
+-define(DBG(F, D), io:format("~p:~p "++F++"~n", [?FILE, ?LINE | D])).
 
 start() ->
 	case application:start(tq_transform) of
@@ -32,7 +32,7 @@ start() ->
 		{error, {already_started, tq_transform}} -> ok;
 		{error, _Reason} = Err -> Err
 	end.
-	
+
 
 parse_transform(Ast, _Options)->
 	try
@@ -57,7 +57,7 @@ parse_transform(Ast, _Options)->
 				%% ?DBG("~n~s~n>>>>~n", [pretty_print(Ast3)]),
 				Ast3
 		end
-    catch T:E ->
+	catch T:E ->
 			Reason = io_lib:format("~p:~p | ~p ~n", [T, E, erlang:get_stacktrace()]),
 			[global_error_ast(1, Reason) | Ast]
 	end.
@@ -159,12 +159,12 @@ try_field_option(Option, Data, Fields) ->
 	try_field_option(Option, Data, Fields, []).
 try_field_option(Option, _Data, [], _) ->
 	{error, "Unknown field option " ++ atom_to_list(Option)};
-try_field_option(Option, Data, [{P, F, S}|Rest], Acc) ->
+try_field_option(Option, Data, [{P, F, S} | Rest], Acc) ->
 	case P:field_option(Option, Data, F) of
 		{ok, F2} ->
-			{ok, lists:reverse(Acc) ++ [{P, F2, S}|Rest]};
+			{ok, lists:reverse(Acc) ++ [{P, F2, S} | Rest]};
 		false ->
-			try_field_option(Option, Data, Rest, [{P, F, S}|Acc]);
+			try_field_option(Option, Data, Rest, [{P, F, S} | Acc]);
 		{error, _} = Err -> Err
 	end.
 
@@ -172,12 +172,12 @@ try_model_option(Option, Data, Models) ->
 	try_model_option(Option, Data, Models, []).
 try_model_option(Option, _Data, [], _) ->
 	{error, "Unknown model option " ++ atom_to_list(Option)};
-try_model_option(Option, Data, [{P, M}|Rest], Acc) ->
+try_model_option(Option, Data, [{P, M} | Rest], Acc) ->
 	case P:model_option(Option, Data, M) of
 		{ok, M2} ->
-			{ok, lists:reverse(Acc) ++ [{P, M2}|Rest]};
+			{ok, lists:reverse(Acc) ++ [{P, M2} | Rest]};
 		false ->
-			try_model_option(Option, Data, Rest, [{P, M}|Acc]);
+			try_model_option(Option, Data, Rest, [{P, M} | Acc]);
 		{error, _} = Err -> Err
 	end.
 
@@ -223,9 +223,9 @@ normalize_models(#state{plugins=Plugins}=State) ->
 build_models(#state{plugins=Plugins}) ->
 	lists:foldl(fun({P, M}, {Exports, Funs}) ->
 						{Es, Fs} = P:build_model(M),
-						{[Es|Exports], [Fs|Funs]}
+						{[Es | Exports], [Fs | Funs]}
 				end, {[], []}, Plugins).
-				
+
 %% Internal helpers.
 
 -spec ast_split_with(Fun, List, 'before') -> {List1, List2} when
@@ -236,17 +236,17 @@ build_models(#state{plugins=Plugins}) ->
 	  List :: [E], List1 :: [E], List2 :: [E].
 ast_split_with(Fun, List, Opt) ->
 	ast_split_with(Fun, List, Opt, []).
-ast_split_with(Fun, [E|Rest] = List, Opt, Acc) ->
+ast_split_with(Fun, [E | Rest] = List, Opt, Acc) ->
 	case Fun(E) of
 		true ->
 			case Opt of
 				'before' ->
 					{ok, {lists:reverse(Acc), List}};
 				'after' ->
-					{ok, {lists:reverse([E|Acc]), Rest}}
+					{ok, {lists:reverse([E | Acc]), Rest}}
 			end;
 		false ->
-			ast_split_with(Fun, Rest, Opt, [E|Acc])
+			ast_split_with(Fun, Rest, Opt, [E | Acc])
 	end;
 ast_split_with(_Fun, [], Opt, Acc) ->
 	case Opt of
@@ -263,11 +263,11 @@ global_error_ast(Line, Reason) ->
 	{error, {Line, erl_parse, Reason}}.
 
 revert(Tree) ->
-    [erl_syntax:revert(T) || T <- lists:flatten(Tree)].
+	[erl_syntax:revert(T) || T <- lists:flatten(Tree)].
 
 pretty_print(Forms0) ->
 	Forms = epp:restore_typed_record_fields(revert(Forms0)),
-    [io_lib:fwrite("~s~n",
+	[io_lib:fwrite("~s~n",
 				   [lists:flatten([erl_pp:form(Fm) ||
 									  Fm <- Forms])])].
 
@@ -278,14 +278,14 @@ pretty_print(Forms0) ->
 
 ast_split_test_() ->
 	Tests = [
-			 {[{1,1}, {2,2}, {3,3}], {'before', 1}, {ok, {[], [{1,1}, {2,2}, {3,3}]}}},
-			 {[{1,1}, {2,2}, {3,3}], {'after',  1}, {ok, {[{1,1}], [{2,2}, {3,3}]}}},
-			 {[{1,1}, {2,2}, {3,3}], {'before', 2}, {ok, {[{1,1}], [{2,2}, {3,3}]}}},
-			 {[{1,1}, {2,2}, {3,3}], {'after',  2}, {ok, {[{1,1}, {2,2}], [{3,3}]}}},
-			 {[{1,1}, {2,2}, {3,3}], {'before', 3}, {ok, {[{1,1}, {2,2}], [{3,3}]}}},
-			 {[{1,1}, {2,2}, {3,3}], {'after',  3}, {ok, {[{1,1}, {2,2}, {3,3}], []}}},
-			 {[{1,1}, {2,2}, {3,3}], {'before', 4}, {ok, {[{1,1}, {2,2}, {3,3}], []}}},
-			 {[{1,1}, {2,2}, {3,3}], {'after',  4}, {error, not_found}}
+			 {[{1, 1}, {2, 2}, {3, 3}], {'before', 1}, {ok, {[], [{1, 1}, {2, 2}, {3, 3}]}}},
+			 {[{1, 1}, {2, 2}, {3, 3}], {'after',  1}, {ok, {[{1, 1}], [{2, 2}, {3, 3}]}}},
+			 {[{1, 1}, {2, 2}, {3, 3}], {'before', 2}, {ok, {[{1, 1}], [{2, 2}, {3, 3}]}}},
+			 {[{1, 1}, {2, 2}, {3, 3}], {'after',  2}, {ok, {[{1, 1}, {2, 2}], [{3, 3}]}}},
+			 {[{1, 1}, {2, 2}, {3, 3}], {'before', 3}, {ok, {[{1, 1}, {2, 2}], [{3, 3}]}}},
+			 {[{1, 1}, {2, 2}, {3, 3}], {'after',  3}, {ok, {[{1, 1}, {2, 2}, {3, 3}], []}}},
+			 {[{1, 1}, {2, 2}, {3, 3}], {'before', 4}, {ok, {[{1, 1}, {2, 2}, {3, 3}], []}}},
+			 {[{1, 1}, {2, 2}, {3, 3}], {'after',  4}, {error, not_found}}
 			],
 	F = fun(D, {Opt, Key},  R) ->
 				Fun = fun(E) -> element(1, E) =:= Key end,

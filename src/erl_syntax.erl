@@ -333,7 +333,7 @@
 %%	type(Com) = comment
 
 -record(com, {pre  = [] :: [syntaxTree()],
-	      post = [] :: [syntaxTree()]}).
+		  post = [] :: [syntaxTree()]}).
 
 %% `attr' records store node attributes as an aggregate.
 %%
@@ -346,9 +346,9 @@
 %% where `Pos' `Ann' and `Comments' are the corresponding values of a
 %% `tree' or `wrapper' record.
 
--record(attr, {pos = 0    :: term(),
-	       ann = []   :: [term()],
-	       com = none :: 'none' | #com{}}).
+-record(attr, {pos = 0	:: term(),
+		   ann = []   :: [term()],
+		   com = none :: 'none' | #com{}}).
 -type syntaxTreeAttributes() :: #attr{}.
 
 %% `tree' records represent new-form syntax tree nodes.
@@ -361,9 +361,9 @@
 %%
 %%	is_tree(Tree) = true
 
--record(tree, {type           :: atom(),
-	       attr = #attr{} :: #attr{},
-	       data           :: term()}).
+-record(tree, {type		   :: atom(),
+		   attr = #attr{} :: #attr{},
+		   data		   :: term()}).
 
 %% `wrapper' records are used for attaching new-form node information to
 %% `erl_parse' trees.
@@ -376,9 +376,9 @@
 %%
 %%	is_tree(Wrapper) = false
 
--record(wrapper, {type           :: atom(),
+-record(wrapper, {type		   :: atom(),
 		  attr = #attr{} :: #attr{},
-		  tree           :: erl_parse()}).
+		  tree		   :: erl_parse()}).
 
 %% =====================================================================
 
@@ -528,12 +528,12 @@
 -spec type(syntaxTree()) -> atom().
 
 type(#tree{type = T}) ->
-    T;
+	T;
 type(#wrapper{type = T}) ->
-    T;
+	T;
 type(Node) ->
-    %% Check for `erl_parse'-compatible nodes, and otherwise fail.
-    case Node of
+	%% Check for `erl_parse'-compatible nodes, and otherwise fail.
+	case Node of
 	%% Leaf types
 	{atom, _, _} -> atom;
 	{char, _, _} -> char;
@@ -542,9 +542,9 @@ type(Node) ->
 	{nil, _} -> nil;
 	{string, _, _} -> string;
 	{var, _, Name} ->
-	    if Name =:= '_' -> underscore;
-	       true -> variable
-	    end;
+		if Name =:= '_' -> underscore;
+		   true -> variable
+		end;
 	{error, _} -> error_marker;
 	{warning, _} -> warning_marker;
 	{eof, _} -> eof_marker;
@@ -570,7 +570,7 @@ type(Node) ->
 	{b_generate, _, _, _} -> binary_generator;
 	{generate, _, _, _} -> generator;
 	{lc, _, _, _} -> list_comp;
-	{bc, _, _, _} -> binary_comp;		
+	{bc, _, _, _} -> binary_comp;
 	{match, _, _, _} -> match_expr;
 	{op, _, _, _, _} -> infix_expr;
 	{op, _, _, _} -> prefix_expr;
@@ -584,8 +584,8 @@ type(Node) ->
 	{'try', _, _, _, _, _} -> try_expr;
 	{tuple, _, _} -> tuple;
 	_ ->
-	    erlang:error({badarg, Node})
-    end.
+		erlang:error({badarg, Node})
+	end.
 
 
 %% =====================================================================
@@ -627,7 +627,7 @@ type(Node) ->
 -spec is_leaf(syntaxTree()) -> boolean().
 
 is_leaf(Node) ->
-    case type(Node) of
+	case type(Node) of
 	atom -> true;
 	char -> true;
 	comment -> true;	% nonstandard type
@@ -644,7 +644,7 @@ is_leaf(Node) ->
 	variable -> true;
 	warning_marker -> true;
 	_ -> false
-    end.
+	end.
 
 
 %% =====================================================================
@@ -682,7 +682,7 @@ is_leaf(Node) ->
 -spec is_form(syntaxTree()) -> boolean().
 
 is_form(Node) ->
-    case type(Node) of
+	case type(Node) of
 	attribute -> true;
 	comment -> true;
 	function -> true;
@@ -693,7 +693,7 @@ is_form(Node) ->
 	warning_marker -> true;
 	text -> true;
 	_ -> false
-    end.
+	end.
 
 
 %% =====================================================================
@@ -716,17 +716,17 @@ is_form(Node) ->
 -spec get_pos(syntaxTree()) -> term().
 
 get_pos(#tree{attr = Attr}) ->
-    Attr#attr.pos;
+	Attr#attr.pos;
 get_pos(#wrapper{attr = Attr}) ->
-    Attr#attr.pos;
+	Attr#attr.pos;
 get_pos({error, {Pos, _, _}}) ->
-    Pos;
+	Pos;
 get_pos({warning, {Pos, _, _}}) ->
-    Pos;
+	Pos;
 get_pos(Node) ->
-    %% Here, we assume that we have an `erl_parse' node with position
-    %% information in element 2.
-    element(2, Node).
+	%% Here, we assume that we have an `erl_parse' node with position
+	%% information in element 2.
+	element(2, Node).
 
 
 %% =====================================================================
@@ -738,16 +738,16 @@ get_pos(Node) ->
 -spec set_pos(syntaxTree(), term()) -> syntaxTree().
 
 set_pos(Node, Pos) ->
-    case Node of
+	case Node of
 	#tree{attr = Attr} ->
-	    Node#tree{attr = Attr#attr{pos = Pos}};
+		Node#tree{attr = Attr#attr{pos = Pos}};
 	#wrapper{attr = Attr} ->
-	    Node#wrapper{attr = Attr#attr{pos = Pos}};
+		Node#wrapper{attr = Attr#attr{pos = Pos}};
 	_ ->
-	    %% We then assume we have an `erl_parse' node, and create a
-	    %% wrapper around it to make things more uniform.
-	    set_pos(wrap(Node), Pos)
-    end.
+		%% We then assume we have an `erl_parse' node, and create a
+		%% wrapper around it to make things more uniform.
+		set_pos(wrap(Node), Pos)
+	end.
 
 
 %% =====================================================================
@@ -762,7 +762,7 @@ set_pos(Node, Pos) ->
 -spec copy_pos(syntaxTree(), syntaxTree()) -> syntaxTree().
 
 copy_pos(Source, Target) ->
-    set_pos(Target, get_pos(Source)).
+	set_pos(Target, get_pos(Source)).
 
 
 %% =====================================================================
@@ -773,14 +773,14 @@ get_com(#wrapper{attr = Attr}) -> Attr#attr.com;
 get_com(_) -> none.
 
 set_com(Node, Com) ->
-    case Node of
+	case Node of
 	#tree{attr = Attr} ->
-	    Node#tree{attr = Attr#attr{com = Com}};
+		Node#tree{attr = Attr#attr{com = Com}};
 	#wrapper{attr = Attr} ->
-	    Node#wrapper{attr = Attr#attr{com = Com}};
+		Node#wrapper{attr = Attr#attr{com = Com}};
 	_ ->
-	    set_com(wrap(Node), Com)
-    end.
+		set_com(wrap(Node), Com)
+	end.
 
 
 %% =====================================================================
@@ -789,14 +789,14 @@ set_com(Node, Com) ->
 %% When the code is formatted, pre-comments are typically displayed
 %% directly above the node. For example:
 %% ```% Pre-comment of function
-%%    foo(X) -> {bar, X}.'''
+%%	foo(X) -> {bar, X}.'''
 %%
 %% If possible, the comment should be moved before any preceding
 %% separator characters on the same line. E.g.:
 %% ```foo([X | Xs]) ->
-%%        % Pre-comment of 'bar(X)' node
-%%        [bar(X) | foo(Xs)];
-%%    ...'''
+%%		% Pre-comment of 'bar(X)' node
+%%		[bar(X) | foo(Xs)];
+%%	...'''
 %% (where the comment is moved before the "`['").
 %%
 %% @see comment/2
@@ -830,19 +830,19 @@ get_precomments_1(#attr{com = #com{pre = Cs}}) -> Cs.
 -spec set_precomments(syntaxTree(), [syntaxTree()]) -> syntaxTree().
 
 set_precomments(Node, Cs) ->
-    case Node of
+	case Node of
 	#tree{attr = Attr} ->
-	    Node#tree{attr = set_precomments_1(Attr, Cs)};
+		Node#tree{attr = set_precomments_1(Attr, Cs)};
 	#wrapper{attr = Attr} ->
-	    Node#wrapper{attr = set_precomments_1(Attr, Cs)};
+		Node#wrapper{attr = set_precomments_1(Attr, Cs)};
 	_ ->
-	    set_precomments(wrap(Node), Cs)
-    end.
+		set_precomments(wrap(Node), Cs)
+	end.
 
 set_precomments_1(#attr{com = none} = Attr, Cs) ->
-    Attr#attr{com = #com{pre = Cs}};
+	Attr#attr{com = #com{pre = Cs}};
 set_precomments_1(#attr{com = Com} = Attr, Cs) ->
-    Attr#attr{com = Com#com{pre = Cs}}.
+	Attr#attr{com = Com#com{pre = Cs}}.
 
 
 %% =====================================================================
@@ -861,19 +861,19 @@ set_precomments_1(#attr{com = Com} = Attr, Cs) ->
 -spec add_precomments([syntaxTree()], syntaxTree()) -> syntaxTree().
 
 add_precomments(Cs, Node) ->
-    case Node of
+	case Node of
 	#tree{attr = Attr} ->
-	    Node#tree{attr = add_precomments_1(Cs, Attr)};
+		Node#tree{attr = add_precomments_1(Cs, Attr)};
 	#wrapper{attr = Attr} ->
-	    Node#wrapper{attr = add_precomments_1(Cs, Attr)};
+		Node#wrapper{attr = add_precomments_1(Cs, Attr)};
 	_ ->
-	    add_precomments(Cs, wrap(Node))
-    end.
+		add_precomments(Cs, wrap(Node))
+	end.
 
 add_precomments_1(Cs, #attr{com = none} = Attr) ->
-    Attr#attr{com = #com{pre = Cs}};
+	Attr#attr{com = #com{pre = Cs}};
 add_precomments_1(Cs, #attr{com = Com} = Attr) ->
-    Attr#attr{com = Com#com{pre = Com#com.pre ++ Cs}}.
+	Attr#attr{com = Com#com{pre = Com#com.pre ++ Cs}}.
 
 
 %% =====================================================================
@@ -881,14 +881,14 @@ add_precomments_1(Cs, #attr{com = Com} = Attr) ->
 %% possibly empty list of abstract comments, in top-down textual order.
 %% When the code is formatted, post-comments are typically displayed to
 %% the right of and/or below the node. For example:
-%% ```{foo, X, Y}     % Post-comment of tuple'''
+%% ```{foo, X, Y}	 % Post-comment of tuple'''
 %%
 %% If possible, the comment should be moved past any following
 %% separator characters on the same line, rather than placing the
 %% separators on the following line. E.g.:
 %% ```foo([X | Xs], Y) ->
-%%        foo(Xs, bar(X));     % Post-comment of 'bar(X)' node
-%%     ...'''
+%%		foo(Xs, bar(X));	 % Post-comment of 'bar(X)' node
+%%	 ...'''
 %% (where the comment is moved past the rightmost "`)'" and
 %% the "`;'").
 %%
@@ -923,19 +923,19 @@ get_postcomments_1(#attr{com = #com{post = Cs}}) -> Cs.
 -spec set_postcomments(syntaxTree(), [syntaxTree()]) -> syntaxTree().
 
 set_postcomments(Node, Cs) ->
-    case Node of
+	case Node of
 	#tree{attr = Attr} ->
-	    Node#tree{attr = set_postcomments_1(Attr, Cs)};
+		Node#tree{attr = set_postcomments_1(Attr, Cs)};
 	#wrapper{attr = Attr} ->
-	    Node#wrapper{attr = set_postcomments_1(Attr, Cs)};
+		Node#wrapper{attr = set_postcomments_1(Attr, Cs)};
 	_ ->
-	    set_postcomments(wrap(Node), Cs)
-    end.
+		set_postcomments(wrap(Node), Cs)
+	end.
 
 set_postcomments_1(#attr{com = none} = Attr, Cs) ->
-    Attr#attr{com = #com{post = Cs}};
+	Attr#attr{com = #com{post = Cs}};
 set_postcomments_1(#attr{com = Com} = Attr, Cs) ->
-    Attr#attr{com = Com#com{post = Cs}}.
+	Attr#attr{com = Com#com{post = Cs}}.
 
 
 %% =====================================================================
@@ -954,19 +954,19 @@ set_postcomments_1(#attr{com = Com} = Attr, Cs) ->
 -spec add_postcomments([syntaxTree()], syntaxTree()) -> syntaxTree().
 
 add_postcomments(Cs, Node) ->
-    case Node of
+	case Node of
 	#tree{attr = Attr} ->
-	    Node#tree{attr = add_postcomments_1(Cs, Attr)};
+		Node#tree{attr = add_postcomments_1(Cs, Attr)};
 	#wrapper{attr = Attr} ->
-	    Node#wrapper{attr = add_postcomments_1(Cs, Attr)};
+		Node#wrapper{attr = add_postcomments_1(Cs, Attr)};
 	_ ->
-	    add_postcomments(Cs, wrap(Node))
-    end.
+		add_postcomments(Cs, wrap(Node))
+	end.
 
 add_postcomments_1(Cs, #attr{com = none} = Attr) ->
-    Attr#attr{com = #com{post = Cs}};
+	Attr#attr{com = #com{post = Cs}};
 add_postcomments_1(Cs, #attr{com = Com} = Attr) ->
-    Attr#attr{com = Com#com{post = Com#com.post ++ Cs}}.
+	Attr#attr{com = Com#com{post = Com#com.post ++ Cs}}.
 
 
 %% =====================================================================
@@ -984,17 +984,17 @@ add_postcomments_1(Cs, #attr{com = Com} = Attr) ->
 -spec has_comments(syntaxTree()) -> boolean().
 
 has_comments(#tree{attr = Attr}) ->
-    case Attr#attr.com of
+	case Attr#attr.com of
 	none -> false;
 	#com{pre = [], post = []} -> false;
 	_ -> true
-    end;
+	end;
 has_comments(#wrapper{attr = Attr}) ->
-    case Attr#attr.com of
+	case Attr#attr.com of
 	none -> false;
 	#com{pre = [], post = []} -> false;
 	_ -> true
-    end;
+	end;
 has_comments(_) -> false.
 
 
@@ -1011,14 +1011,14 @@ has_comments(_) -> false.
 -spec remove_comments(syntaxTree()) -> syntaxTree().
 
 remove_comments(Node) ->
-    case Node of
+	case Node of
 	#tree{attr = Attr} ->
-	    Node#tree{attr = Attr#attr{com = none}};
+		Node#tree{attr = Attr#attr{com = none}};
 	#wrapper{attr = Attr} ->
-	    Node#wrapper{attr = Attr#attr{com = none}};
+		Node#wrapper{attr = Attr#attr{com = none}};
 	_ ->
-	    Node
-    end.
+		Node
+	end.
 
 
 %% =====================================================================
@@ -1038,7 +1038,7 @@ remove_comments(Node) ->
 -spec copy_comments(syntaxTree(), syntaxTree()) -> syntaxTree().
 
 copy_comments(Source, Target) ->
-    set_com(Target, get_com(Source)).
+	set_com(Target, get_com(Source)).
 
 
 %% =====================================================================
@@ -1059,9 +1059,9 @@ copy_comments(Source, Target) ->
 -spec join_comments(syntaxTree(), syntaxTree()) -> syntaxTree().
 
 join_comments(Source, Target) ->
-    add_postcomments(
-      get_postcomments(Source),
-      add_precomments(get_precomments(Source), Target)).
+	add_postcomments(
+	  get_postcomments(Source),
+	  add_precomments(get_precomments(Source), Target)).
 
 
 %% =====================================================================
@@ -1089,16 +1089,16 @@ get_ann(_) -> [].
 -spec set_ann(syntaxTree(), [term()]) -> syntaxTree().
 
 set_ann(Node, As) ->
-    case Node of
+	case Node of
 	#tree{attr = Attr} ->
-	    Node#tree{attr = Attr#attr{ann = As}};
+		Node#tree{attr = Attr#attr{ann = As}};
 	#wrapper{attr = Attr} ->
-	    Node#wrapper{attr = Attr#attr{ann = As}};
+		Node#wrapper{attr = Attr#attr{ann = As}};
 	_ ->
-	    %% Assume we have an `erl_parse' node and create a wrapper
-	    %% structure to carry the annotation.
-	    set_ann(wrap(Node), As)
-    end.
+		%% Assume we have an `erl_parse' node and create a wrapper
+		%% structure to carry the annotation.
+		set_ann(wrap(Node), As)
+	end.
 
 
 %% =====================================================================
@@ -1114,16 +1114,16 @@ set_ann(Node, As) ->
 -spec add_ann(term(), syntaxTree()) -> syntaxTree().
 
 add_ann(A, Node) ->
-    case Node of
+	case Node of
 	#tree{attr = Attr} ->
-	    Node#tree{attr = Attr#attr{ann = [A | Attr#attr.ann]}};
+		Node#tree{attr = Attr#attr{ann = [A | Attr#attr.ann]}};
 	#wrapper{attr = Attr} ->
-	    Node#wrapper{attr = Attr#attr{ann = [A | Attr#attr.ann]}};
+		Node#wrapper{attr = Attr#attr{ann = [A | Attr#attr.ann]}};
 	_ ->
-	    %% Assume we have an `erl_parse' node and create a wrapper
-	    %% structure to carry the annotation.
-	    add_ann(A, wrap(Node))
-    end.
+		%% Assume we have an `erl_parse' node and create a wrapper
+		%% structure to carry the annotation.
+		add_ann(A, wrap(Node))
+	end.
 
 
 %% =====================================================================
@@ -1138,7 +1138,7 @@ add_ann(A, Node) ->
 -spec copy_ann(syntaxTree(), syntaxTree()) -> syntaxTree().
 
 copy_ann(Source, Target) ->
-    set_ann(Target, get_ann(Source)).
+	set_ann(Target, get_ann(Source)).
 
 
 %% =====================================================================
@@ -1180,14 +1180,14 @@ get_attrs(Node) -> #attr{pos = get_pos(Node),
 -spec set_attrs(syntaxTree(), syntaxTreeAttributes()) -> syntaxTree().
 
 set_attrs(Node, Attr) ->
-    case Node of
+	case Node of
 	#tree{} ->
-	    Node#tree{attr = Attr};
+		Node#tree{attr = Attr};
 	#wrapper{} ->
-	    Node#wrapper{attr = Attr};
+		Node#wrapper{attr = Attr};
 	_ ->
-	    set_attrs(wrap(Node), Attr)
-    end.
+		set_attrs(wrap(Node), Attr)
+	end.
 
 
 %% =====================================================================
@@ -1202,7 +1202,7 @@ set_attrs(Node, Attr) ->
 -spec copy_attrs(syntaxTree(), syntaxTree()) -> syntaxTree().
 
 copy_attrs(S, T) ->
-    set_attrs(T, get_attrs(S)).
+	set_attrs(T, get_attrs(S)).
 
 
 %% =====================================================================
@@ -1211,7 +1211,7 @@ copy_attrs(S, T) ->
 -spec comment([string()]) -> syntaxTree().
 
 comment(Strings) ->
-    comment(none, Strings).
+	comment(none, Strings).
 
 
 %% =====================================================================
@@ -1220,9 +1220,9 @@ comment(Strings) ->
 %% <code>["<em>Txt1</em>", ..., "<em>TxtN</em>"]</code>, the result
 %% represents the source code text
 %% <pre>
-%%    %<em>Txt1</em>
-%%    ...
-%%    %<em>TxtN</em></pre>
+%%	%<em>Txt1</em>
+%%	...
+%%	%<em>TxtN</em></pre>
 %% `Padding' states the number of empty character positions
 %% to the left of the comment separating it horizontally from
 %% source code on the same line (if any). If `Padding' is
@@ -1247,7 +1247,7 @@ comment(Strings) ->
 -spec comment(padding(), [string()]) -> syntaxTree().
 
 comment(Pad, Strings) ->
-    tree(comment, #comment{pad = Pad, text = Strings}).
+	tree(comment, #comment{pad = Pad, text = Strings}).
 
 
 %% =====================================================================
@@ -1258,7 +1258,7 @@ comment(Pad, Strings) ->
 -spec comment_text(syntaxTree()) -> [string()].
 
 comment_text(Node) ->
-    (data(Node))#comment.text.
+	(data(Node))#comment.text.
 
 
 %% =====================================================================
@@ -1270,7 +1270,7 @@ comment_text(Node) ->
 -spec comment_padding(syntaxTree()) -> padding().
 
 comment_padding(Node) ->
-    (data(Node))#comment.pad.
+	(data(Node))#comment.pad.
 
 
 %% =====================================================================
@@ -1279,9 +1279,9 @@ comment_padding(Node) ->
 %% `Fi' is a form (see {@link is_form/1}, the result
 %% represents
 %% <pre>
-%%    <em>F1</em>
-%%    ...
-%%    <em>Fn</em></pre>
+%%	<em>F1</em>
+%%	...
+%%	<em>Fn</em></pre>
 %% where the `Fi' are separated by one or more line breaks. A
 %% node of type `form_list' is itself regarded as a source
 %% code form; see {@link flatten_form_list/1}.
@@ -1303,7 +1303,7 @@ comment_padding(Node) ->
 -spec form_list([syntaxTree()]) -> syntaxTree().
 
 form_list(Forms) ->
-    tree(form_list, Forms).
+	tree(form_list, Forms).
 
 
 %% =====================================================================
@@ -1314,7 +1314,7 @@ form_list(Forms) ->
 -spec form_list_elements(syntaxTree()) -> [syntaxTree()].
 
 form_list_elements(Node) ->
-    data(Node).
+	data(Node).
 
 
 %% =====================================================================
@@ -1328,20 +1328,20 @@ form_list_elements(Node) ->
 -spec flatten_form_list(syntaxTree()) -> syntaxTree().
 
 flatten_form_list(Node) ->
-    Fs = form_list_elements(Node),
-    Fs1 = lists:reverse(flatten_form_list_1(Fs, [])),
-    copy_attrs(Node, form_list(Fs1)).
+	Fs = form_list_elements(Node),
+	Fs1 = lists:reverse(flatten_form_list_1(Fs, [])),
+	copy_attrs(Node, form_list(Fs1)).
 
 flatten_form_list_1([F | Fs], As) ->
-    case type(F) of
+	case type(F) of
 	form_list ->
-	    As1 = flatten_form_list_1(form_list_elements(F), As),
-	    flatten_form_list_1(Fs, As1);
+		As1 = flatten_form_list_1(form_list_elements(F), As),
+		flatten_form_list_1(Fs, As1);
 	_ ->
-	    flatten_form_list_1(Fs, [F | As])
-    end;
+		flatten_form_list_1(Fs, [F | As])
+	end;
 flatten_form_list_1([], As) ->
-    As.
+	As.
 
 
 %% =====================================================================
@@ -1359,7 +1359,7 @@ flatten_form_list_1([], As) ->
 -spec text(string()) -> syntaxTree().
 
 text(String) ->
-    tree(text, String).
+	tree(text, String).
 
 
 %% =====================================================================
@@ -1370,7 +1370,7 @@ text(String) ->
 -spec text_string(syntaxTree()) -> string().
 
 text_string(Node) ->
-    data(Node).
+	data(Node).
 
 
 %% =====================================================================
@@ -1400,14 +1400,14 @@ text_string(Node) ->
 -spec variable(atom() | string()) -> syntaxTree().
 
 variable(Name) when is_atom(Name) ->
-    tree(variable, Name);
+	tree(variable, Name);
 variable(Name) ->
-    tree(variable, list_to_atom(Name)).
+	tree(variable, list_to_atom(Name)).
 
 revert_variable(Node) ->
-    Pos = get_pos(Node),
-    Name = variable_name(Node),
-    {var, Pos, Name}.
+	Pos = get_pos(Node),
+	Name = variable_name(Node),
+	{var, Pos, Name}.
 
 
 %% =====================================================================
@@ -1418,12 +1418,12 @@ revert_variable(Node) ->
 -spec variable_name(syntaxTree()) -> atom().
 
 variable_name(Node) ->
-    case unwrap(Node) of
+	case unwrap(Node) of
 	{var, _, Name} ->
-	    Name;
+		Name;
 	Node1 ->
-	    data(Node1)
-    end.
+		data(Node1)
+	end.
 
 
 %% =====================================================================
@@ -1434,12 +1434,12 @@ variable_name(Node) ->
 -spec variable_literal(syntaxTree()) -> string().
 
 variable_literal(Node) ->
-    case unwrap(Node) of
+	case unwrap(Node) of
 	{var, _, Name} ->
-	    atom_to_list(Name);
+		atom_to_list(Name);
 	Node1 ->
-	    atom_to_list(data(Node1))
-    end.
+		atom_to_list(data(Node1))
+	end.
 
 
 %% =====================================================================
@@ -1459,11 +1459,11 @@ variable_literal(Node) ->
 -spec underscore() -> syntaxTree().
 
 underscore() ->
-    tree(underscore, []).
+	tree(underscore, []).
 
 revert_underscore(Node) ->
-    Pos = get_pos(Node),
-    {var, Pos, '_'}.
+	Pos = get_pos(Node),
+	{var, Pos, '_'}.
 
 
 %% =====================================================================
@@ -1486,11 +1486,11 @@ revert_underscore(Node) ->
 -spec integer(integer()) -> syntaxTree().
 
 integer(Value) ->
-    tree(integer, Value).
+	tree(integer, Value).
 
 revert_integer(Node) ->
-    Pos = get_pos(Node),
-    {integer, Pos, integer_value(Node)}.
+	Pos = get_pos(Node),
+	{integer, Pos, integer_value(Node)}.
 
 
 %% =====================================================================
@@ -1502,14 +1502,14 @@ revert_integer(Node) ->
 -spec is_integer(syntaxTree(), integer()) -> boolean().
 
 is_integer(Node, Value) ->
-    case unwrap(Node) of
+	case unwrap(Node) of
 	{integer, _, Value} ->
-	    true;
+		true;
 	#tree{type = integer, data = Value} ->
-	    true;
+		true;
 	_ ->
-	    false
-    end.
+		false
+	end.
 
 
 %% =====================================================================
@@ -1520,12 +1520,12 @@ is_integer(Node, Value) ->
 -spec integer_value(syntaxTree()) -> integer().
 
 integer_value(Node) ->
-    case unwrap(Node) of
+	case unwrap(Node) of
 	{integer, _, Value} ->
-	    Value;
+		Value;
 	Node1 ->
-	    data(Node1)
-    end.
+		data(Node1)
+	end.
 
 
 %% =====================================================================
@@ -1536,7 +1536,7 @@ integer_value(Node) ->
 -spec integer_literal(syntaxTree()) -> string().
 
 integer_literal(Node) ->
-    integer_to_list(integer_value(Node)).
+	integer_to_list(integer_value(Node)).
 
 
 %% =====================================================================
@@ -1565,14 +1565,14 @@ integer_literal(Node) ->
 -spec float(float()) -> syntaxTree().
 
 float(Value) ->
-    make_float(Value).
+	make_float(Value).
 
 make_float(Value) ->
-    tree(float, Value).
+	tree(float, Value).
 
 revert_float(Node) ->
-    Pos = get_pos(Node),
-    {float, Pos, float_value(Node)}.
+	Pos = get_pos(Node),
+	{float, Pos, float_value(Node)}.
 
 
 %% =====================================================================
@@ -1585,12 +1585,12 @@ revert_float(Node) ->
 -spec float_value(syntaxTree()) -> float().
 
 float_value(Node) ->
-    case unwrap(Node) of
+	case unwrap(Node) of
 	{float, _, Value} ->
-	    Value;
+		Value;
 	Node1 ->
-	    data(Node1)
-    end.
+		data(Node1)
+	end.
 
 
 %% =====================================================================
@@ -1601,7 +1601,7 @@ float_value(Node) ->
 -spec float_literal(syntaxTree()) -> string().
 
 float_literal(Node) ->
-    float_to_list(float_value(Node)).
+	float_to_list(float_value(Node)).
 
 
 %% =====================================================================
@@ -1632,11 +1632,11 @@ float_literal(Node) ->
 -spec char(char()) -> syntaxTree().
 
 char(Char) ->
-    tree(char, Char).
+	tree(char, Char).
 
 revert_char(Node) ->
-    Pos = get_pos(Node),
-    {char, Pos, char_value(Node)}.
+	Pos = get_pos(Node),
+	{char, Pos, char_value(Node)}.
 
 
 %% =====================================================================
@@ -1648,14 +1648,14 @@ revert_char(Node) ->
 -spec is_char(syntaxTree(), char()) -> boolean().
 
 is_char(Node, Value) ->
-    case unwrap(Node) of
+	case unwrap(Node) of
 	{char, _, Value} ->
-	    true;
+		true;
 	#tree{type = char, data = Value} ->
-	    true;
+		true;
 	_ ->
-	    false
-    end.
+		false
+	end.
 
 
 %% =====================================================================
@@ -1666,12 +1666,12 @@ is_char(Node, Value) ->
 -spec char_value(syntaxTree()) -> char().
 
 char_value(Node) ->
-    case unwrap(Node) of
+	case unwrap(Node) of
 	{char, _, Char} ->
-	    Char;
+		Char;
 	Node1 ->
-	    data(Node1)
-    end.
+		data(Node1)
+	end.
 
 
 %% =====================================================================
@@ -1684,7 +1684,7 @@ char_value(Node) ->
 -spec char_literal(syntaxTree()) -> nonempty_string().
 
 char_literal(Node) ->
-    char_literal(Node, latin1).
+	char_literal(Node, latin1).
 
 
 %% =====================================================================
@@ -1700,11 +1700,11 @@ char_literal(Node) ->
 -spec char_literal(syntaxTree(), encoding()) -> nonempty_string().
 
 char_literal(Node, unicode) ->
-    io_lib:write_char(char_value(Node));
+	io_lib:write_char(char_value(Node));
 char_literal(Node, utf8) ->
-    io_lib:write_char(char_value(Node));
+	io_lib:write_char(char_value(Node));
 char_literal(Node, latin1) ->
-    io_lib:write_char_as_latin1(char_value(Node)).
+	io_lib:write_char_as_latin1(char_value(Node)).
 
 
 %% =====================================================================
@@ -1735,11 +1735,11 @@ char_literal(Node, latin1) ->
 -spec string(string()) -> syntaxTree().
 
 string(String) ->
-    tree(string, String).
+	tree(string, String).
 
 revert_string(Node) ->
-    Pos = get_pos(Node),
-    {string, Pos, string_value(Node)}.
+	Pos = get_pos(Node),
+	{string, Pos, string_value(Node)}.
 
 
 %% =====================================================================
@@ -1751,14 +1751,14 @@ revert_string(Node) ->
 -spec is_string(syntaxTree(), string()) -> boolean().
 
 is_string(Node, Value) ->
-    case unwrap(Node) of
+	case unwrap(Node) of
 	{string, _, Value} ->
-	    true;
+		true;
 	#tree{type = string, data = Value} ->
-	    true;
+		true;
 	_ ->
-	    false
-    end.
+		false
+	end.
 
 
 %% =====================================================================
@@ -1769,12 +1769,12 @@ is_string(Node, Value) ->
 -spec string_value(syntaxTree()) -> string().
 
 string_value(Node) ->
-    case unwrap(Node) of
+	case unwrap(Node) of
 	{string, _, List} ->
-	    List;
+		List;
 	Node1 ->
-	    data(Node1)
-    end.
+		data(Node1)
+	end.
 
 
 %% =====================================================================
@@ -1787,7 +1787,7 @@ string_value(Node) ->
 -spec string_literal(syntaxTree()) -> nonempty_string().
 
 string_literal(Node) ->
-    string_literal(Node, latin1).
+	string_literal(Node, latin1).
 
 
 %% =====================================================================
@@ -1801,11 +1801,11 @@ string_literal(Node) ->
 -spec string_literal(syntaxTree(), encoding()) -> nonempty_string().
 
 string_literal(Node, utf8) ->
-    io_lib:write_string(string_value(Node));
+	io_lib:write_string(string_value(Node));
 string_literal(Node, unicode) ->
-    io_lib:write_string(string_value(Node));
+	io_lib:write_string(string_value(Node));
 string_literal(Node, latin1) ->
-    io_lib:write_string_as_latin1(string_value(Node)).
+	io_lib:write_string_as_latin1(string_value(Node)).
 
 
 %% =====================================================================
@@ -1829,13 +1829,13 @@ string_literal(Node, latin1) ->
 -spec atom(atom() | string()) -> syntaxTree().
 
 atom(Name) when is_atom(Name) ->
-    tree(atom, Name);
+	tree(atom, Name);
 atom(Name) ->
-    tree(atom, list_to_atom(Name)).
+	tree(atom, list_to_atom(Name)).
 
 revert_atom(Node) ->
-    Pos = get_pos(Node),
-    {atom, Pos, atom_value(Node)}.
+	Pos = get_pos(Node),
+	{atom, Pos, atom_value(Node)}.
 
 
 %% =====================================================================
@@ -1847,14 +1847,14 @@ revert_atom(Node) ->
 -spec is_atom(syntaxTree(), atom()) -> boolean().
 
 is_atom(Node, Value) ->
-    case unwrap(Node) of
+	case unwrap(Node) of
 	{atom, _, Value} ->
-	    true;
+		true;
 	#tree{type = atom, data = Value} ->
-	    true;
+		true;
 	_ ->
-	    false
-    end.
+		false
+	end.
 
 
 %% =====================================================================
@@ -1865,12 +1865,12 @@ is_atom(Node, Value) ->
 -spec atom_value(syntaxTree()) -> atom().
 
 atom_value(Node) ->
-    case unwrap(Node) of
+	case unwrap(Node) of
 	{atom, _, Name} ->
-	    Name;
+		Name;
 	Node1 ->
-	    data(Node1)
-    end.
+		data(Node1)
+	end.
 
 
 %% =====================================================================
@@ -1881,7 +1881,7 @@ atom_value(Node) ->
 -spec atom_name(syntaxTree()) -> string().
 
 atom_name(Node) ->
-    atom_to_list(atom_value(Node)).
+	atom_to_list(atom_value(Node)).
 
 
 %% =====================================================================
@@ -1898,7 +1898,7 @@ atom_name(Node) ->
 -spec atom_literal(syntaxTree()) -> string().
 
 atom_literal(Node) ->
-    io_lib:write_atom(atom_value(Node)).
+	io_lib:write_atom(atom_value(Node)).
 
 
 %% =====================================================================
@@ -1926,11 +1926,11 @@ atom_literal(Node) ->
 -spec tuple([syntaxTree()]) -> syntaxTree().
 
 tuple(List) ->
-    tree(tuple, List).
+	tree(tuple, List).
 
 revert_tuple(Node) ->
-    Pos = get_pos(Node),
-    {tuple, Pos, tuple_elements(Node)}.
+	Pos = get_pos(Node),
+	{tuple, Pos, tuple_elements(Node)}.
 
 
 %% =====================================================================
@@ -1941,12 +1941,12 @@ revert_tuple(Node) ->
 -spec tuple_elements(syntaxTree()) -> [syntaxTree()].
 
 tuple_elements(Node) ->
-    case unwrap(Node) of
+	case unwrap(Node) of
 	{tuple, _, List} ->
-	    List;
+		List;
 	Node1 ->
-	    data(Node1)
-    end.
+		data(Node1)
+	end.
 
 
 %% =====================================================================
@@ -1962,7 +1962,7 @@ tuple_elements(Node) ->
 -spec tuple_size(syntaxTree()) -> non_neg_integer().
 
 tuple_size(Node) ->
-    length(tuple_elements(Node)).
+	length(tuple_elements(Node)).
 
 
 %% =====================================================================
@@ -1971,7 +1971,7 @@ tuple_size(Node) ->
 -spec list([syntaxTree()]) -> syntaxTree().
 
 list(List) ->
-    list(List, none).
+	list(List, none).
 
 
 %% =====================================================================
@@ -2021,8 +2021,8 @@ list(List) ->
 %% type(Node) = list
 %% data(Node) = #list{prefix :: Elements, suffix :: Tail}
 %%
-%%	    Elements = [syntaxTree()]
-%%	    Tail = none | syntaxTree()
+%%		Elements = [syntaxTree()]
+%%		Tail = none | syntaxTree()
 %%
 %% `erl_parse' representation:
 %%
@@ -2037,20 +2037,20 @@ list(List) ->
 -spec list([syntaxTree()], 'none' | syntaxTree()) -> syntaxTree().
 
 list([], none) ->
-    nil();
+	nil();
 list(Elements, Tail) when Elements =/= [] ->
-    tree(list, #list{prefix = Elements, suffix = Tail}).
+	tree(list, #list{prefix = Elements, suffix = Tail}).
 
 revert_list(Node) ->
-    Pos = get_pos(Node),
-    P = list_prefix(Node),
-    S = case list_suffix(Node) of
-	    none ->
+	Pos = get_pos(Node),
+	P = list_prefix(Node),
+	S = case list_suffix(Node) of
+		none ->
 		revert_nil(set_pos(nil(), Pos));
-	    S1 ->
+		S1 ->
 		S1
 	end,
-    lists:foldr(fun (X, A) ->
+	lists:foldr(fun (X, A) ->
 			{cons, Pos, X, A}
 		end,
 		S, P).
@@ -2072,11 +2072,11 @@ revert_list(Node) ->
 -spec nil() -> syntaxTree().
 
 nil() ->
-    tree(nil).
+	tree(nil).
 
 revert_nil(Node) ->
-    Pos = get_pos(Node),
-    {nil, Pos}.
+	Pos = get_pos(Node),
+	{nil, Pos}.
 
 
 %% =====================================================================
@@ -2091,18 +2091,18 @@ revert_nil(Node) ->
 -spec list_prefix(syntaxTree()) -> [syntaxTree()].
 
 list_prefix(Node) ->
-    case unwrap(Node) of
+	case unwrap(Node) of
 	{cons, _, Head, Tail} ->
-	    [Head | cons_prefix(Tail)];
+		[Head | cons_prefix(Tail)];
 	Node1 ->
-	    (data(Node1))#list.prefix
-    end.
+		(data(Node1))#list.prefix
+	end.
 
 %% collects sequences of conses; cf. cons_suffix/1 below
 cons_prefix({cons, _, Head, Tail}) ->
-    [Head | cons_prefix(Tail)];
+	[Head | cons_prefix(Tail)];
 cons_prefix(_) ->
-    [].
+	[].
 
 
 %% =====================================================================
@@ -2125,23 +2125,23 @@ cons_prefix(_) ->
 -spec list_suffix(syntaxTree()) -> 'none' | syntaxTree().
 
 list_suffix(Node) ->
-    case unwrap(Node) of
+	case unwrap(Node) of
 	{cons, _, _, Tail} ->
-	    case cons_suffix(Tail) of
+		case cons_suffix(Tail) of
 		{nil, _} ->
-		    none;
+			none;
 		Tail1 ->
-		    Tail1
-	    end;
+			Tail1
+		end;
 	Node1 ->
-	    (data(Node1))#list.suffix
-    end.
+		(data(Node1))#list.suffix
+	end.
 
 %% skips sequences of conses; cf. cons_prefix/1 above
 cons_suffix({cons, _, _, Tail}) ->
-    cons_suffix(Tail);
+	cons_suffix(Tail);
 cons_suffix(Tail) ->
-    Tail.
+	Tail.
 
 
 %% =====================================================================
@@ -2166,15 +2166,15 @@ cons_suffix(Tail) ->
 -spec cons(syntaxTree(), syntaxTree()) -> syntaxTree().
 
 cons(Head, Tail) ->
-    case type(Tail) of
+	case type(Tail) of
 	list ->
-	    copy_comments(Tail, list([Head | list_prefix(Tail)],
-				     list_suffix(Tail)));
+		copy_comments(Tail, list([Head | list_prefix(Tail)],
+					 list_suffix(Tail)));
 	nil ->
-	    copy_comments(Tail, list([Head]));
+		copy_comments(Tail, list([Head]));
 	_ ->
-	    list([Head], Tail)
-    end.
+		list([Head], Tail)
+	end.
 
 
 %% =====================================================================
@@ -2189,7 +2189,7 @@ cons(Head, Tail) ->
 -spec list_head(syntaxTree()) -> syntaxTree().
 
 list_head(Node) ->
-    hd(list_prefix(Node)).
+	hd(list_prefix(Node)).
 
 
 %% =====================================================================
@@ -2210,17 +2210,17 @@ list_head(Node) ->
 -spec list_tail(syntaxTree()) -> syntaxTree().
 
 list_tail(Node) ->
-    Tail = list_suffix(Node),
-    case tl(list_prefix(Node)) of
+	Tail = list_suffix(Node),
+	case tl(list_prefix(Node)) of
 	[] ->
-	    if Tail =:= none ->
-		    nil();    % implicit list terminator.
-	       true ->
-		    Tail
-	    end;
+		if Tail =:= none ->
+			nil();	% implicit list terminator.
+		   true ->
+			Tail
+		end;
 	Es ->
-	    list(Es, Tail)    % `Es' is nonempty.
-    end.
+		list(Es, Tail)	% `Es' is nonempty.
+	end.
 
 
 %% =====================================================================
@@ -2233,11 +2233,11 @@ list_tail(Node) ->
 -spec is_list_skeleton(syntaxTree()) -> boolean().
 
 is_list_skeleton(Node) ->
-    case type(Node) of
+	case type(Node) of
 	list -> true;
 	nil -> true;
 	_ -> false
-    end.
+	end.
 
 
 %% =====================================================================
@@ -2263,19 +2263,19 @@ is_list_skeleton(Node) ->
 -spec is_proper_list(syntaxTree()) -> boolean().
 
 is_proper_list(Node) ->
-    case type(Node) of
+	case type(Node) of
 	list ->
-	    case list_suffix(Node) of
+		case list_suffix(Node) of
 		none ->
-		    true;
+			true;
 		Tail ->
-		    is_proper_list(Tail)
-	    end;
+			is_proper_list(Tail)
+		end;
 	nil ->
-	    true;
+		true;
 	_ ->
-	    false
-    end.
+		false
+	end.
 
 
 %% =====================================================================
@@ -2291,21 +2291,21 @@ is_proper_list(Node) ->
 -spec list_elements(syntaxTree()) -> [syntaxTree()].
 
 list_elements(Node) ->
-    lists:reverse(list_elements(Node, [])).
+	lists:reverse(list_elements(Node, [])).
 
 list_elements(Node, As) ->
-    case type(Node) of
+	case type(Node) of
 	list ->
-	    As1 = lists:reverse(list_prefix(Node)) ++ As,
-	    case list_suffix(Node) of
+		As1 = lists:reverse(list_prefix(Node)) ++ As,
+		case list_suffix(Node) of
 		none ->
-		    As1;
+			As1;
 		Tail ->
-		    list_elements(Tail, As1)
-	    end;
+			list_elements(Tail, As1)
+		end;
 	nil ->
-	    As
-    end.
+		As
+	end.
 
 
 %% =====================================================================
@@ -2326,21 +2326,21 @@ list_elements(Node, As) ->
 -spec list_length(syntaxTree()) -> non_neg_integer().
 
 list_length(Node) ->
-    list_length(Node, 0).
+	list_length(Node, 0).
 
 list_length(Node, A) ->
-    case type(Node) of
+	case type(Node) of
 	list ->
-	    A1 = length(list_prefix(Node)) + A,
-	    case list_suffix(Node) of
+		A1 = length(list_prefix(Node)) + A,
+		case list_suffix(Node) of
 		none ->
-		    A1;
+			A1;
 		Tail ->
-		    list_length(Tail, A1)
-	    end;
+			list_length(Tail, A1)
+		end;
 	nil ->
-	    A
-    end.
+		A
+	end.
 
 
 %% =====================================================================
@@ -2361,23 +2361,23 @@ list_length(Node, A) ->
 -spec normalize_list(syntaxTree()) -> syntaxTree().
 
 normalize_list(Node) ->
-    case type(Node) of
+	case type(Node) of
 	list ->
-	    P = list_prefix(Node),
-	    case list_suffix(Node) of
+		P = list_prefix(Node),
+		case list_suffix(Node) of
 		none ->
-		    copy_attrs(Node, normalize_list_1(P, nil()));
+			copy_attrs(Node, normalize_list_1(P, nil()));
 		Tail ->
-		    Tail1 = normalize_list(Tail),
-		    copy_attrs(Node, normalize_list_1(P, Tail1))
-	    end;
+			Tail1 = normalize_list(Tail),
+			copy_attrs(Node, normalize_list_1(P, Tail1))
+		end;
 	_ ->
-	    Node
-    end.
+		Node
+	end.
 
 normalize_list_1(Es, Tail) ->
-    lists:foldr(fun (X, A) ->
-			list([X], A)    % not `cons'!
+	lists:foldr(fun (X, A) ->
+			list([X], A)	% not `cons'!
 		end,
 		Tail, Es).
 
@@ -2398,33 +2398,33 @@ normalize_list_1(Es, Tail) ->
 -spec compact_list(syntaxTree()) -> syntaxTree().
 
 compact_list(Node) ->
-    case type(Node) of
+	case type(Node) of
 	list ->
-	    case list_suffix(Node) of
+		case list_suffix(Node) of
 		none ->
-		    Node;
+			Node;
 		Tail ->
-		    case type(Tail) of
+			case type(Tail) of
 			list ->
-			    Tail1 = compact_list(Tail),
-			    Node1 = list(list_prefix(Node) ++
+				Tail1 = compact_list(Tail),
+				Node1 = list(list_prefix(Node) ++
 					 list_prefix(Tail1),
 					 list_suffix(Tail1)),
-			    join_comments(Tail1,
+				join_comments(Tail1,
 					  copy_attrs(Node,
-						     Node1));
+							 Node1));
 			nil ->
-			    Node1 = list(list_prefix(Node)),
-			    join_comments(Tail,
+				Node1 = list(list_prefix(Node)),
+				join_comments(Tail,
 					  copy_attrs(Node,
-						     Node1));
+							 Node1));
 			_ ->
-			    Node 
-		    end
-	    end;
+				Node
+			end
+		end;
 	_ ->
-	    Node
-    end.
+		Node
+	end.
 
 
 %% =====================================================================
@@ -2454,11 +2454,11 @@ compact_list(Node) ->
 -spec binary([syntaxTree()]) -> syntaxTree().
 
 binary(List) ->
-    tree(binary, List).
+	tree(binary, List).
 
 revert_binary(Node) ->
-    Pos = get_pos(Node),
-    {bin, Pos, binary_fields(Node)}.
+	Pos = get_pos(Node),
+	{bin, Pos, binary_fields(Node)}.
 
 
 %% =====================================================================
@@ -2470,12 +2470,12 @@ revert_binary(Node) ->
 -spec binary_fields(syntaxTree()) -> [syntaxTree()].
 
 binary_fields(Node) ->
-    case unwrap(Node) of
+	case unwrap(Node) of
 	{bin, _, List} ->
-	    List;
+		List;
 	Node1 ->
-	    data(Node1)
-    end.
+		data(Node1)
+	end.
 
 
 %% =====================================================================
@@ -2484,7 +2484,7 @@ binary_fields(Node) ->
 -spec binary_field(syntaxTree()) -> syntaxTree().
 
 binary_field(Body) ->
-    binary_field(Body, []).
+	binary_field(Body, []).
 
 
 %% =====================================================================
@@ -2501,12 +2501,12 @@ binary_field(Body) ->
 %% @see size_qualifier/2
 
 -spec binary_field(syntaxTree(), 'none' | syntaxTree(), [syntaxTree()]) ->
-        syntaxTree().
+		syntaxTree().
 
 binary_field(Body, none, Types) ->
-    binary_field(Body, Types);
+	binary_field(Body, Types);
 binary_field(Body, Size, Types) ->
-    binary_field(size_qualifier(Body, Size), Types).
+	binary_field(size_qualifier(Body, Size), Types).
 
 
 %% =====================================================================
@@ -2528,8 +2528,8 @@ binary_field(Body, Size, Types) ->
 %% type(Node) = binary_field
 %% data(Node) = #binary_field{body :: Body, types :: Types}
 %%
-%%	    Body = syntaxTree()
-%%	    Types = [syntaxTree()]
+%%		Body = syntaxTree()
+%%		Types = [syntaxTree()]
 %%
 %% `erl_parse' representation:
 %%
@@ -2543,27 +2543,27 @@ binary_field(Body, Size, Types) ->
 -spec binary_field(syntaxTree(), [syntaxTree()]) -> syntaxTree().
 
 binary_field(Body, Types) ->
-    tree(binary_field, #binary_field{body = Body, types = Types}).
+	tree(binary_field, #binary_field{body = Body, types = Types}).
 
 revert_binary_field(Node) ->
-    Pos = get_pos(Node),
-    Body = binary_field_body(Node),
-    {Expr, Size} = case type(Body) of
-		       size_qualifier ->
+	Pos = get_pos(Node),
+	Body = binary_field_body(Node),
+	{Expr, Size} = case type(Body) of
+			   size_qualifier ->
 			   %% Note that size qualifiers are not
 			   %% revertible out of context.
 			   {size_qualifier_body(Body),
-			    size_qualifier_argument(Body)};
-		       _ ->
+				size_qualifier_argument(Body)};
+			   _ ->
 			   {Body, default}
 		   end,
-    Types = case binary_field_types(Node) of
+	Types = case binary_field_types(Node) of
 		[] ->
-		    default;
+			default;
 		Ts ->
-		    fold_binary_field_types(Ts)
-	    end,
-    {bin_element, Pos, Expr, Size, Types}.
+			fold_binary_field_types(Ts)
+		end,
+	{bin_element, Pos, Expr, Size, Types}.
 
 
 %% =====================================================================
@@ -2574,16 +2574,16 @@ revert_binary_field(Node) ->
 -spec binary_field_body(syntaxTree()) -> syntaxTree().
 
 binary_field_body(Node) ->
-    case unwrap(Node) of
+	case unwrap(Node) of
 	{bin_element, _, Body, Size, _} ->
-	    if Size =:= default ->
-		    Body;
-	       true ->
-		    size_qualifier(Body, Size)
-	    end;
+		if Size =:= default ->
+			Body;
+		   true ->
+			size_qualifier(Body, Size)
+		end;
 	Node1 ->
-	    (data(Node1))#binary_field.body
-    end.
+		(data(Node1))#binary_field.body
+	end.
 
 
 %% =====================================================================
@@ -2597,16 +2597,16 @@ binary_field_body(Node) ->
 -spec binary_field_types(syntaxTree()) -> [syntaxTree()].
 
 binary_field_types(Node) ->
-    case unwrap(Node) of
+	case unwrap(Node) of
 	{bin_element, Pos, _, _, Types} ->
-	    if Types =:= default ->
-		    [];
-	       true ->
-		    unfold_binary_field_types(Types, Pos)
-	    end;
+		if Types =:= default ->
+			[];
+		   true ->
+			unfold_binary_field_types(Types, Pos)
+		end;
 	Node1 ->
-	    (data(Node1))#binary_field.types
-    end.
+		(data(Node1))#binary_field.types
+	end.
 
 
 %% =====================================================================
@@ -2625,22 +2625,22 @@ binary_field_types(Node) ->
 -spec binary_field_size(syntaxTree()) -> 'none' | syntaxTree().
 
 binary_field_size(Node) ->
-    case unwrap(Node) of
+	case unwrap(Node) of
 	{bin_element, _, _, Size, _} ->
-	    if Size =:= default ->
-		    none;
-	       true ->
-		    Size
-	    end;
+		if Size =:= default ->
+			none;
+		   true ->
+			Size
+		end;
 	Node1 ->
-	    Body = (data(Node1))#binary_field.body,
-	    case type(Body) of
+		Body = (data(Node1))#binary_field.body,
+		case type(Body) of
 		size_qualifier ->
-		    size_qualifier_argument(Body);
+			size_qualifier_argument(Body);
 		_ ->
-		    none
-	    end
-    end.
+			none
+		end
+	end.
 
 
 %% =====================================================================
@@ -2660,7 +2660,7 @@ binary_field_size(Node) ->
 -spec size_qualifier(syntaxTree(), syntaxTree()) -> syntaxTree().
 
 size_qualifier(Body, Size) ->
-    tree(size_qualifier,
+	tree(size_qualifier,
 	 #size_qualifier{body = Body, size = Size}).
 
 
@@ -2672,7 +2672,7 @@ size_qualifier(Body, Size) ->
 -spec size_qualifier_body(syntaxTree()) -> syntaxTree().
 
 size_qualifier_body(Node) ->
-    (data(Node))#size_qualifier.body.
+	(data(Node))#size_qualifier.body.
 
 
 %% =====================================================================
@@ -2684,7 +2684,7 @@ size_qualifier_body(Node) ->
 -spec size_qualifier_argument(syntaxTree()) -> syntaxTree().
 
 size_qualifier_argument(Node) ->
-    (data(Node))#size_qualifier.size.
+	(data(Node))#size_qualifier.size.
 
 
 %% =====================================================================
@@ -2717,12 +2717,12 @@ size_qualifier_argument(Node) ->
 -spec error_marker(term()) -> syntaxTree().
 
 error_marker(Error) ->
-    tree(error_marker, Error).
+	tree(error_marker, Error).
 
 revert_error_marker(Node) ->
-    %% Note that the position information of the node itself is not
-    %% preserved.
-    {error, error_marker_info(Node)}.
+	%% Note that the position information of the node itself is not
+	%% preserved.
+	{error, error_marker_info(Node)}.
 
 
 %% =====================================================================
@@ -2733,12 +2733,12 @@ revert_error_marker(Node) ->
 -spec error_marker_info(syntaxTree()) -> term().
 
 error_marker_info(Node) ->
-    case unwrap(Node) of
+	case unwrap(Node) of
 	{error, Error} ->
-	    Error;
+		Error;
 	T ->
-	    data(T)
-    end.
+		data(T)
+	end.
 
 
 %% =====================================================================
@@ -2771,12 +2771,12 @@ error_marker_info(Node) ->
 -spec warning_marker(term()) -> syntaxTree().
 
 warning_marker(Warning) ->
-    tree(warning_marker, Warning).
+	tree(warning_marker, Warning).
 
 revert_warning_marker(Node) ->
-    %% Note that the position information of the node itself is not
-    %% preserved.
-    {warning, warning_marker_info(Node)}.
+	%% Note that the position information of the node itself is not
+	%% preserved.
+	{warning, warning_marker_info(Node)}.
 
 
 %% =====================================================================
@@ -2787,12 +2787,12 @@ revert_warning_marker(Node) ->
 -spec warning_marker_info(syntaxTree()) -> term().
 
 warning_marker_info(Node) ->
-    case unwrap(Node) of
+	case unwrap(Node) of
 	{warning, Error} ->
-	    Error;
+		Error;
 	T ->
-	    data(T)
-    end.
+		data(T)
+	end.
 
 
 %% =====================================================================
@@ -2819,11 +2819,11 @@ warning_marker_info(Node) ->
 -spec eof_marker() -> syntaxTree().
 
 eof_marker() ->
-    tree(eof_marker).
+	tree(eof_marker).
 
 revert_eof_marker(Node) ->
-    Pos = get_pos(Node),
-    {eof, Pos}.
+	Pos = get_pos(Node),
+	{eof, Pos}.
 
 
 %% =====================================================================
@@ -2832,7 +2832,7 @@ revert_eof_marker(Node) ->
 -spec attribute(syntaxTree()) -> syntaxTree().
 
 attribute(Name) ->
-    attribute(Name, none).
+	attribute(Name, none).
 
 
 %% =====================================================================
@@ -2867,7 +2867,7 @@ attribute(Name) ->
 %%
 %% `erl_parse' representation:
 %%
-%% {attribute, Pos, module, {Name,Vars}}
+%% {attribute, Pos, module, {Name, Vars}}
 %% {attribute, Pos, module, Name}
 %%
 %%	Name = atom() | [atom()]
@@ -2905,7 +2905,7 @@ attribute(Name) ->
 %%	Info = {Name, [Entries]}
 %%	Name = atom()
 %%	Entries = {record_field, Pos, atom()}
-%%		| {record_field, Pos, atom(), erl_parse()}
+%%		 | {record_field, Pos, atom(), erl_parse()}
 %%
 %%	Representing `-record(Name, {<F1>, ..., <Fn>}).', if `Info' is
 %%	`{Name, [D1, ..., D1]}', where each `Fi' is either `Ai = <Ei>',
@@ -2923,120 +2923,120 @@ attribute(Name) ->
 -spec attribute(syntaxTree(), 'none' | [syntaxTree()]) -> syntaxTree().
 
 attribute(Name, Args) ->
-    tree(attribute, #attribute{name = Name, args = Args}).
+	tree(attribute, #attribute{name = Name, args = Args}).
 
 revert_attribute(Node) ->
-    Name = attribute_name(Node),
-    Args = attribute_arguments(Node),
-    Pos = get_pos(Node),
-    case type(Name) of
+	Name = attribute_name(Node),
+	Args = attribute_arguments(Node),
+	Pos = get_pos(Node),
+	case type(Name) of
 	atom ->
-	    revert_attribute_1(atom_value(Name), Args, Pos, Node);
+		revert_attribute_1(atom_value(Name), Args, Pos, Node);
 	_ ->
-	    Node
-    end.
+		Node
+	end.
 
 %% All the checking makes this part a bit messy:
 
 revert_attribute_1(module, [M], Pos, Node) ->
-    case revert_module_name(M) of
-	{ok, A} -> 
-	    {attribute, Pos, module, A};
+	case revert_module_name(M) of
+	{ok, A} ->
+		{attribute, Pos, module, A};
 	error -> Node
-    end;
+	end;
 revert_attribute_1(module, [M, List], Pos, Node) ->
-    Vs = case is_list_skeleton(List) of
-	     true ->
+	Vs = case is_list_skeleton(List) of
+		 true ->
 		 case is_proper_list(List) of
-		     true ->
+			 true ->
 			 fold_variable_names(list_elements(List));
-		     false ->
+			 false ->
 			 Node
 		 end;
-	     false ->
+		 false ->
 		 Node
 	 end,
-    case revert_module_name(M) of
-	{ok, A} -> 
-	    {attribute, Pos, module, {A, Vs}};
+	case revert_module_name(M) of
+	{ok, A} ->
+		{attribute, Pos, module, {A, Vs}};
 	error -> Node
-    end;
+	end;
 revert_attribute_1(export, [List], Pos, Node) ->
-    case is_list_skeleton(List) of
+	case is_list_skeleton(List) of
 	true ->
-	    case is_proper_list(List) of
+		case is_proper_list(List) of
 		true ->
-		    Fs = fold_function_names(list_elements(List)),
-		    {attribute, Pos, export, Fs};
+			Fs = fold_function_names(list_elements(List)),
+			{attribute, Pos, export, Fs};
 		false ->
-		    Node
-	    end;
+			Node
+		end;
 	false ->
-	    Node
-    end;
+		Node
+	end;
 revert_attribute_1(import, [M], Pos, Node) ->
-    case revert_module_name(M) of
+	case revert_module_name(M) of
 	{ok, A} -> {attribute, Pos, import, A};
 	error -> Node
-    end;
+	end;
 revert_attribute_1(import, [M, List], Pos, Node) ->
-    case revert_module_name(M) of
+	case revert_module_name(M) of
 	{ok, A} ->
-	    case is_list_skeleton(List) of
+		case is_list_skeleton(List) of
 		true ->
-		    case is_proper_list(List) of
+			case is_proper_list(List) of
 			true ->
-			    Fs = fold_function_names(
+				Fs = fold_function_names(
 				   list_elements(List)),
-			    {attribute, Pos, import, {A, Fs}};
+				{attribute, Pos, import, {A, Fs}};
 			false ->
-			    Node
-		    end;
+				Node
+			end;
 		false ->
-		    Node
-	    end;
+			Node
+		end;
 	error ->
-	    Node
-    end;
+		Node
+	end;
 revert_attribute_1(file, [A, Line], Pos, Node) ->
-    case type(A) of
+	case type(A) of
 	string ->
-	    case type(Line) of
+		case type(Line) of
 		integer ->
-		    {attribute, Pos, file,
-		     {concrete(A), concrete(Line)}};
+			{attribute, Pos, file,
+			 {concrete(A), concrete(Line)}};
 		_ ->
-		    Node
-	    end;
+			Node
+		end;
 	_ ->
-	    Node
-    end;
+		Node
+	end;
 revert_attribute_1(record, [A, Tuple], Pos, Node) ->
-    case type(A) of
+	case type(A) of
 	atom ->
-	    case type(Tuple) of
+		case type(Tuple) of
 		tuple ->
-		    Fs = fold_record_fields(
+			Fs = fold_record_fields(
 			   tuple_elements(Tuple)),
-		    {attribute, Pos, record, {concrete(A), Fs}};
+			{attribute, Pos, record, {concrete(A), Fs}};
 		_ ->
-		    Node
-	    end;
+			Node
+		end;
 	_ ->
-	    Node
-    end;
+		Node
+	end;
 revert_attribute_1(N, [T], Pos, _) ->
-    {attribute, Pos, N, concrete(T)};
+	{attribute, Pos, N, concrete(T)};
 revert_attribute_1(_, _, _, Node) ->
-    Node.
+	Node.
 
 revert_module_name(A) ->
-    case type(A) of
+	case type(A) of
 	atom ->
-	    {ok, concrete(A)};
+		{ok, concrete(A)};
 	_ ->
-	    error
-    end.
+		error
+	end.
 
 
 %% =====================================================================
@@ -3047,12 +3047,12 @@ revert_module_name(A) ->
 -spec attribute_name(syntaxTree()) -> syntaxTree().
 
 attribute_name(Node) ->
-    case unwrap(Node) of
+	case unwrap(Node) of
 	{attribute, Pos, Name, _} ->
-	    set_pos(atom(Name), Pos);
+		set_pos(atom(Name), Pos);
 	Node1 ->
-	    (data(Node1))#attribute.name
-    end.
+		(data(Node1))#attribute.name
+	end.
 
 
 %% =====================================================================
@@ -3068,50 +3068,50 @@ attribute_name(Node) ->
 -spec attribute_arguments(syntaxTree()) -> none | [syntaxTree()].
 
 attribute_arguments(Node) ->
-    case unwrap(Node) of
+	case unwrap(Node) of
 	{attribute, Pos, Name, Data} ->
-	    case Name of
+		case Name of
 		module ->
-		    {M1, Vs} =
+			{M1, Vs} =
 			case Data of
-			    {M0, Vs0} ->
+				{M0, Vs0} ->
 				{M0, unfold_variable_names(Vs0, Pos)};
-			    M0 ->
+				M0 ->
 				{M0, none}
 			end,
-		    M2 = atom(M1),
-		    M = set_pos(M2, Pos),
-		    if Vs == none -> [M];
-		       true -> [M, set_pos(list(Vs), Pos)]
-		    end;
+			M2 = atom(M1),
+			M = set_pos(M2, Pos),
+			if Vs == none -> [M];
+			   true -> [M, set_pos(list(Vs), Pos)]
+			end;
 		export ->
-		    [set_pos(
-		       list(unfold_function_names(Data, Pos)),
-		       Pos)];
+			[set_pos(
+			   list(unfold_function_names(Data, Pos)),
+			   Pos)];
 		import ->
-		    {Module, Imports} = Data,
-		    [set_pos(atom(Module), Pos),
-		     set_pos(
-		       list(unfold_function_names(Imports, Pos)),
-		       Pos)];
+			{Module, Imports} = Data,
+			[set_pos(atom(Module), Pos),
+			 set_pos(
+			   list(unfold_function_names(Imports, Pos)),
+			   Pos)];
 		file ->
-		    {File, Line} = Data,
-		    [set_pos(string(File), Pos),
-		     set_pos(integer(Line), Pos)];
+			{File, Line} = Data,
+			[set_pos(string(File), Pos),
+			 set_pos(integer(Line), Pos)];
 		record ->
-		    %% Note that we create a tuple as container
-		    %% for the second argument!
-		    {Type, Entries} = Data,
-		    [set_pos(atom(Type), Pos),
-		     set_pos(tuple(unfold_record_fields(Entries)),
-			     Pos)];
+			%% Note that we create a tuple as container
+			%% for the second argument!
+			{Type, Entries} = Data,
+			[set_pos(atom(Type), Pos),
+			 set_pos(tuple(unfold_record_fields(Entries)),
+				 Pos)];
 		_ ->
-		    %% Standard single-term generic attribute.
-		    [set_pos(abstract(Data), Pos)]
-	    end;
+			%% Standard single-term generic attribute.
+			[set_pos(abstract(Data), Pos)]
+		end;
 	Node1 ->
-	    (data(Node1))#attribute.args
-    end.
+		(data(Node1))#attribute.args
+	end.
 
 
 %% =====================================================================
@@ -3131,7 +3131,7 @@ attribute_arguments(Node) ->
 -spec arity_qualifier(syntaxTree(), syntaxTree()) -> syntaxTree().
 
 arity_qualifier(Body, Arity) ->
-    tree(arity_qualifier,
+	tree(arity_qualifier,
 	 #arity_qualifier{body = Body, arity = Arity}).
 
 
@@ -3143,7 +3143,7 @@ arity_qualifier(Body, Arity) ->
 -spec arity_qualifier_body(syntaxTree()) -> syntaxTree().
 
 arity_qualifier_body(Node) ->
-    (data(Node))#arity_qualifier.body.
+	(data(Node))#arity_qualifier.body.
 
 
 %% =====================================================================
@@ -3155,7 +3155,7 @@ arity_qualifier_body(Node) ->
 -spec arity_qualifier_argument(syntaxTree()) -> syntaxTree().
 
 arity_qualifier_argument(Node) ->
-    (data(Node))#arity_qualifier.arity.
+	(data(Node))#arity_qualifier.arity.
 
 
 %% =====================================================================
@@ -3181,14 +3181,14 @@ arity_qualifier_argument(Node) ->
 -spec module_qualifier(syntaxTree(), syntaxTree()) -> syntaxTree().
 
 module_qualifier(Module, Body) ->
-    tree(module_qualifier,
+	tree(module_qualifier,
 	 #module_qualifier{module = Module, body = Body}).
 
 revert_module_qualifier(Node) ->
-    Pos = get_pos(Node),
-    Module = module_qualifier_argument(Node),
-    Body = module_qualifier_body(Node),
-    {remote, Pos, Module, Body}.
+	Pos = get_pos(Node),
+	Module = module_qualifier_argument(Node),
+	Body = module_qualifier_body(Node),
+	{remote, Pos, Module, Body}.
 
 
 %% =====================================================================
@@ -3200,12 +3200,12 @@ revert_module_qualifier(Node) ->
 -spec module_qualifier_argument(syntaxTree()) -> syntaxTree().
 
 module_qualifier_argument(Node) ->
-    case unwrap(Node) of
+	case unwrap(Node) of
 	{remote, _, Module, _} ->
-	    Module;
+		Module;
 	Node1 ->
-	    (data(Node1))#module_qualifier.module
-    end.
+		(data(Node1))#module_qualifier.module
+	end.
 
 
 %% =====================================================================
@@ -3216,12 +3216,12 @@ module_qualifier_argument(Node) ->
 -spec module_qualifier_body(syntaxTree()) -> syntaxTree().
 
 module_qualifier_body(Node) ->
-    case unwrap(Node) of
+	case unwrap(Node) of
 	{remote, _, _, Body} ->
-	    Body;
+		Body;
 	Node1 ->
-	    (data(Node1))#module_qualifier.body
-    end.
+		(data(Node1))#module_qualifier.body
+	end.
 
 
 %% =====================================================================
@@ -3243,7 +3243,7 @@ module_qualifier_body(Node) ->
 %% @see rule/2
 
 %% Don't use the name 'function' for this record, to avoid confusion with
-%% the tuples on the form {function,Name,Arity} used by erl_parse.
+%% the tuples on the form {function, Name, Arity} used by erl_parse.
 -record(func, {name :: syntaxTree(), clauses :: [syntaxTree()]}).
 
 %% type(Node) = function
@@ -3274,19 +3274,19 @@ module_qualifier_body(Node) ->
 -spec function(syntaxTree(), [syntaxTree()]) -> syntaxTree().
 
 function(Name, Clauses) ->
-    tree(function, #func{name = Name, clauses = Clauses}).
+	tree(function, #func{name = Name, clauses = Clauses}).
 
 revert_function(Node) ->
-    Name = function_name(Node),
-    Clauses = [revert_clause(C) || C <- function_clauses(Node)],
-    Pos = get_pos(Node),
-    case type(Name) of
+	Name = function_name(Node),
+	Clauses = [revert_clause(C) || C <- function_clauses(Node)],
+	Pos = get_pos(Node),
+	case type(Name) of
 	atom ->
-	    A = function_arity(Node),
-	    {function, Pos, concrete(Name), A, Clauses};
+		A = function_arity(Node),
+		{function, Pos, concrete(Name), A, Clauses};
 	_ ->
-	    Node
-    end.
+		Node
+	end.
 
 
 %% =====================================================================
@@ -3297,12 +3297,12 @@ revert_function(Node) ->
 -spec function_name(syntaxTree()) -> syntaxTree().
 
 function_name(Node) ->
-    case unwrap(Node) of
+	case unwrap(Node) of
 	{function, Pos, Name, _, _} ->
-	    set_pos(atom(Name), Pos);
+		set_pos(atom(Name), Pos);
 	Node1 ->
-	    (data(Node1))#func.name
-    end.
+		(data(Node1))#func.name
+	end.
 
 
 %% =====================================================================
@@ -3313,12 +3313,12 @@ function_name(Node) ->
 -spec function_clauses(syntaxTree()) -> [syntaxTree()].
 
 function_clauses(Node) ->
-    case unwrap(Node) of
+	case unwrap(Node) of
 	{function, _, _, _, Clauses} ->
-	    Clauses;
+		Clauses;
 	Node1 ->
-	    (data(Node1))#func.clauses
-    end.
+		(data(Node1))#func.clauses
+	end.
 
 
 %% =====================================================================
@@ -3339,9 +3339,9 @@ function_clauses(Node) ->
 -spec function_arity(syntaxTree()) -> arity().
 
 function_arity(Node) ->
-    %% Note that this never accesses the arity field of `erl_parse'
-    %% function nodes.
-    length(clause_patterns(hd(function_clauses(Node)))).
+	%% Note that this never accesses the arity field of `erl_parse'
+	%% function nodes.
+	length(clause_patterns(hd(function_clauses(Node)))).
 
 
 %% =====================================================================
@@ -3352,7 +3352,7 @@ function_arity(Node) ->
 -spec clause(guard(), [syntaxTree()]) -> syntaxTree().
 
 clause(Guard, Body) ->
-    clause([], Guard, Body).
+	clause([], Guard, Body).
 
 
 %% =====================================================================
@@ -3369,14 +3369,14 @@ clause(Guard, Body) ->
 %% of the following:
 %% <ul>
 %%   <li>An empty list `[]'. This is equivalent to passing
-%%       `none'.</li>
+%%	   `none'.</li>
 %%   <li>A nonempty list `[E1, ..., Ej]' of syntax trees.
-%%       This is equivalent to passing `conjunction([E1, ...,
-%%       Ej])'.</li>
+%%	   This is equivalent to passing `conjunction([E1, ...,
+%%	   Ej])'.</li>
 %%   <li>A nonempty list of lists of syntax trees `[[E1_1, ...,
-%%       E1_k1], ..., [Ej_1, ..., Ej_kj]]', which is equivalent
-%%       to passing `disjunction([conjunction([E1_1, ...,
-%%       E1_k1]), ..., conjunction([Ej_1, ..., Ej_kj])])'.</li>
+%%	   E1_k1], ..., [Ej_1, ..., Ej_kj]]', which is equivalent
+%%	   to passing `disjunction([conjunction([E1_1, ...,
+%%	   E1_k1]), ..., conjunction([Ej_1, ..., Ej_kj])])'.</li>
 %% </ul>
 %%
 %% @see clause/2
@@ -3385,12 +3385,12 @@ clause(Guard, Body) ->
 %% @see clause_body/1
 
 -record(clause, {patterns :: [syntaxTree()],
-		 guard    :: guard(),
-		 body     :: [syntaxTree()]}).
+		 guard	:: guard(),
+		 body	 :: [syntaxTree()]}).
 
 %% type(Node) = clause
 %% data(Node) = #clause{patterns :: Patterns, guard :: Guard,
-%%		        body :: Body}
+%%				body :: Body}
 %%
 %%	Patterns = [syntaxTree()]
 %%	Guard = syntaxTree() | none
@@ -3416,80 +3416,80 @@ clause(Guard, Body) ->
 -spec clause([syntaxTree()], guard(), [syntaxTree()]) -> syntaxTree().
 
 clause(Patterns, Guard, Body) ->
-    Guard1 = case Guard of
+	Guard1 = case Guard of
 		 [] ->
-		     none;
+			 none;
 		 [X | _] when is_list(X) ->
-		     disjunction(conjunction_list(Guard));
+			 disjunction(conjunction_list(Guard));
 		 [_ | _] ->
-		     %% Handle older forms also.
-		     conjunction(Guard);
+			 %% Handle older forms also.
+			 conjunction(Guard);
 		 _ ->
-		     %% This should be `none' or a syntax tree.
-		     Guard
-	     end,
-    tree(clause, #clause{patterns = Patterns, guard = Guard1,
+			 %% This should be `none' or a syntax tree.
+			 Guard
+		 end,
+	tree(clause, #clause{patterns = Patterns, guard = Guard1,
 			 body = Body}).
 
 conjunction_list([L | Ls]) ->
-    [conjunction(L) | conjunction_list(Ls)];
+	[conjunction(L) | conjunction_list(Ls)];
 conjunction_list([]) ->
-    [].
+	[].
 
 revert_clause(Node) ->
-    Pos = get_pos(Node),
-    Guard = case clause_guard(Node) of
+	Pos = get_pos(Node),
+	Guard = case clause_guard(Node) of
 		none ->
-		    [];
+			[];
 		E ->
-		    case type(E) of
+			case type(E) of
 			disjunction ->
-			    revert_clause_disjunction(E);
+				revert_clause_disjunction(E);
 			conjunction ->
-			    %% Only the top level expression is
-			    %% unfolded here; no recursion.
-			    [conjunction_body(E)];
+				%% Only the top level expression is
+				%% unfolded here; no recursion.
+				[conjunction_body(E)];
 			_ ->
-			    [[E]]	% a single expression
-		    end
-	    end,
-    {clause, Pos, clause_patterns(Node), Guard,
-     clause_body(Node)}.
+				[[E]]	% a single expression
+			end
+		end,
+	{clause, Pos, clause_patterns(Node), Guard,
+	 clause_body(Node)}.
 
 revert_clause_disjunction(D) ->
-    %% We handle conjunctions within a disjunction, but only at
-    %% the top level; no recursion.
-    [case type(E) of
+	%% We handle conjunctions within a disjunction, but only at
+	%% the top level; no recursion.
+	[case type(E) of
 	 conjunction ->
-	     conjunction_body(E);
+		 conjunction_body(E);
 	 _ ->
-	     [E]
-     end
-     || E <- disjunction_body(D)].
+		 [E]
+	 end
+ || E <- disjunction_body(D)].
 
 revert_try_clause(Node) ->
-    fold_try_clause(revert_clause(Node)).
+	fold_try_clause(revert_clause(Node)).
 
 fold_try_clause({clause, Pos, [P], Guard, Body}) ->
-    P1 = case type(P) of
-	     class_qualifier ->
+	P1 = case type(P) of
+		 class_qualifier ->
 		 {tuple, Pos, [class_qualifier_argument(P),
-			       class_qualifier_body(P),
-			       {var, Pos, '_'}]};
-	     _ ->
+				   class_qualifier_body(P),
+				   {var, Pos, '_'}]};
+		 _ ->
 		 {tuple, Pos, [{atom, Pos, throw}, P, {var, Pos, '_'}]}
 	 end,
-    {clause, Pos, [P1], Guard, Body}.
+	{clause, Pos, [P1], Guard, Body}.
 
 unfold_try_clauses(Cs) ->
-    [unfold_try_clause(C) || C <- Cs].
+	[unfold_try_clause(C) || C <- Cs].
 
 unfold_try_clause({clause, Pos, [{tuple, _, [{atom, _, throw}, V, _]}],
 		   Guard, Body}) ->
-    {clause, Pos, [V], Guard, Body};
+	{clause, Pos, [V], Guard, Body};
 unfold_try_clause({clause, Pos, [{tuple, _, [C, V, _]}],
 		   Guard, Body}) ->
-    {clause, Pos, [class_qualifier(C, V)], Guard, Body}.
+	{clause, Pos, [class_qualifier(C, V)], Guard, Body}.
 
 
 %% =====================================================================
@@ -3500,12 +3500,12 @@ unfold_try_clause({clause, Pos, [{tuple, _, [C, V, _]}],
 -spec clause_patterns(syntaxTree()) -> [syntaxTree()].
 
 clause_patterns(Node) ->
-    case unwrap(Node) of
+	case unwrap(Node) of
 	{clause, _, Patterns, _, _} ->
-	    Patterns;
+		Patterns;
 	Node1 ->
-	    (data(Node1))#clause.patterns
-    end.
+		(data(Node1))#clause.patterns
+	end.
 
 
 %% =====================================================================
@@ -3520,18 +3520,18 @@ clause_patterns(Node) ->
 -spec clause_guard(syntaxTree()) -> 'none' | syntaxTree().
 
 clause_guard(Node) ->
-    case unwrap(Node) of
+	case unwrap(Node) of
 	{clause, _, _, Guard, _} ->
-	    case Guard of
+		case Guard of
 		[] -> none;
 		[L | _] when is_list(L) ->
-		    disjunction(conjunction_list(Guard));
+			disjunction(conjunction_list(Guard));
 		[_ | _] ->
-		    conjunction(Guard)
-	    end;
+			conjunction(Guard)
+		end;
 	Node1 ->
-	    (data(Node1))#clause.guard
-    end.
+		(data(Node1))#clause.guard
+	end.
 
 
 %% =====================================================================
@@ -3542,12 +3542,12 @@ clause_guard(Node) ->
 -spec clause_body(syntaxTree()) -> [syntaxTree()].
 
 clause_body(Node) ->
-    case unwrap(Node) of
+	case unwrap(Node) of
 	{clause, _, _, _, Body} ->
-	    Body;
+		Body;
 	Node1 ->
-	    (data(Node1))#clause.body
-    end.
+		(data(Node1))#clause.body
+	end.
 
 
 %% =====================================================================
@@ -3564,7 +3564,7 @@ clause_body(Node) ->
 -spec disjunction([syntaxTree()]) -> syntaxTree().
 
 disjunction(Tests) ->
-    tree(disjunction, Tests).
+	tree(disjunction, Tests).
 
 
 %% =====================================================================
@@ -3576,7 +3576,7 @@ disjunction(Tests) ->
 -spec disjunction_body(syntaxTree()) -> [syntaxTree()].
 
 disjunction_body(Node) ->
-    data(Node).
+	data(Node).
 
 
 %% =====================================================================
@@ -3593,7 +3593,7 @@ disjunction_body(Node) ->
 -spec conjunction([syntaxTree()]) -> syntaxTree().
 
 conjunction(Tests) ->
-    tree(conjunction, Tests).
+	tree(conjunction, Tests).
 
 
 %% =====================================================================
@@ -3605,7 +3605,7 @@ conjunction(Tests) ->
 -spec conjunction_body(syntaxTree()) -> [syntaxTree()].
 
 conjunction_body(Node) ->
-    data(Node).
+	data(Node).
 
 
 %% =====================================================================
@@ -3626,12 +3626,12 @@ conjunction_body(Node) ->
 -spec catch_expr(syntaxTree()) -> syntaxTree().
 
 catch_expr(Expr) ->
-    tree(catch_expr, Expr).
+	tree(catch_expr, Expr).
 
 revert_catch_expr(Node) ->
-    Pos = get_pos(Node),
-    Expr = catch_expr_body(Node),
-    {'catch', Pos, Expr}.
+	Pos = get_pos(Node),
+	Expr = catch_expr_body(Node),
+	{'catch', Pos, Expr}.
 
 
 %% =====================================================================
@@ -3642,12 +3642,12 @@ revert_catch_expr(Node) ->
 -spec catch_expr_body(syntaxTree()) -> syntaxTree().
 
 catch_expr_body(Node) ->
-    case unwrap(Node) of
+	case unwrap(Node) of
 	{'catch', _, Expr} ->
-	    Expr;
+		Expr;
 	Node1 ->
-	    data(Node1)
-    end.
+		data(Node1)
+	end.
 
 
 %% =====================================================================
@@ -3673,13 +3673,13 @@ catch_expr_body(Node) ->
 -spec match_expr(syntaxTree(), syntaxTree()) -> syntaxTree().
 
 match_expr(Pattern, Body) ->
-    tree(match_expr, #match_expr{pattern = Pattern, body = Body}).
+	tree(match_expr, #match_expr{pattern = Pattern, body = Body}).
 
 revert_match_expr(Node) ->
-    Pos = get_pos(Node),
-    Pattern = match_expr_pattern(Node),
-    Body = match_expr_body(Node),
-    {match, Pos, Pattern, Body}.
+	Pos = get_pos(Node),
+	Pattern = match_expr_pattern(Node),
+	Body = match_expr_body(Node),
+	{match, Pos, Pattern, Body}.
 
 
 %% =====================================================================
@@ -3690,12 +3690,12 @@ revert_match_expr(Node) ->
 -spec match_expr_pattern(syntaxTree()) -> syntaxTree().
 
 match_expr_pattern(Node) ->
-    case unwrap(Node) of
+	case unwrap(Node) of
 	{match, _, Pattern, _} ->
-	    Pattern;
+		Pattern;
 	Node1 ->
-	    (data(Node1))#match_expr.pattern
-    end.
+		(data(Node1))#match_expr.pattern
+	end.
 
 
 %% =====================================================================
@@ -3706,12 +3706,12 @@ match_expr_pattern(Node) ->
 -spec match_expr_body(syntaxTree()) -> syntaxTree().
 
 match_expr_body(Node) ->
-    case unwrap(Node) of
+	case unwrap(Node) of
 	{match, _, _, Body} ->
-	    Body;
+		Body;
 	Node1 ->
-	    (data(Node1))#match_expr.body
-    end.
+		(data(Node1))#match_expr.body
+	end.
 
 
 %% =====================================================================
@@ -3732,9 +3732,9 @@ match_expr_body(Node) ->
 -spec operator(atom() | string()) -> syntaxTree().
 
 operator(Name) when is_atom(Name) ->
-    tree(operator, Name);
+	tree(operator, Name);
 operator(Name) ->
-    tree(operator, list_to_atom(Name)).
+	tree(operator, list_to_atom(Name)).
 
 
 %% =====================================================================
@@ -3746,7 +3746,7 @@ operator(Name) ->
 -spec operator_name(syntaxTree()) -> atom().
 
 operator_name(Node) ->
-    data(Node).
+	data(Node).
 
 
 %% =====================================================================
@@ -3758,7 +3758,7 @@ operator_name(Node) ->
 -spec operator_literal(syntaxTree()) -> string().
 
 operator_literal(Node) ->
-    atom_to_list(operator_name(Node)).
+	atom_to_list(operator_name(Node)).
 
 
 %% =====================================================================
@@ -3772,12 +3772,12 @@ operator_literal(Node) ->
 %% @see prefix_expr/2
 
 -record(infix_expr, {operator :: syntaxTree(),
-		     left     :: syntaxTree(),
-		     right    :: syntaxTree()}).
+			 left	 :: syntaxTree(),
+			 right	:: syntaxTree()}).
 
 %% type(Node) = infix_expr
 %% data(Node) = #infix_expr{left :: Left, operator :: Operator,
-%%		            right :: Right}
+%%					right :: Right}
 %%
 %%	Left = Operator = Right = syntaxTree()
 %%
@@ -3791,22 +3791,22 @@ operator_literal(Node) ->
 -spec infix_expr(syntaxTree(), syntaxTree(), syntaxTree()) -> syntaxTree().
 
 infix_expr(Left, Operator, Right) ->
-    tree(infix_expr, #infix_expr{operator = Operator, left = Left,
+	tree(infix_expr, #infix_expr{operator = Operator, left = Left,
 				 right = Right}).
 
 revert_infix_expr(Node) ->
-    Pos = get_pos(Node),
-    Operator = infix_expr_operator(Node),
-    Left = infix_expr_left(Node),
-    Right = infix_expr_right(Node),
-    case type(Operator) of
+	Pos = get_pos(Node),
+	Operator = infix_expr_operator(Node),
+	Left = infix_expr_left(Node),
+	Right = infix_expr_right(Node),
+	case type(Operator) of
 	operator ->
-	    %% Note that the operator itself is not revertible out
-	    %% of context.
-	    {op, Pos, operator_name(Operator), Left, Right};
+		%% Note that the operator itself is not revertible out
+		%% of context.
+		{op, Pos, operator_name(Operator), Left, Right};
 	_ ->
-	    Node
-    end.
+		Node
+	end.
 
 
 %% =====================================================================
@@ -3818,12 +3818,12 @@ revert_infix_expr(Node) ->
 -spec infix_expr_left(syntaxTree()) -> syntaxTree().
 
 infix_expr_left(Node) ->
-    case unwrap(Node) of
+	case unwrap(Node) of
 	{op, _, _, Left, _} ->
-	    Left;
+		Left;
 	Node1 ->
-	    (data(Node1))#infix_expr.left
-    end.
+		(data(Node1))#infix_expr.left
+	end.
 
 
 %% =====================================================================
@@ -3834,12 +3834,12 @@ infix_expr_left(Node) ->
 -spec infix_expr_operator(syntaxTree()) -> syntaxTree().
 
 infix_expr_operator(Node) ->
-    case unwrap(Node) of
+	case unwrap(Node) of
 	{op, Pos, Operator, _, _} ->
-	    set_pos(operator(Operator), Pos);
+		set_pos(operator(Operator), Pos);
 	Node1 ->
-	    (data(Node1))#infix_expr.operator
-    end.
+		(data(Node1))#infix_expr.operator
+	end.
 
 
 %% =====================================================================
@@ -3851,12 +3851,12 @@ infix_expr_operator(Node) ->
 -spec infix_expr_right(syntaxTree()) -> syntaxTree().
 
 infix_expr_right(Node) ->
-    case unwrap(Node) of
+	case unwrap(Node) of
 	{op, _, _, _, Right} ->
-	    Right;
+		Right;
 	Node1 ->
-	    (data(Node1))#infix_expr.right
-    end.
+		(data(Node1))#infix_expr.right
+	end.
 
 
 %% =====================================================================
@@ -3871,7 +3871,7 @@ infix_expr_right(Node) ->
 
 %% type(Node) = prefix_expr
 %% data(Node) = #prefix_expr{operator :: Operator,
-%%		             argument :: Argument}
+%%					 argument :: Argument}
 %%
 %%	Operator = Argument = syntaxTree()
 %%
@@ -3885,21 +3885,21 @@ infix_expr_right(Node) ->
 -spec prefix_expr(syntaxTree(), syntaxTree()) -> syntaxTree().
 
 prefix_expr(Operator, Argument) ->
-    tree(prefix_expr, #prefix_expr{operator = Operator,
+	tree(prefix_expr, #prefix_expr{operator = Operator,
 				   argument = Argument}).
 
 revert_prefix_expr(Node) ->
-    Pos = get_pos(Node),
-    Operator = prefix_expr_operator(Node),
-    Argument = prefix_expr_argument(Node),
-    case type(Operator) of
+	Pos = get_pos(Node),
+	Operator = prefix_expr_operator(Node),
+	Argument = prefix_expr_argument(Node),
+	case type(Operator) of
 	operator ->
-	    %% Note that the operator itself is not revertible out
-	    %% of context.
-	    {op, Pos, operator_name(Operator), Argument};
+		%% Note that the operator itself is not revertible out
+		%% of context.
+		{op, Pos, operator_name(Operator), Argument};
 	_ ->
-	    Node
-    end.
+		Node
+	end.
 
 
 %% =====================================================================
@@ -3910,12 +3910,12 @@ revert_prefix_expr(Node) ->
 -spec prefix_expr_operator(syntaxTree()) -> syntaxTree().
 
 prefix_expr_operator(Node) ->
-    case unwrap(Node) of
+	case unwrap(Node) of
 	{op, Pos, Operator, _} ->
-	    set_pos(operator(Operator), Pos);
+		set_pos(operator(Operator), Pos);
 	Node1 ->
-	    (data(Node1))#prefix_expr.operator
-    end.
+		(data(Node1))#prefix_expr.operator
+	end.
 
 
 %% =====================================================================
@@ -3926,12 +3926,12 @@ prefix_expr_operator(Node) ->
 -spec prefix_expr_argument(syntaxTree()) -> syntaxTree().
 
 prefix_expr_argument(Node) ->
-    case unwrap(Node) of
+	case unwrap(Node) of
 	{op, _, _, Argument} ->
-	    Argument;
+		Argument;
 	Node1 ->
-	    (data(Node1))#prefix_expr.argument
-    end.
+		(data(Node1))#prefix_expr.argument
+	end.
 
 
 %% =====================================================================
@@ -3940,7 +3940,7 @@ prefix_expr_argument(Node) ->
 -spec record_field(syntaxTree()) -> syntaxTree().
 
 record_field(Name) ->
-    record_field(Name, none).
+	record_field(Name, none).
 
 
 %% =====================================================================
@@ -3963,7 +3963,7 @@ record_field(Name) ->
 -spec record_field(syntaxTree(), 'none' | syntaxTree()) -> syntaxTree().
 
 record_field(Name, Value) ->
-    tree(record_field, #record_field{name = Name, value = Value}).
+	tree(record_field, #record_field{name = Name, value = Value}).
 
 
 %% =====================================================================
@@ -3974,7 +3974,7 @@ record_field(Name, Value) ->
 -spec record_field_name(syntaxTree()) -> syntaxTree().
 
 record_field_name(Node) ->
-    (data(Node))#record_field.name.
+	(data(Node))#record_field.name.
 
 
 %% =====================================================================
@@ -3990,7 +3990,7 @@ record_field_name(Node) ->
 -spec record_field_value(syntaxTree()) -> 'none' | syntaxTree().
 
 record_field_value(Node) ->
-    (data(Node))#record_field.value.
+	(data(Node))#record_field.value.
 
 
 %% =====================================================================
@@ -4022,19 +4022,19 @@ record_field_value(Node) ->
 -spec record_index_expr(syntaxTree(), syntaxTree()) -> syntaxTree().
 
 record_index_expr(Type, Field) ->
-    tree(record_index_expr, #record_index_expr{type = Type,
-					       field = Field}).
+	tree(record_index_expr, #record_index_expr{type = Type,
+						   field = Field}).
 
 revert_record_index_expr(Node) ->
-    Pos = get_pos(Node),
-    Type = record_index_expr_type(Node),
-    Field = record_index_expr_field(Node),
-    case type(Type) of
+	Pos = get_pos(Node),
+	Type = record_index_expr_type(Node),
+	Field = record_index_expr_field(Node),
+	case type(Type) of
 	atom ->
-	    {record_index, Pos, concrete(Type), Field};
+		{record_index, Pos, concrete(Type), Field};
 	_ ->
-	    Node
-    end.
+		Node
+	end.
 
 
 %% =====================================================================
@@ -4045,12 +4045,12 @@ revert_record_index_expr(Node) ->
 -spec record_index_expr_type(syntaxTree()) -> syntaxTree().
 
 record_index_expr_type(Node) ->
-    case unwrap(Node) of
+	case unwrap(Node) of
 	{record_index, Pos, Type, _} ->
-	    set_pos(atom(Type), Pos);
+		set_pos(atom(Type), Pos);
 	Node1 ->
-	    (data(Node1))#record_index_expr.type
-    end.
+		(data(Node1))#record_index_expr.type
+	end.
 
 
 %% =====================================================================
@@ -4061,12 +4061,12 @@ record_index_expr_type(Node) ->
 -spec record_index_expr_field(syntaxTree()) -> syntaxTree().
 
 record_index_expr_field(Node) ->
-    case unwrap(Node) of
+	case unwrap(Node) of
 	{record_index, _, _, Field} ->
-	    Field;
+		Field;
 	Node1 ->
-	    (data(Node1))#record_index_expr.field
-    end.
+		(data(Node1))#record_index_expr.field
+	end.
 
 
 %% =====================================================================
@@ -4075,7 +4075,7 @@ record_index_expr_field(Node) ->
 -spec record_access(syntaxTree(), syntaxTree()) -> syntaxTree().
 
 record_access(Argument, Field) ->
-    record_access(Argument, none, Field).
+	record_access(Argument, none, Field).
 
 
 %% =====================================================================
@@ -4094,12 +4094,12 @@ record_access(Argument, Field) ->
 %% @see record_expr/3
 
 -record(record_access, {argument :: syntaxTree(),
-			type     :: 'none' | syntaxTree(),
-			field    :: syntaxTree()}).
+			type	 :: 'none' | syntaxTree(),
+			field	:: syntaxTree()}).
 
 %% type(Node) = record_access
 %% data(Node) = #record_access{argument :: Argument, type :: Type,
-%%			       field :: Field}
+%%				   field :: Field}
 %%
 %%	Argument = Field = syntaxTree()
 %%	Type = none | syntaxTree()
@@ -4113,29 +4113,29 @@ record_access(Argument, Field) ->
 %%	Type = atom()
 
 -spec record_access(syntaxTree(), 'none' | syntaxTree(), syntaxTree()) ->
-        syntaxTree().
+		syntaxTree().
 
 record_access(Argument, Type, Field) ->
-    tree(record_access,#record_access{argument = Argument,
-				      type = Type,
-				      field = Field}).
+	tree(record_access, #record_access{argument = Argument,
+					  type = Type,
+					  field = Field}).
 
 revert_record_access(Node) ->
-    Pos = get_pos(Node),
-    Argument = record_access_argument(Node),
-    Type = record_access_type(Node),
-    Field = record_access_field(Node),
-    if Type =:= none ->
-	    {record_field, Pos, Argument, Field};
-       true ->
-	    case type(Type) of
+	Pos = get_pos(Node),
+	Argument = record_access_argument(Node),
+	Type = record_access_type(Node),
+	Field = record_access_field(Node),
+	if Type =:= none ->
+		{record_field, Pos, Argument, Field};
+	   true ->
+		case type(Type) of
 		atom ->
-		    {record_field, Pos,
-		     Argument, concrete(Type), Field};
+			{record_field, Pos,
+			 Argument, concrete(Type), Field};
 		_ ->
-		    Node
-	    end
-    end.
+			Node
+		end
+	end.
 
 
 %% =====================================================================
@@ -4146,14 +4146,14 @@ revert_record_access(Node) ->
 -spec record_access_argument(syntaxTree()) -> syntaxTree().
 
 record_access_argument(Node) ->
-    case unwrap(Node) of
+	case unwrap(Node) of
 	{record_field, _, Argument, _} ->
-	    Argument;
+		Argument;
 	{record_field, _, Argument, _, _} ->
-	    Argument;
+		Argument;
 	Node1 ->
-	    (data(Node1))#record_access.argument
-    end.
+		(data(Node1))#record_access.argument
+	end.
 
 
 %% =====================================================================
@@ -4169,14 +4169,14 @@ record_access_argument(Node) ->
 -spec record_access_type(syntaxTree()) -> 'none' | syntaxTree().
 
 record_access_type(Node) ->
-    case unwrap(Node) of
+	case unwrap(Node) of
 	{record_field, _, _, _} ->
-	    none;
+		none;
 	{record_field, Pos, _, Type, _} ->
-	    set_pos(atom(Type), Pos);
+		set_pos(atom(Type), Pos);
 	Node1 ->
-	    (data(Node1))#record_access.type
-    end.
+		(data(Node1))#record_access.type
+	end.
 
 
 %% =====================================================================
@@ -4187,14 +4187,14 @@ record_access_type(Node) ->
 -spec record_access_field(syntaxTree()) -> syntaxTree().
 
 record_access_field(Node) ->
-    case unwrap(Node) of
+	case unwrap(Node) of
 	{record_field, _, _, Field} ->
-	    Field;
+		Field;
 	{record_field, _, _, _, Field} ->
-	    Field;
+		Field;
 	Node1 ->
-	    (data(Node1))#record_access.field
-    end.
+		(data(Node1))#record_access.field
+	end.
 
 
 %% =====================================================================
@@ -4203,7 +4203,7 @@ record_access_field(Node) ->
 -spec record_expr(syntaxTree(), [syntaxTree()]) -> syntaxTree().
 
 record_expr(Type, Fields) ->
-    record_expr(none, Type, Fields).
+	record_expr(none, Type, Fields).
 
 
 %% =====================================================================
@@ -4224,12 +4224,12 @@ record_expr(Type, Fields) ->
 %% @see record_access/3
 
 -record(record_expr, {argument :: 'none' | syntaxTree(),
-		      type     :: syntaxTree(),
-		      fields   :: [syntaxTree()]}).
+			  type	 :: syntaxTree(),
+			  fields   :: [syntaxTree()]}).
 
 %% type(Node) = record_expr
 %% data(Node) = #record_expr{argument :: Argument, type :: Type,
-%%			     fields :: Fields}
+%%				 fields :: Fields}
 %%
 %%	Argument = none | syntaxTree()
 %%	Type = syntaxTree
@@ -4244,34 +4244,34 @@ record_expr(Type, Fields) ->
 %%	Type = atom()
 %%	Fields = [Entry]
 %%	Entry = {record_field, Pos, Field, Value}
-%%	      | {record_field, Pos, Field}
+%%	 | {record_field, Pos, Field}
 %%	Field = Value = erl_parse()
 
 -spec record_expr('none' | syntaxTree(), syntaxTree(), [syntaxTree()]) ->
-        syntaxTree().
+		syntaxTree().
 
 record_expr(Argument, Type, Fields) ->
-    tree(record_expr, #record_expr{argument = Argument,
+	tree(record_expr, #record_expr{argument = Argument,
 				   type = Type, fields = Fields}).
 
 revert_record_expr(Node) ->
-    Pos = get_pos(Node),
-    Argument = record_expr_argument(Node),
-    Type = record_expr_type(Node),
-    Fields = record_expr_fields(Node),
-    case type(Type) of
+	Pos = get_pos(Node),
+	Argument = record_expr_argument(Node),
+	Type = record_expr_type(Node),
+	Fields = record_expr_fields(Node),
+	case type(Type) of
 	atom ->
-	    T = concrete(Type),
-	    Fs = fold_record_fields(Fields),
-	    case Argument of
+		T = concrete(Type),
+		Fs = fold_record_fields(Fields),
+		case Argument of
 		none ->
-		    {record, Pos, T, Fs};
+			{record, Pos, T, Fs};
 		_ ->
-		    {record, Pos, Argument, T, Fs}
-	    end;
+			{record, Pos, Argument, T, Fs}
+		end;
 	_ ->
-	    Node
-    end.
+		Node
+	end.
 
 
 %% =====================================================================
@@ -4287,14 +4287,14 @@ revert_record_expr(Node) ->
 -spec record_expr_argument(syntaxTree()) -> 'none' | syntaxTree().
 
 record_expr_argument(Node) ->
-    case unwrap(Node) of
+	case unwrap(Node) of
 	{record, _, _, _} ->
-	    none;
+		none;
 	{record, _, Argument, _, _} ->
-	    Argument;
+		Argument;
 	Node1 ->
-	    (data(Node1))#record_expr.argument
-    end.
+		(data(Node1))#record_expr.argument
+	end.
 
 
 %% =====================================================================
@@ -4305,14 +4305,14 @@ record_expr_argument(Node) ->
 -spec record_expr_type(syntaxTree()) -> syntaxTree().
 
 record_expr_type(Node) ->
-    case unwrap(Node) of
+	case unwrap(Node) of
 	{record, Pos, Type, _} ->
-	    set_pos(atom(Type), Pos);
+		set_pos(atom(Type), Pos);
 	{record, Pos, _, Type, _} ->
-	    set_pos(atom(Type), Pos);
+		set_pos(atom(Type), Pos);
 	Node1 ->
-	    (data(Node1))#record_expr.type
-    end.
+		(data(Node1))#record_expr.type
+	end.
 
 
 %% =====================================================================
@@ -4324,14 +4324,14 @@ record_expr_type(Node) ->
 -spec record_expr_fields(syntaxTree()) -> [syntaxTree()].
 
 record_expr_fields(Node) ->
-    case unwrap(Node) of
+	case unwrap(Node) of
 	{record, _, _, Fields} ->
-	    unfold_record_fields(Fields);
+		unfold_record_fields(Fields);
 	{record, _, _, _, Fields} ->
-	    unfold_record_fields(Fields);
+		unfold_record_fields(Fields);
 	Node1 ->
-	    (data(Node1))#record_expr.fields
-    end.
+		(data(Node1))#record_expr.fields
+	end.
 
 
 %% =====================================================================
@@ -4347,12 +4347,12 @@ record_expr_fields(Node) ->
 %% @see module_qualifier/2
 
 -spec application('none' | syntaxTree(), syntaxTree(), [syntaxTree()]) ->
-        syntaxTree().
+		syntaxTree().
 
 application(none, Name, Arguments) ->
-    application(Name, Arguments);
+	application(Name, Arguments);
 application(Module, Name, Arguments) ->
-    application(module_qualifier(Module, Name), Arguments).
+	application(module_qualifier(Module, Name), Arguments).
 
 
 %% =====================================================================
@@ -4369,7 +4369,7 @@ application(Module, Name, Arguments) ->
 
 %% type(Node) = application
 %% data(Node) = #application{operator :: Operator,
-%%			     arguments :: Arguments}
+%%				 arguments :: Arguments}
 %%
 %%	Operator = syntaxTree()
 %%	Arguments = [syntaxTree()]
@@ -4384,14 +4384,14 @@ application(Module, Name, Arguments) ->
 -spec application(syntaxTree(), [syntaxTree()]) -> syntaxTree().
 
 application(Operator, Arguments) ->
-    tree(application, #application{operator = Operator,
+	tree(application, #application{operator = Operator,
 				   arguments = Arguments}).
 
 revert_application(Node) ->
-    Pos = get_pos(Node),
-    Operator = application_operator(Node),
-    Arguments = application_arguments(Node),
-    {call, Pos, Operator, Arguments}.
+	Pos = get_pos(Node),
+	Operator = application_operator(Node),
+	Arguments = application_arguments(Node),
+	{call, Pos, Operator, Arguments}.
 
 
 %% =====================================================================
@@ -4407,12 +4407,12 @@ revert_application(Node) ->
 -spec application_operator(syntaxTree()) -> syntaxTree().
 
 application_operator(Node) ->
-    case unwrap(Node) of
+	case unwrap(Node) of
 	{call, _, Operator, _} ->
-	    Operator;
+		Operator;
 	Node1 ->
-	    (data(Node1))#application.operator
-    end.
+		(data(Node1))#application.operator
+	end.
 
 
 %% =====================================================================
@@ -4424,12 +4424,12 @@ application_operator(Node) ->
 -spec application_arguments(syntaxTree()) -> [syntaxTree()].
 
 application_arguments(Node) ->
-    case unwrap(Node) of
+	case unwrap(Node) of
 	{call, _, _, Arguments} ->
-	    Arguments;
+		Arguments;
 	Node1 ->
-	    (data(Node1))#application.arguments
-    end.
+		(data(Node1))#application.arguments
+	end.
 
 
 %% =====================================================================
@@ -4459,13 +4459,13 @@ application_arguments(Node) ->
 -spec list_comp(syntaxTree(), [syntaxTree()]) -> syntaxTree().
 
 list_comp(Template, Body) ->
-    tree(list_comp, #list_comp{template = Template, body = Body}).
+	tree(list_comp, #list_comp{template = Template, body = Body}).
 
 revert_list_comp(Node) ->
-    Pos = get_pos(Node),
-    Template = list_comp_template(Node),
-    Body = list_comp_body(Node),
-    {lc, Pos, Template, Body}.
+	Pos = get_pos(Node),
+	Template = list_comp_template(Node),
+	Body = list_comp_body(Node),
+	{lc, Pos, Template, Body}.
 
 
 %% =====================================================================
@@ -4476,12 +4476,12 @@ revert_list_comp(Node) ->
 -spec list_comp_template(syntaxTree()) -> syntaxTree().
 
 list_comp_template(Node) ->
-    case unwrap(Node) of
+	case unwrap(Node) of
 	{lc, _, Template, _} ->
-	    Template;
+		Template;
 	Node1 ->
-	    (data(Node1))#list_comp.template
-    end.
+		(data(Node1))#list_comp.template
+	end.
 
 
 %% =====================================================================
@@ -4492,12 +4492,12 @@ list_comp_template(Node) ->
 -spec list_comp_body(syntaxTree()) -> [syntaxTree()].
 
 list_comp_body(Node) ->
-    case unwrap(Node) of
+	case unwrap(Node) of
 	{lc, _, _, Body} ->
-	    Body;
+		Body;
 	Node1 ->
-	    (data(Node1))#list_comp.body
-    end.
+		(data(Node1))#list_comp.body
+	end.
 
 %% =====================================================================
 %% @doc Creates an abstract binary comprehension. If `Body' is
@@ -4526,13 +4526,13 @@ list_comp_body(Node) ->
 -spec binary_comp(syntaxTree(), [syntaxTree()]) -> syntaxTree().
 
 binary_comp(Template, Body) ->
-    tree(binary_comp, #binary_comp{template = Template, body = Body}).
+	tree(binary_comp, #binary_comp{template = Template, body = Body}).
 
 revert_binary_comp(Node) ->
-    Pos = get_pos(Node),
-    Template = binary_comp_template(Node),
-    Body = binary_comp_body(Node),
-    {bc, Pos, Template, Body}.
+	Pos = get_pos(Node),
+	Template = binary_comp_template(Node),
+	Body = binary_comp_body(Node),
+	{bc, Pos, Template, Body}.
 
 
 %% =====================================================================
@@ -4543,12 +4543,12 @@ revert_binary_comp(Node) ->
 -spec binary_comp_template(syntaxTree()) -> syntaxTree().
 
 binary_comp_template(Node) ->
-    case unwrap(Node) of
+	case unwrap(Node) of
 	{bc, _, Template, _} ->
-	    Template;
+		Template;
 	Node1 ->
-	    (data(Node1))#binary_comp.template
-    end.
+		(data(Node1))#binary_comp.template
+	end.
 
 
 %% =====================================================================
@@ -4559,12 +4559,12 @@ binary_comp_template(Node) ->
 -spec binary_comp_body(syntaxTree()) -> [syntaxTree()].
 
 binary_comp_body(Node) ->
-    case unwrap(Node) of
+	case unwrap(Node) of
 	{bc, _, _, Body} ->
-	    Body;
+		Body;
 	Node1 ->
-	    (data(Node1))#binary_comp.body
-    end.
+		(data(Node1))#binary_comp.body
+	end.
 
 
 %% =====================================================================
@@ -4610,19 +4610,19 @@ binary_comp_body(Node) ->
 -spec rule(syntaxTree(), [syntaxTree()]) -> syntaxTree().
 
 rule(Name, Clauses) ->
-    tree(rule, #rule{name = Name, clauses = Clauses}).
+	tree(rule, #rule{name = Name, clauses = Clauses}).
 
 revert_rule(Node) ->
-    Name = rule_name(Node),
-    Clauses = [revert_clause(C) || C <- rule_clauses(Node)],
-    Pos = get_pos(Node),
-    case type(Name) of
+	Name = rule_name(Node),
+	Clauses = [revert_clause(C) || C <- rule_clauses(Node)],
+	Pos = get_pos(Node),
+	case type(Name) of
 	atom ->
-	    A = rule_arity(Node),
-	    {rule, Pos, concrete(Name), A, Clauses};
+		A = rule_arity(Node),
+		{rule, Pos, concrete(Name), A, Clauses};
 	_ ->
-	    Node
-    end.
+		Node
+	end.
 
 
 %% =====================================================================
@@ -4633,12 +4633,12 @@ revert_rule(Node) ->
 -spec rule_name(syntaxTree()) -> syntaxTree().
 
 rule_name(Node) ->
-    case unwrap(Node) of
+	case unwrap(Node) of
 	{rule, Pos, Name, _, _} ->
-	    set_pos(atom(Name), Pos);
+		set_pos(atom(Name), Pos);
 	Node1 ->
-	    (data(Node1))#rule.name
-    end.
+		(data(Node1))#rule.name
+	end.
 
 %% =====================================================================
 %% @doc Returns the list of clause subtrees of a `rule' node.
@@ -4648,12 +4648,12 @@ rule_name(Node) ->
 -spec rule_clauses(syntaxTree()) -> [syntaxTree()].
 
 rule_clauses(Node) ->
-    case unwrap(Node) of
+	case unwrap(Node) of
 	{rule, _, _, _, Clauses} ->
-	    Clauses;
+		Clauses;
 	Node1 ->
-	    (data(Node1))#rule.clauses
-    end.
+		(data(Node1))#rule.clauses
+	end.
 
 %% =====================================================================
 %% @doc Returns the arity of a `rule' node. The result is the
@@ -4673,9 +4673,9 @@ rule_clauses(Node) ->
 -spec rule_arity(syntaxTree()) -> arity().
 
 rule_arity(Node) ->
-    %% Note that this never accesses the arity field of
-    %% `erl_parse' rule nodes.
-    length(clause_patterns(hd(rule_clauses(Node)))).
+	%% Note that this never accesses the arity field of
+	%% `erl_parse' rule nodes.
+	length(clause_patterns(hd(rule_clauses(Node)))).
 
 
 %% =====================================================================
@@ -4703,13 +4703,13 @@ rule_arity(Node) ->
 -spec generator(syntaxTree(), syntaxTree()) -> syntaxTree().
 
 generator(Pattern, Body) ->
-    tree(generator, #generator{pattern = Pattern, body = Body}).
+	tree(generator, #generator{pattern = Pattern, body = Body}).
 
 revert_generator(Node) ->
-    Pos = get_pos(Node),
-    Pattern = generator_pattern(Node),
-    Body = generator_body(Node),
-    {generate, Pos, Pattern, Body}.
+	Pos = get_pos(Node),
+	Pattern = generator_pattern(Node),
+	Body = generator_body(Node),
+	{generate, Pos, Pattern, Body}.
 
 
 %% =====================================================================
@@ -4720,12 +4720,12 @@ revert_generator(Node) ->
 -spec generator_pattern(syntaxTree()) -> syntaxTree().
 
 generator_pattern(Node) ->
-    case unwrap(Node) of
+	case unwrap(Node) of
 	{generate, _, Pattern, _} ->
-	    Pattern;
+		Pattern;
 	Node1 ->
-	    (data(Node1))#generator.pattern
-    end.
+		(data(Node1))#generator.pattern
+	end.
 
 
 %% =====================================================================
@@ -4736,12 +4736,12 @@ generator_pattern(Node) ->
 -spec generator_body(syntaxTree()) -> syntaxTree().
 
 generator_body(Node) ->
-    case unwrap(Node) of
+	case unwrap(Node) of
 	{generate, _, _, Body} ->
-	    Body;
+		Body;
 	Node1 ->
-	    (data(Node1))#generator.body
-    end.
+		(data(Node1))#generator.body
+	end.
 
 
 %% =====================================================================
@@ -4769,13 +4769,13 @@ generator_body(Node) ->
 -spec binary_generator(syntaxTree(), syntaxTree()) -> syntaxTree().
 
 binary_generator(Pattern, Body) ->
-    tree(binary_generator, #binary_generator{pattern = Pattern, body = Body}).
+	tree(binary_generator, #binary_generator{pattern = Pattern, body = Body}).
 
 revert_binary_generator(Node) ->
-    Pos = get_pos(Node),
-    Pattern = binary_generator_pattern(Node),
-    Body = binary_generator_body(Node),
-    {b_generate, Pos, Pattern, Body}.
+	Pos = get_pos(Node),
+	Pattern = binary_generator_pattern(Node),
+	Body = binary_generator_body(Node),
+	{b_generate, Pos, Pattern, Body}.
 
 
 %% =====================================================================
@@ -4786,12 +4786,12 @@ revert_binary_generator(Node) ->
 -spec binary_generator_pattern(syntaxTree()) -> syntaxTree().
 
 binary_generator_pattern(Node) ->
-    case unwrap(Node) of
+	case unwrap(Node) of
 	{b_generate, _, Pattern, _} ->
-	    Pattern;
+		Pattern;
 	Node1 ->
-	    (data(Node1))#binary_generator.pattern
-    end.
+		(data(Node1))#binary_generator.pattern
+	end.
 
 
 %% =====================================================================
@@ -4802,12 +4802,12 @@ binary_generator_pattern(Node) ->
 -spec binary_generator_body(syntaxTree()) -> syntaxTree().
 
 binary_generator_body(Node) ->
-    case unwrap(Node) of
+	case unwrap(Node) of
 	{b_generate, _, _, Body} ->
-	    Body;
+		Body;
 	Node1 ->
-	    (data(Node1))#binary_generator.body
-    end.
+		(data(Node1))#binary_generator.body
+	end.
 
 
 %% =====================================================================
@@ -4826,17 +4826,17 @@ binary_generator_body(Node) ->
 %%
 %% {block, Pos, Body}
 %%
-%%	    Body = [erl_parse()] \ []
+%%		Body = [erl_parse()] \ []
 
 -spec block_expr([syntaxTree()]) -> syntaxTree().
 
 block_expr(Body) ->
-    tree(block_expr, Body).
+	tree(block_expr, Body).
 
 revert_block_expr(Node) ->
-    Pos = get_pos(Node),
-    Body = block_expr_body(Node),
-    {block, Pos, Body}.
+	Pos = get_pos(Node),
+	Body = block_expr_body(Node),
+	{block, Pos, Body}.
 
 
 %% =====================================================================
@@ -4847,12 +4847,12 @@ revert_block_expr(Node) ->
 -spec block_expr_body(syntaxTree()) -> [syntaxTree()].
 
 block_expr_body(Node) ->
-    case unwrap(Node) of
+	case unwrap(Node) of
 	{block, _, Body} ->
-	    Body;
+		Body;
 	Node1 ->
-	    data(Node1)
-    end.
+		data(Node1)
+	end.
 
 
 %% =====================================================================
@@ -4885,12 +4885,12 @@ block_expr_body(Node) ->
 -spec if_expr([syntaxTree()]) -> syntaxTree().
 
 if_expr(Clauses) ->
-    tree(if_expr, Clauses).
+	tree(if_expr, Clauses).
 
 revert_if_expr(Node) ->
-    Pos = get_pos(Node),
-    Clauses = [revert_clause(C) || C <- if_expr_clauses(Node)],
-    {'if', Pos, Clauses}.
+	Pos = get_pos(Node),
+	Clauses = [revert_clause(C) || C <- if_expr_clauses(Node)],
+	{'if', Pos, Clauses}.
 
 
 %% =====================================================================
@@ -4901,12 +4901,12 @@ revert_if_expr(Node) ->
 -spec if_expr_clauses(syntaxTree()) -> [syntaxTree()].
 
 if_expr_clauses(Node) ->
-    case unwrap(Node) of
+	case unwrap(Node) of
 	{'if', _, Clauses} ->
-	    Clauses;
+		Clauses;
 	Node1 ->
-	    data(Node1)
-    end.
+		data(Node1)
+	end.
 
 
 %% =====================================================================
@@ -4946,14 +4946,14 @@ if_expr_clauses(Node) ->
 -spec case_expr(syntaxTree(), [syntaxTree()]) -> syntaxTree().
 
 case_expr(Argument, Clauses) ->
-    tree(case_expr, #case_expr{argument = Argument,
-			       clauses = Clauses}).
+	tree(case_expr, #case_expr{argument = Argument,
+				   clauses = Clauses}).
 
 revert_case_expr(Node) ->
-    Pos = get_pos(Node),
-    Argument = case_expr_argument(Node),
-    Clauses = [revert_clause(C) || C <- case_expr_clauses(Node)],
-    {'case', Pos, Argument, Clauses}.
+	Pos = get_pos(Node),
+	Argument = case_expr_argument(Node),
+	Clauses = [revert_clause(C) || C <- case_expr_clauses(Node)],
+	{'case', Pos, Argument, Clauses}.
 
 
 %% =====================================================================
@@ -4964,12 +4964,12 @@ revert_case_expr(Node) ->
 -spec case_expr_argument(syntaxTree()) -> syntaxTree().
 
 case_expr_argument(Node) ->
-    case unwrap(Node) of
+	case unwrap(Node) of
 	{'case', _, Argument, _} ->
-	    Argument;
+		Argument;
 	Node1 ->
-	    (data(Node1))#case_expr.argument
-    end.
+		(data(Node1))#case_expr.argument
+	end.
 
 
 %% =====================================================================
@@ -4980,12 +4980,12 @@ case_expr_argument(Node) ->
 -spec case_expr_clauses(syntaxTree()) -> [syntaxTree()].
 
 case_expr_clauses(Node) ->
-    case unwrap(Node) of
+	case unwrap(Node) of
 	{'case', _, _, Clauses} ->
-	    Clauses;
+		Clauses;
 	Node1 ->
-	    (data(Node1))#case_expr.clauses
-    end.
+		(data(Node1))#case_expr.clauses
+	end.
 
 
 %% =====================================================================
@@ -5018,12 +5018,12 @@ case_expr_clauses(Node) ->
 -spec cond_expr([syntaxTree()]) -> syntaxTree().
 
 cond_expr(Clauses) ->
-    tree(cond_expr, Clauses).
+	tree(cond_expr, Clauses).
 
 revert_cond_expr(Node) ->
-    Pos = get_pos(Node),
-    Clauses = [revert_clause(C) || C <- cond_expr_clauses(Node)],
-    {'cond', Pos, Clauses}.
+	Pos = get_pos(Node),
+	Clauses = [revert_clause(C) || C <- cond_expr_clauses(Node)],
+	{'cond', Pos, Clauses}.
 
 
 %% =====================================================================
@@ -5034,12 +5034,12 @@ revert_cond_expr(Node) ->
 -spec cond_expr_clauses(syntaxTree()) -> [syntaxTree()].
 
 cond_expr_clauses(Node) ->
-    case unwrap(Node) of
+	case unwrap(Node) of
 	{'cond', _, Clauses} ->
-	    Clauses;
+		Clauses;
 	Node1 ->
-	    data(Node1)
-    end.
+		data(Node1)
+	end.
 
 
 %% =====================================================================
@@ -5048,7 +5048,7 @@ cond_expr_clauses(Node) ->
 -spec receive_expr([syntaxTree()]) -> syntaxTree().
 
 receive_expr(Clauses) ->
-    receive_expr(Clauses, none, []).
+	receive_expr(Clauses, none, []).
 
 
 %% =====================================================================
@@ -5076,13 +5076,13 @@ receive_expr(Clauses) ->
 %% @see case_expr/2
 
 -record(receive_expr, {clauses :: [syntaxTree()],
-		       timeout :: 'none' | syntaxTree(),
-		       action  :: [syntaxTree()]}).
+			   timeout :: 'none' | syntaxTree(),
+			   action  :: [syntaxTree()]}).
 
 %% type(Node) = receive_expr
 %% data(Node) = #receive_expr{clauses :: Clauses,
-%%			      timeout :: Timeout,
-%%			      action :: Action}
+%%				  timeout :: Timeout,
+%%				  action :: Action}
 %%
 %%	Clauses = [syntaxTree()]
 %%	Timeout = none | syntaxTree()
@@ -5101,32 +5101,32 @@ receive_expr(Clauses) ->
 %%	See `clause' for documentation on `erl_parse' clauses.
 
 -spec receive_expr([syntaxTree()], 'none' | syntaxTree(), [syntaxTree()]) ->
-        syntaxTree().
+		syntaxTree().
 
 receive_expr(Clauses, Timeout, Action) ->
-    %% If `Timeout' is `none', we always replace the actual
-    %% `Action' argument with an empty list, since
-    %% `receive_expr_action' should in that case return the empty
-    %% list regardless.
-    Action1 = case Timeout of
+	%% If `Timeout' is `none', we always replace the actual
+	%% `Action' argument with an empty list, since
+	%% `receive_expr_action' should in that case return the empty
+	%% list regardless.
+	Action1 = case Timeout of
 		  none -> [];
 		  _ -> Action
-	      end,
-    tree(receive_expr, #receive_expr{clauses = Clauses,
-				     timeout = Timeout,
-				     action = Action1}).
+		  end,
+	tree(receive_expr, #receive_expr{clauses = Clauses,
+					 timeout = Timeout,
+					 action = Action1}).
 
 revert_receive_expr(Node) ->
-    Pos = get_pos(Node),
-    Clauses = [revert_clause(C) || C <- receive_expr_clauses(Node)],
-    Timeout = receive_expr_timeout(Node),
-    Action = receive_expr_action(Node),
-    case Timeout of
+	Pos = get_pos(Node),
+	Clauses = [revert_clause(C) || C <- receive_expr_clauses(Node)],
+	Timeout = receive_expr_timeout(Node),
+	Action = receive_expr_action(Node),
+	case Timeout of
 	none ->
-	    {'receive', Pos, Clauses};
+		{'receive', Pos, Clauses};
 	_ ->
-	    {'receive', Pos, Clauses, Timeout, Action}
-    end.
+		{'receive', Pos, Clauses, Timeout, Action}
+	end.
 
 
 %% =====================================================================
@@ -5138,14 +5138,14 @@ revert_receive_expr(Node) ->
 -spec receive_expr_clauses(syntaxTree()) -> [syntaxTree()].
 
 receive_expr_clauses(Node) ->
-    case unwrap(Node) of
+	case unwrap(Node) of
 	{'receive', _, Clauses} ->
-	    Clauses;
+		Clauses;
 	{'receive', _, Clauses, _, _} ->
-	    Clauses;
+		Clauses;
 	Node1 ->
-	    (data(Node1))#receive_expr.clauses
-    end.
+		(data(Node1))#receive_expr.clauses
+	end.
 
 
 %% =====================================================================
@@ -5161,14 +5161,14 @@ receive_expr_clauses(Node) ->
 -spec receive_expr_timeout(syntaxTree()) -> 'none' | syntaxTree().
 
 receive_expr_timeout(Node) ->
-    case unwrap(Node) of
+	case unwrap(Node) of
 	{'receive', _, _} ->
-	    none;
+		none;
 	{'receive', _, _, Timeout, _} ->
-	    Timeout;
+		Timeout;
 	Node1 ->
-	    (data(Node1))#receive_expr.timeout
-    end.
+		(data(Node1))#receive_expr.timeout
+	end.
 
 
 %% =====================================================================
@@ -5182,14 +5182,14 @@ receive_expr_timeout(Node) ->
 -spec receive_expr_action(syntaxTree()) -> [syntaxTree()].
 
 receive_expr_action(Node) ->
-    case unwrap(Node) of
+	case unwrap(Node) of
 	{'receive', _, _} ->
-	    [];
+		[];
 	{'receive', _, _, _, Action} ->
-	    Action;
+		Action;
 	Node1 ->
-	    (data(Node1))#receive_expr.action
-    end.
+		(data(Node1))#receive_expr.action
+	end.
 
 
 %% =====================================================================
@@ -5198,7 +5198,7 @@ receive_expr_action(Node) ->
 -spec try_expr([syntaxTree()], [syntaxTree()]) -> syntaxTree().
 
 try_expr(Body, Handlers) ->
-    try_expr(Body, [], Handlers).
+	try_expr(Body, [], Handlers).
 
 
 %% =====================================================================
@@ -5207,7 +5207,7 @@ try_expr(Body, Handlers) ->
 -spec try_expr([syntaxTree()], [syntaxTree()], [syntaxTree()]) -> syntaxTree().
 
 try_expr(Body, Clauses, Handlers) ->
-    try_expr(Body, Clauses, Handlers, []).
+	try_expr(Body, Clauses, Handlers, []).
 
 
 %% =====================================================================
@@ -5216,7 +5216,7 @@ try_expr(Body, Clauses, Handlers) ->
 -spec try_after_expr([syntaxTree()], [syntaxTree()]) -> syntaxTree().
 
 try_after_expr(Body, After) ->
-    try_expr(Body, [], [], After).
+	try_expr(Body, [], [], After).
 
 
 %% =====================================================================
@@ -5252,7 +5252,7 @@ try_after_expr(Body, After) ->
 %% @see class_qualifier/2
 %% @see case_expr/2
 
--record(try_expr, {body     :: [syntaxTree()],
+-record(try_expr, {body	 :: [syntaxTree()],
 		   clauses  :: [syntaxTree()],
 		   handlers :: [syntaxTree()],
 		   'after'  :: [syntaxTree()]}).
@@ -5279,21 +5279,21 @@ try_after_expr(Body, After) ->
 %%	See `clause' for documentation on `erl_parse' clauses.
 
 -spec try_expr([syntaxTree()], [syntaxTree()],
-	       [syntaxTree()], [syntaxTree()]) -> syntaxTree().
+		   [syntaxTree()], [syntaxTree()]) -> syntaxTree().
 
 try_expr(Body, Clauses, Handlers, After) ->
-    tree(try_expr, #try_expr{body = Body,
-			     clauses = Clauses,
-			     handlers = Handlers,
-			     'after' = After}).
+	tree(try_expr, #try_expr{body = Body,
+				 clauses = Clauses,
+				 handlers = Handlers,
+				 'after' = After}).
 
 revert_try_expr(Node) ->
-    Pos = get_pos(Node),
-    Body = try_expr_body(Node),
-    Clauses = [revert_clause(C) || C <- try_expr_clauses(Node)],
-    Handlers = [revert_try_clause(C) || C <- try_expr_handlers(Node)],
-    After = try_expr_after(Node),
-    {'try', Pos, Body, Clauses, Handlers, After}.
+	Pos = get_pos(Node),
+	Body = try_expr_body(Node),
+	Clauses = [revert_clause(C) || C <- try_expr_clauses(Node)],
+	Handlers = [revert_try_clause(C) || C <- try_expr_handlers(Node)],
+	After = try_expr_after(Node),
+	{'try', Pos, Body, Clauses, Handlers, After}.
 
 
 %% =====================================================================
@@ -5304,12 +5304,12 @@ revert_try_expr(Node) ->
 -spec try_expr_body(syntaxTree()) -> [syntaxTree()].
 
 try_expr_body(Node) ->
-    case unwrap(Node) of
+	case unwrap(Node) of
 	{'try', _, Body, _, _, _} ->
-	    Body;
+		Body;
 	Node1 ->
-	    (data(Node1))#try_expr.body
-    end.
+		(data(Node1))#try_expr.body
+	end.
 
 
 %% =====================================================================
@@ -5323,12 +5323,12 @@ try_expr_body(Node) ->
 -spec try_expr_clauses(syntaxTree()) -> [syntaxTree()].
 
 try_expr_clauses(Node) ->
-    case unwrap(Node) of
+	case unwrap(Node) of
 	{'try', _, _, Clauses, _, _} ->
-	    Clauses;
+		Clauses;
 	Node1 ->
-	    (data(Node1))#try_expr.clauses
-    end.
+		(data(Node1))#try_expr.clauses
+	end.
 
 
 %% =====================================================================
@@ -5340,12 +5340,12 @@ try_expr_clauses(Node) ->
 -spec try_expr_handlers(syntaxTree()) -> [syntaxTree()].
 
 try_expr_handlers(Node) ->
-    case unwrap(Node) of
+	case unwrap(Node) of
 	{'try', _, _, _, Handlers, _} ->
-	    unfold_try_clauses(Handlers);
+		unfold_try_clauses(Handlers);
 	Node1 ->
-	    (data(Node1))#try_expr.handlers
-    end.
+		(data(Node1))#try_expr.handlers
+	end.
 
 
 %% =====================================================================
@@ -5356,12 +5356,12 @@ try_expr_handlers(Node) ->
 -spec try_expr_after(syntaxTree()) -> [syntaxTree()].
 
 try_expr_after(Node) ->
-    case unwrap(Node) of
+	case unwrap(Node) of
 	{'try', _, _, _, _, After} ->
-	    After;
+		After;
 	Node1 ->
-	    (data(Node1))#try_expr.'after'
-    end.
+		(data(Node1))#try_expr.'after'
+	end.
 
 
 %% =====================================================================
@@ -5382,7 +5382,7 @@ try_expr_after(Node) ->
 -spec class_qualifier(syntaxTree(), syntaxTree()) -> syntaxTree().
 
 class_qualifier(Class, Body) ->
-    tree(class_qualifier,
+	tree(class_qualifier,
 	 #class_qualifier{class = Class, body = Body}).
 
 
@@ -5395,7 +5395,7 @@ class_qualifier(Class, Body) ->
 -spec class_qualifier_argument(syntaxTree()) -> syntaxTree().
 
 class_qualifier_argument(Node) ->
-    (data(Node))#class_qualifier.class.
+	(data(Node))#class_qualifier.class.
 
 
 %% =====================================================================
@@ -5406,7 +5406,7 @@ class_qualifier_argument(Node) ->
 -spec class_qualifier_body(syntaxTree()) -> syntaxTree().
 
 class_qualifier_body(Node) ->
-    (data(Node))#class_qualifier.body.
+	(data(Node))#class_qualifier.body.
 
 
 %% =====================================================================
@@ -5423,9 +5423,9 @@ class_qualifier_body(Node) ->
 -spec implicit_fun(syntaxTree(), 'none' | syntaxTree()) -> syntaxTree().
 
 implicit_fun(Name, none) ->
-    implicit_fun(Name);
+	implicit_fun(Name);
 implicit_fun(Name, Arity) ->
-    implicit_fun(arity_qualifier(Name, Arity)).
+	implicit_fun(arity_qualifier(Name, Arity)).
 
 
 %% =====================================================================
@@ -5441,12 +5441,12 @@ implicit_fun(Name, Arity) ->
 %% @see implicit_fun/2
 
 -spec implicit_fun('none' | syntaxTree(), syntaxTree(), syntaxTree()) ->
-        syntaxTree().
+		syntaxTree().
 
 implicit_fun(none, Name, Arity) ->
-    implicit_fun(Name, Arity);
+	implicit_fun(Name, Arity);
 implicit_fun(Module, Name, Arity) ->
-    implicit_fun(module_qualifier(Module, arity_qualifier(Name, Arity))).
+	implicit_fun(module_qualifier(Module, arity_qualifier(Name, Arity))).
 
 
 %% =====================================================================
@@ -5476,37 +5476,37 @@ implicit_fun(Module, Name, Arity) ->
 -spec implicit_fun(syntaxTree()) -> syntaxTree().
 
 implicit_fun(Name) ->
-    tree(implicit_fun, Name).
+	tree(implicit_fun, Name).
 
 revert_implicit_fun(Node) ->
-    Pos = get_pos(Node),
-    Name = implicit_fun_name(Node),
-    case type(Name) of
+	Pos = get_pos(Node),
+	Name = implicit_fun_name(Node),
+	case type(Name) of
 	arity_qualifier ->
-	    F = arity_qualifier_body(Name),
-	    A = arity_qualifier_argument(Name),
-	    case {type(F), type(A)} of
+		F = arity_qualifier_body(Name),
+		A = arity_qualifier_argument(Name),
+		case {type(F), type(A)} of
 		{atom, integer} ->
-		    {'fun', Pos,
-		     {function, concrete(F), concrete(A)}};
+			{'fun', Pos,
+			 {function, concrete(F), concrete(A)}};
 		_ ->
-		    Node
-	    end;
+			Node
+		end;
 	module_qualifier ->
-	    M = module_qualifier_argument(Name),
-	    Name1 = module_qualifier_body(Name),
-	    F = arity_qualifier_body(Name1),
-	    A = arity_qualifier_argument(Name1),
-	    case {type(M), type(F), type(A)} of
+		M = module_qualifier_argument(Name),
+		Name1 = module_qualifier_body(Name),
+		F = arity_qualifier_body(Name1),
+		A = arity_qualifier_argument(Name1),
+		case {type(M), type(F), type(A)} of
 		{atom, atom, integer} ->
-		    {'fun', Pos,
-		     {function, concrete(M), concrete(F), concrete(A)}};
+			{'fun', Pos,
+			 {function, concrete(M), concrete(F), concrete(A)}};
 		_ ->
-		    Node
-	    end;
+			Node
+		end;
 	_ ->
-	    Node
-    end.
+		Node
+	end.
 
 
 %% =====================================================================
@@ -5525,24 +5525,24 @@ revert_implicit_fun(Node) ->
 -spec implicit_fun_name(syntaxTree()) -> syntaxTree().
 
 implicit_fun_name(Node) ->
-    case unwrap(Node) of
+	case unwrap(Node) of
 	{'fun', Pos, {function, Atom, Arity}} ->
-	    arity_qualifier(set_pos(atom(Atom), Pos),
-			    set_pos(integer(Arity), Pos));
+		arity_qualifier(set_pos(atom(Atom), Pos),
+				set_pos(integer(Arity), Pos));
 	{'fun', Pos, {function, Module, Atom, Arity}}
 	  when is_atom(Module), is_atom(Atom), is_integer(Arity) ->
-	    %% Backward compatibility with pre-R15 abstract format.
-	    module_qualifier(set_pos(atom(Module), Pos),
-			     arity_qualifier(
-			       set_pos(atom(Atom), Pos),
-			       set_pos(integer(Arity), Pos)));
+		%% Backward compatibility with pre-R15 abstract format.
+		module_qualifier(set_pos(atom(Module), Pos),
+				 arity_qualifier(
+				   set_pos(atom(Atom), Pos),
+				   set_pos(integer(Arity), Pos)));
 	{'fun', _Pos, {function, Module, Atom, Arity}} ->
-	    %% New in R15: fun M:F/A.
-	    %% XXX: Perhaps set position for this as well?
-	    module_qualifier(Module, arity_qualifier(Atom, Arity));
+		%% New in R15: fun M:F/A.
+		%% XXX: Perhaps set position for this as well?
+		module_qualifier(Module, arity_qualifier(Atom, Arity));
 	Node1 ->
-	    data(Node1)
-    end.
+		data(Node1)
+	end.
 
 
 %% =====================================================================
@@ -5577,12 +5577,12 @@ implicit_fun_name(Node) ->
 -spec fun_expr([syntaxTree()]) -> syntaxTree().
 
 fun_expr(Clauses) ->
-    tree(fun_expr, Clauses).
+	tree(fun_expr, Clauses).
 
 revert_fun_expr(Node) ->
-    Clauses = [revert_clause(C) || C <- fun_expr_clauses(Node)],
-    Pos = get_pos(Node),
-    {'fun', Pos, {clauses, Clauses}}.
+	Clauses = [revert_clause(C) || C <- fun_expr_clauses(Node)],
+	Pos = get_pos(Node),
+	{'fun', Pos, {clauses, Clauses}}.
 
 
 %% =====================================================================
@@ -5593,12 +5593,12 @@ revert_fun_expr(Node) ->
 -spec fun_expr_clauses(syntaxTree()) -> [syntaxTree()].
 
 fun_expr_clauses(Node) ->
-    case unwrap(Node) of
+	case unwrap(Node) of
 	{'fun', _, {clauses, Clauses}} ->
-	    Clauses;
+		Clauses;
 	Node1 ->
-	    data(Node1)
-    end.
+		data(Node1)
+	end.
 
 
 %% =====================================================================
@@ -5619,7 +5619,7 @@ fun_expr_clauses(Node) ->
 -spec fun_expr_arity(syntaxTree()) -> arity().
 
 fun_expr_arity(Node) ->
-    length(clause_patterns(hd(fun_expr_clauses(Node)))).
+	length(clause_patterns(hd(fun_expr_clauses(Node)))).
 
 
 %% =====================================================================
@@ -5635,10 +5635,10 @@ fun_expr_arity(Node) ->
 -spec parentheses(syntaxTree()) -> syntaxTree().
 
 parentheses(Expr) ->
-    tree(parentheses, Expr).
+	tree(parentheses, Expr).
 
 revert_parentheses(Node) ->
-    parentheses_body(Node).
+	parentheses_body(Node).
 
 
 %% =====================================================================
@@ -5649,7 +5649,7 @@ revert_parentheses(Node) ->
 -spec parentheses_body(syntaxTree()) -> syntaxTree().
 
 parentheses_body(Node) ->
-    data(Node).
+	data(Node).
 
 
 %% =====================================================================
@@ -5658,7 +5658,7 @@ parentheses_body(Node) ->
 -spec macro(syntaxTree()) -> syntaxTree().
 
 macro(Name) ->
-    macro(Name, none).
+	macro(Name, none).
 
 
 %% =====================================================================
@@ -5695,7 +5695,7 @@ macro(Name) ->
 -spec macro(syntaxTree(), 'none' | [syntaxTree()]) -> syntaxTree().
 
 macro(Name, Arguments) ->
-    tree(macro, #macro{name = Name, arguments = Arguments}).
+	tree(macro, #macro{name = Name, arguments = Arguments}).
 
 
 %% =====================================================================
@@ -5706,7 +5706,7 @@ macro(Name, Arguments) ->
 -spec macro_name(syntaxTree()) -> syntaxTree().
 
 macro_name(Node) ->
-    (data(Node))#macro.name.
+	(data(Node))#macro.name.
 
 
 %% =====================================================================
@@ -5722,7 +5722,7 @@ macro_name(Node) ->
 -spec macro_arguments(syntaxTree()) -> 'none' | [syntaxTree()].
 
 macro_arguments(Node) ->
-    (data(Node))#macro.arguments.
+	(data(Node))#macro.arguments.
 
 
 %% =====================================================================
@@ -5740,33 +5740,33 @@ macro_arguments(Node) ->
 -spec abstract(term()) -> syntaxTree().
 
 abstract([H | T] = L) when is_integer(H) ->
-    case is_printable(L) of
+	case is_printable(L) of
 	true ->
-	    string(L);
+		string(L);
 	false ->
-	    abstract_tail(H, T)
-    end;
+		abstract_tail(H, T)
+	end;
 abstract([H | T]) ->
-    abstract_tail(H, T);
+	abstract_tail(H, T);
 abstract(T) when is_atom(T) ->
-    atom(T);
+	atom(T);
 abstract(T) when is_integer(T) ->
-    integer(T);
+	integer(T);
 abstract(T) when is_float(T) ->
-    make_float(T);    % (not `float', which would call the BIF)
+	make_float(T);	% (not `float', which would call the BIF)
 abstract([]) ->
-    nil();
+	nil();
 abstract(T) when is_tuple(T) ->
-    tuple(abstract_list(tuple_to_list(T)));
+	tuple(abstract_list(tuple_to_list(T)));
 abstract(T) when is_binary(T) ->
-    binary([binary_field(integer(B)) || B <- binary_to_list(T)]);
+	binary([binary_field(integer(B)) || B <- binary_to_list(T)]);
 abstract(T) ->
-    erlang:error({badarg, T}).
+	erlang:error({badarg, T}).
 
 abstract_list([T | Ts]) ->
-    [abstract(T) | abstract_list(Ts)];
+	[abstract(T) | abstract_list(Ts)];
 abstract_list([]) ->
-    [].
+	[].
 
 %% This is entered when we might have a sequence of conses that might or
 %% might not be a proper list, but which should not be considered as a
@@ -5775,10 +5775,10 @@ abstract_list([]) ->
 %% `[4711 | "*\n"]'.
 
 abstract_tail(H1, [H2 | T]) ->
-    %% Recall that `cons' does "intelligent" composition
-    cons(abstract(H1), abstract_tail(H2, T));
+	%% Recall that `cons' does "intelligent" composition
+	cons(abstract(H1), abstract_tail(H2, T));
 abstract_tail(H, T) ->
-    cons(abstract(H), abstract(T)).
+	cons(abstract(H), abstract(T)).
 
 
 %% =====================================================================
@@ -5801,48 +5801,48 @@ abstract_tail(H, T) ->
 -spec concrete(syntaxTree()) -> term().
 
 concrete(Node) ->
-    case type(Node) of
+	case type(Node) of
 	atom ->
-	    atom_value(Node);
+		atom_value(Node);
 	integer ->
-	    integer_value(Node);
+		integer_value(Node);
 	float ->
-	    float_value(Node);
+		float_value(Node);
 	char ->
-	    char_value(Node);
+		char_value(Node);
 	string ->
-	    string_value(Node);
+		string_value(Node);
 	nil ->
-	    [];
+		[];
 	list ->
-	    [concrete(list_head(Node))
-	     | concrete(list_tail(Node))];
+		[concrete(list_head(Node))
+	 | concrete(list_tail(Node))];
 	tuple ->
-	    list_to_tuple(concrete_list(tuple_elements(Node)));
+		list_to_tuple(concrete_list(tuple_elements(Node)));
 	binary ->
-	    Fs = [revert_binary_field(
-		    binary_field(binary_field_body(F),
+		Fs = [revert_binary_field(
+			binary_field(binary_field_body(F),
 				 case binary_field_size(F) of
-				     none -> none;
-				     S ->
+					 none -> none;
+					 S ->
 					 revert(S)
 				 end,
 				 binary_field_types(F)))
-		  || F <- binary_fields(Node)],
-	    {value, B, _} =
+		 || F <- binary_fields(Node)],
+		{value, B, _} =
 		eval_bits:expr_grp(Fs, [],
 				   fun(F, _) ->
 					   {value, concrete(F), []}
 				   end, [], true),
-	    B;
-        _ ->
-	    erlang:error({badarg, Node})
-    end.
+		B;
+		_ ->
+		erlang:error({badarg, Node})
+	end.
 
 concrete_list([E | Es]) ->
-    [concrete(E) | concrete_list(Es)];
+	[concrete(E) | concrete_list(Es)];
 concrete_list([]) ->
-    [].
+	[].
 
 
 %% =====================================================================
@@ -5857,26 +5857,26 @@ concrete_list([]) ->
 -spec is_literal(syntaxTree()) -> boolean().
 
 is_literal(T) ->
-    case type(T) of
+	case type(T) of
 	atom ->
-	    true;
+		true;
 	integer ->
-	    true;
+		true;
 	float ->
-	    true;
+		true;
 	char->
-	    true;
+		true;
 	string ->
-	    true;
+		true;
 	nil ->
-	    true;
+		true;
 	list ->
-	    is_literal(list_head(T)) andalso is_literal(list_tail(T));
+		is_literal(list_head(T)) andalso is_literal(list_tail(T));
 	tuple ->
-	    lists:all(fun is_literal/1, tuple_elements(T));
+		lists:all(fun is_literal/1, tuple_elements(T));
 	_ ->
-	    false
-    end.
+		false
+	end.
 
 
 %% =====================================================================
@@ -5900,28 +5900,28 @@ is_literal(T) ->
 -spec revert(syntaxTree()) -> syntaxTree().
 
 revert(Node) ->
-    case is_tree(Node) of
+	case is_tree(Node) of
 	false ->
-	    %% Just remove any wrapper. `erl_parse' nodes never contain
-	    %% abstract syntax tree nodes as subtrees.
-	    unwrap(Node);
+		%% Just remove any wrapper. `erl_parse' nodes never contain
+		%% abstract syntax tree nodes as subtrees.
+		unwrap(Node);
 	true ->
-	    case is_leaf(Node) of
+		case is_leaf(Node) of
 		true ->
-		    revert_root(Node);
+			revert_root(Node);
 		false ->
-		    %% First revert the subtrees, where possible.
-		    %% (Sometimes, subtrees cannot be reverted out of
-		    %% context, and the real work will be done when the
-		    %% parent node is reverted.)
-		    Gs = [[revert(X) || X <- L] || L <- subtrees(Node)],
+			%% First revert the subtrees, where possible.
+			%% (Sometimes, subtrees cannot be reverted out of
+			%% context, and the real work will be done when the
+			%% parent node is reverted.)
+			Gs = [[revert(X) || X <- L] || L <- subtrees(Node)],
 
-		    %% Then reconstruct the node from the reverted
-		    %% parts, and revert the node itself.
-		    Node1 = update_tree(Node, Gs),
-		    revert_root(Node1)
-	    end
-    end.
+			%% Then reconstruct the node from the reverted
+			%% parts, and revert the node itself.
+			Node1 = update_tree(Node, Gs),
+			revert_root(Node1)
+		end
+	end.
 
 %% Note: The concept of "compatible root node" is not strictly defined.
 %% At a minimum, if `make_tree' is used to compose a node `T' from
@@ -5930,93 +5930,93 @@ revert(Node) ->
 %% compatible.
 
 revert_root(Node) ->
-    case type(Node) of
+	case type(Node) of
 	application ->
-	    revert_application(Node);
+		revert_application(Node);
 	atom ->
-	    revert_atom(Node);
+		revert_atom(Node);
 	attribute ->
-	    revert_attribute(Node);
+		revert_attribute(Node);
 	binary ->
-	    revert_binary(Node);
-        binary_comp ->
-	    revert_binary_comp(Node);
+		revert_binary(Node);
+		binary_comp ->
+		revert_binary_comp(Node);
 	binary_field ->
-	    revert_binary_field(Node);
-        binary_generator ->
-	    revert_binary_generator(Node);
+		revert_binary_field(Node);
+		binary_generator ->
+		revert_binary_generator(Node);
 	block_expr ->
-	    revert_block_expr(Node);
+		revert_block_expr(Node);
 	case_expr ->
-	    revert_case_expr(Node);
+		revert_case_expr(Node);
 	catch_expr ->
-	    revert_catch_expr(Node);
+		revert_catch_expr(Node);
 	char ->
-	    revert_char(Node);
+		revert_char(Node);
 	clause ->
-	    revert_clause(Node);
+		revert_clause(Node);
 	cond_expr ->
-	    revert_cond_expr(Node);
+		revert_cond_expr(Node);
 	eof_marker ->
-	    revert_eof_marker(Node);
+		revert_eof_marker(Node);
 	error_marker ->
-	    revert_error_marker(Node);
+		revert_error_marker(Node);
 	float ->
-	    revert_float(Node);
+		revert_float(Node);
 	fun_expr ->
-	    revert_fun_expr(Node);
+		revert_fun_expr(Node);
 	function ->
-	    revert_function(Node);
+		revert_function(Node);
 	generator ->
-	    revert_generator(Node);
+		revert_generator(Node);
 	if_expr ->
-	    revert_if_expr(Node);
+		revert_if_expr(Node);
 	implicit_fun ->
-	    revert_implicit_fun(Node);
+		revert_implicit_fun(Node);
 	infix_expr ->
-	    revert_infix_expr(Node);
+		revert_infix_expr(Node);
 	integer ->
-	    revert_integer(Node);
+		revert_integer(Node);
 	list ->
-	    revert_list(Node);
+		revert_list(Node);
 	list_comp ->
-	    revert_list_comp(Node);
+		revert_list_comp(Node);
 	match_expr ->
-	    revert_match_expr(Node);
+		revert_match_expr(Node);
 	module_qualifier ->
-	    revert_module_qualifier(Node);
+		revert_module_qualifier(Node);
 	nil ->
-	    revert_nil(Node);
+		revert_nil(Node);
 	parentheses ->
-	    revert_parentheses(Node);
+		revert_parentheses(Node);
 	prefix_expr ->
-	    revert_prefix_expr(Node);
+		revert_prefix_expr(Node);
 	receive_expr ->
-	    revert_receive_expr(Node);
+		revert_receive_expr(Node);
 	record_access ->
-	    revert_record_access(Node);
+		revert_record_access(Node);
 	record_expr ->
-	    revert_record_expr(Node);
+		revert_record_expr(Node);
 	record_index_expr ->
-	    revert_record_index_expr(Node);
+		revert_record_index_expr(Node);
 	rule ->
-	    revert_rule(Node);
+		revert_rule(Node);
 	string ->
-	    revert_string(Node);
+		revert_string(Node);
 	try_expr ->
-	    revert_try_expr(Node);
+		revert_try_expr(Node);
 	tuple ->
-	    revert_tuple(Node);
+		revert_tuple(Node);
 	underscore ->
-	    revert_underscore(Node);
+		revert_underscore(Node);
 	variable ->
-	    revert_variable(Node);
+		revert_variable(Node);
 	warning_marker ->
-	    revert_warning_marker(Node);
+		revert_warning_marker(Node);
 	_ ->
-	    %% Non-revertible new-form node
-	    Node
-    end.
+		%% Non-revertible new-form node
+		Node
+	end.
 
 
 %% =====================================================================
@@ -6037,40 +6037,40 @@ revert_root(Node) ->
 -spec revert_forms(forms()) -> [erl_parse()].
 
 revert_forms(Forms) when is_list(Forms) ->
-    revert_forms(form_list(Forms));
+	revert_forms(form_list(Forms));
 revert_forms(T) ->
-    case type(T) of
+	case type(T) of
 	form_list ->
-	    T1 = flatten_form_list(T),
-	    case catch {ok, revert_forms_1(form_list_elements(T1))} of
+		T1 = flatten_form_list(T),
+		case catch {ok, revert_forms_1(form_list_elements(T1))} of
 		{ok, Fs} ->
-		    Fs;
+			Fs;
 		{error, _} = Error ->
-		    erlang:error(Error);
+			erlang:error(Error);
 		{'EXIT', R} ->
-		    exit(R);
+			exit(R);
 		R ->
-		    throw(R)
-	    end;
+			throw(R)
+		end;
 	_ ->
-	    erlang:error({badarg, T})
-    end.
+		erlang:error({badarg, T})
+	end.
 
 revert_forms_1([T | Ts]) ->
-    case type(T) of
+	case type(T) of
 	comment ->
-	    revert_forms_1(Ts);
+		revert_forms_1(Ts);
 	_ ->
-	    T1 = revert(T),
-	    case is_tree(T1) of
+		T1 = revert(T),
+		case is_tree(T1) of
 		true ->
-		    throw({error, T1});
+			throw({error, T1});
 		false ->
-		    [T1 | revert_forms_1(Ts)]
-	    end
-    end;
+			[T1 | revert_forms_1(Ts)]
+		end
+	end;
 revert_forms_1([]) ->
-    [].
+	[].
 
 
 %% =====================================================================
@@ -6102,22 +6102,22 @@ revert_forms_1([]) ->
 %%
 %% For example:
 %% ```postorder(F, Tree) ->
-%%       F(case subtrees(Tree) of
-%%           [] -> Tree;
-%%           List -> update_tree(Tree,
-%%                               [[postorder(F, Subtree)
-%%                                 || Subtree &lt;- Group]
-%%                                || Group &lt;- List])
-%%         end).'''
+%%	   F(case subtrees(Tree) of
+%%		   [] -> Tree;
+%%		   List -> update_tree(Tree,
+%%							   [[postorder(F, Subtree)
+%% || Subtree &lt;- Group]
+%% || Group &lt;- List])
+%%		 end).'''
 %% maps the function `F' on `Tree' and all its
 %% subtrees, doing a post-order traversal of the syntax tree. (Note the
 %% use of {@link update_tree/2} to preserve node attributes.) For a
 %% simple function like:
 %% ```f(Node) ->
-%%       case type(Node) of
-%%           atom -> atom("a_" ++ atom_name(Node));
-%%           _ -> Node
-%%       end.'''
+%%	   case type(Node) of
+%%		   atom -> atom("a_" ++ atom_name(Node));
+%%		   _ -> Node
+%%	   end.'''
 %% the call `postorder(fun f/1, Tree)' will yield a new
 %% representation of `Tree' in which all atom names have been
 %% extended with the prefix "a_", but nothing else (including comments,
@@ -6131,159 +6131,159 @@ revert_forms_1([]) ->
 -spec subtrees(syntaxTree()) -> [[syntaxTree()]].
 
 subtrees(T) ->
-    case is_leaf(T) of
+	case is_leaf(T) of
 	true ->
-	    [];
+		[];
 	false ->
-	    case type(T) of
+		case type(T) of
 		application ->
-		    [[application_operator(T)],
-		     application_arguments(T)];
+			[[application_operator(T)],
+			 application_arguments(T)];
 		arity_qualifier ->
-		    [[arity_qualifier_body(T)],
-		     [arity_qualifier_argument(T)]];
+			[[arity_qualifier_body(T)],
+			 [arity_qualifier_argument(T)]];
 		attribute ->
-		    case attribute_arguments(T) of
+			case attribute_arguments(T) of
 			none ->
-			    [[attribute_name(T)]];
+				[[attribute_name(T)]];
 			As ->
-			    [[attribute_name(T)], As]
-		    end;
+				[[attribute_name(T)], As]
+			end;
 		binary ->
-		    [binary_fields(T)];
+			[binary_fields(T)];
 		binary_comp ->
-		    [[binary_comp_template(T)], binary_comp_body(T)];
-                binary_field ->
-		    case binary_field_types(T) of
+			[[binary_comp_template(T)], binary_comp_body(T)];
+				binary_field ->
+			case binary_field_types(T) of
 			[] ->
-			    [[binary_field_body(T)]];
+				[[binary_field_body(T)]];
 			Ts ->
-			    [[binary_field_body(T)],
-			     Ts]
-		    end;
-	        binary_generator ->
-		    [[binary_generator_pattern(T)], 
-                     [binary_generator_body(T)]];
+				[[binary_field_body(T)],
+				 Ts]
+			end;
+			binary_generator ->
+			[[binary_generator_pattern(T)],
+					 [binary_generator_body(T)]];
 		block_expr ->
-		    [block_expr_body(T)];
+			[block_expr_body(T)];
 		case_expr ->
-		    [[case_expr_argument(T)],
-		     case_expr_clauses(T)];
+			[[case_expr_argument(T)],
+			 case_expr_clauses(T)];
 		catch_expr ->
-		    [[catch_expr_body(T)]];
+			[[catch_expr_body(T)]];
 		class_qualifier ->
-		    [[class_qualifier_argument(T)],
-		     [class_qualifier_body(T)]];
+			[[class_qualifier_argument(T)],
+			 [class_qualifier_body(T)]];
 		clause ->
-		    case clause_guard(T) of
+			case clause_guard(T) of
 			none ->
-			    [clause_patterns(T), clause_body(T)];
+				[clause_patterns(T), clause_body(T)];
 			G ->
-			    [clause_patterns(T), [G],
-			     clause_body(T)]
-		    end;
+				[clause_patterns(T), [G],
+				 clause_body(T)]
+			end;
 		cond_expr ->
-		    [cond_expr_clauses(T)];
+			[cond_expr_clauses(T)];
 		conjunction ->
-		    [conjunction_body(T)];
+			[conjunction_body(T)];
 		disjunction ->
-		    [disjunction_body(T)];
+			[disjunction_body(T)];
 		form_list ->
-		    [form_list_elements(T)];
+			[form_list_elements(T)];
 		fun_expr ->
-		    [fun_expr_clauses(T)];
+			[fun_expr_clauses(T)];
 		function ->
-		    [[function_name(T)], function_clauses(T)];
+			[[function_name(T)], function_clauses(T)];
 		generator ->
-		    [[generator_pattern(T)], [generator_body(T)]];
+			[[generator_pattern(T)], [generator_body(T)]];
 		if_expr ->
-		    [if_expr_clauses(T)];
+			[if_expr_clauses(T)];
 		implicit_fun ->
-		    [[implicit_fun_name(T)]];
+			[[implicit_fun_name(T)]];
 		infix_expr ->
-		    [[infix_expr_left(T)],
-		     [infix_expr_operator(T)],
-		     [infix_expr_right(T)]];
+			[[infix_expr_left(T)],
+			 [infix_expr_operator(T)],
+			 [infix_expr_right(T)]];
 		list ->
-		    case list_suffix(T) of
+			case list_suffix(T) of
 			none ->
-			    [list_prefix(T)];
+				[list_prefix(T)];
 			S ->
-			    [list_prefix(T), [S]]
-		    end;
+				[list_prefix(T), [S]]
+			end;
 		list_comp ->
-		    [[list_comp_template(T)], list_comp_body(T)];
+			[[list_comp_template(T)], list_comp_body(T)];
 		macro ->
-		    case macro_arguments(T) of
+			case macro_arguments(T) of
 			none ->
-			    [[macro_name(T)]];
+				[[macro_name(T)]];
 			As ->
-			    [[macro_name(T)], As]
-		    end;
+				[[macro_name(T)], As]
+			end;
 		match_expr ->
-		    [[match_expr_pattern(T)],
-		     [match_expr_body(T)]];
+			[[match_expr_pattern(T)],
+			 [match_expr_body(T)]];
 		module_qualifier ->
-		    [[module_qualifier_argument(T)],
-		     [module_qualifier_body(T)]];
+			[[module_qualifier_argument(T)],
+			 [module_qualifier_body(T)]];
 		parentheses ->
-		    [[parentheses_body(T)]];
+			[[parentheses_body(T)]];
 		prefix_expr ->
-		    [[prefix_expr_operator(T)],
-		     [prefix_expr_argument(T)]];
+			[[prefix_expr_operator(T)],
+			 [prefix_expr_argument(T)]];
 		receive_expr ->
-		    case receive_expr_timeout(T) of
+			case receive_expr_timeout(T) of
 			none ->
-			    [receive_expr_clauses(T)];
+				[receive_expr_clauses(T)];
 			E ->
-			    [receive_expr_clauses(T),
-			     [E],
-			     receive_expr_action(T)]
-		    end;
+				[receive_expr_clauses(T),
+				 [E],
+				 receive_expr_action(T)]
+			end;
 		record_access ->
-		    case record_access_type(T) of
+			case record_access_type(T) of
 			none ->
-			    [[record_access_argument(T)],
-			     [record_access_field(T)]];
+				[[record_access_argument(T)],
+				 [record_access_field(T)]];
 			R ->
-			    [[record_access_argument(T)],
-			     [R],
-			     [record_access_field(T)]]
-		    end;
+				[[record_access_argument(T)],
+				 [R],
+				 [record_access_field(T)]]
+			end;
 		record_expr ->
-		    case record_expr_argument(T) of
+			case record_expr_argument(T) of
 			none ->
-			    [[record_expr_type(T)],
-			     record_expr_fields(T)];
+				[[record_expr_type(T)],
+				 record_expr_fields(T)];
 			V ->
-			    [[V],
-			     [record_expr_type(T)],
-			     record_expr_fields(T)]
-		    end;
+				[[V],
+				 [record_expr_type(T)],
+				 record_expr_fields(T)]
+			end;
 		record_field ->
-		    case record_field_value(T) of
+			case record_field_value(T) of
 			none ->
-			    [[record_field_name(T)]];
+				[[record_field_name(T)]];
 			V ->
-			    [[record_field_name(T)], [V]]
-		    end;
+				[[record_field_name(T)], [V]]
+			end;
 		record_index_expr ->
-		    [[record_index_expr_type(T)],
-		     [record_index_expr_field(T)]];
+			[[record_index_expr_type(T)],
+			 [record_index_expr_field(T)]];
 		rule ->
-		    [[rule_name(T)], rule_clauses(T)];
+			[[rule_name(T)], rule_clauses(T)];
 		size_qualifier ->
-		    [[size_qualifier_body(T)],
-		     [size_qualifier_argument(T)]];
+			[[size_qualifier_body(T)],
+			 [size_qualifier_argument(T)]];
 		try_expr ->
-		    [try_expr_body(T),
-		     try_expr_clauses(T),
-		     try_expr_handlers(T),
-		     try_expr_after(T)];
+			[try_expr_body(T),
+			 try_expr_clauses(T),
+			 try_expr_handlers(T),
+			 try_expr_after(T)];
 		tuple ->
-		    [tuple_elements(T)]
-	    end
-    end.
+			[tuple_elements(T)]
+		end
+	end.
 
 
 %% =====================================================================
@@ -6298,7 +6298,7 @@ subtrees(T) ->
 -spec update_tree(syntaxTree(), [[syntaxTree()]]) -> syntaxTree().
 
 update_tree(Node, Groups) ->
-    copy_attrs(Node, make_tree(type(Node), Groups)).
+	copy_attrs(Node, make_tree(type(Node), Groups)).
 
 
 %% =====================================================================
@@ -6362,15 +6362,15 @@ make_tree(prefix_expr, [[F], [A]]) -> prefix_expr(F, A);
 make_tree(receive_expr, [C]) -> receive_expr(C);
 make_tree(receive_expr, [C, [E], A]) -> receive_expr(C, E, A);
 make_tree(record_access, [[E], [F]]) ->
-    record_access(E, F);
+	record_access(E, F);
 make_tree(record_access, [[E], [T], [F]]) ->
-    record_access(E, T, F);
+	record_access(E, T, F);
 make_tree(record_expr, [[T], F]) -> record_expr(T, F);
 make_tree(record_expr, [[E], [T], F]) -> record_expr(E, T, F);
 make_tree(record_field, [[N]]) -> record_field(N);
 make_tree(record_field, [[N], [E]]) -> record_field(N, E);
 make_tree(record_index_expr, [[T], [F]]) ->
-    record_index_expr(T, F);
+	record_index_expr(T, F);
 make_tree(rule, [[N], C]) -> rule(N, C);
 make_tree(size_qualifier, [[N], [A]]) -> size_qualifier(N, A);
 make_tree(try_expr, [B, C, H, A]) -> try_expr(B, C, H, A);
@@ -6420,119 +6420,119 @@ make_tree(tuple, [E]) -> tuple(E).
 -spec meta(syntaxTree()) -> syntaxTree().
 
 meta(T) ->
-    %% First of all we check for metavariables:
-    case type(T) of
+	%% First of all we check for metavariables:
+	case type(T) of
 	variable ->
-	    case lists:member(meta_var, get_ann(T)) of
+		case lists:member(meta_var, get_ann(T)) of
 		false ->
-		    meta_precomment(T);
+			meta_precomment(T);
 		true ->
-		    %% A meta-variable: remove the first found
-		    %% `meta_var' annotation, but otherwise leave
-		    %% the node unchanged.
-		    set_ann(T, lists:delete(meta_var, get_ann(T)))
-	    end;
+			%% A meta-variable: remove the first found
+			%% `meta_var' annotation, but otherwise leave
+			%% the node unchanged.
+			set_ann(T, lists:delete(meta_var, get_ann(T)))
+		end;
 	_ ->
-	    case has_comments(T) of
+		case has_comments(T) of
 		true ->
-		    meta_precomment(T);
+			meta_precomment(T);
 		false ->
-		    meta_1(T)
-	    end
-    end.
+			meta_1(T)
+		end
+	end.
 
 meta_precomment(T) ->
-    case get_precomments(T) of
+	case get_precomments(T) of
 	[] ->
-	    meta_postcomment(T);
+		meta_postcomment(T);
 	Cs ->
-	    meta_call(set_precomments,
-		      [meta_postcomment(T), list(meta_list(Cs))])
-    end.
+		meta_call(set_precomments,
+			  [meta_postcomment(T), list(meta_list(Cs))])
+	end.
 
 meta_postcomment(T) ->
-    case get_postcomments(T) of
+	case get_postcomments(T) of
 	[] ->
-	    meta_0(T);
+		meta_0(T);
 	Cs ->
-	    meta_call(set_postcomments,
-		      [meta_0(T), list(meta_list(Cs))])
-    end.
+		meta_call(set_postcomments,
+			  [meta_0(T), list(meta_list(Cs))])
+	end.
 
 meta_0(T) ->
-    meta_1(remove_comments(T)).
+	meta_1(remove_comments(T)).
 
 meta_1(T) ->
-    %% First handle leaf nodes and other common cases, in order to
-    %% generate compact code.
-    case type(T) of
+	%% First handle leaf nodes and other common cases, in order to
+	%% generate compact code.
+	case type(T) of
 	atom ->
-	    meta_call(atom, [T]);
+		meta_call(atom, [T]);
 	char ->
-	    meta_call(char, [T]);
+		meta_call(char, [T]);
 	comment ->
-	    meta_call(comment, [list([string(S)
-				      || S <- comment_text(T)])]);
+		meta_call(comment, [list([string(S)
+				 || S <- comment_text(T)])]);
 	eof_marker ->
-	    meta_call(eof_marker, []);
+		meta_call(eof_marker, []);
 	error_marker ->
-	    meta_call(error_marker,
-		      [abstract(error_marker_info(T))]);
+		meta_call(error_marker,
+			  [abstract(error_marker_info(T))]);
 	float ->
-	    meta_call(float, [T]);
+		meta_call(float, [T]);
 	integer ->
-	    meta_call(integer, [T]);
+		meta_call(integer, [T]);
 	nil ->
-	    meta_call(nil, []);
+		meta_call(nil, []);
 	operator ->
-	    meta_call(operator, [atom(operator_name(T))]);
+		meta_call(operator, [atom(operator_name(T))]);
 	string ->
-	    meta_call(string, [T]);
+		meta_call(string, [T]);
 	text ->
-	    meta_call(text, [string(text_string(T))]);
+		meta_call(text, [string(text_string(T))]);
 	underscore ->
-	    meta_call(underscore, []);
+		meta_call(underscore, []);
 	variable ->
-	    meta_call(variable, [string(atom_to_list(variable_name(T)))]);
+		meta_call(variable, [string(atom_to_list(variable_name(T)))]);
 	warning_marker ->
-	    meta_call(warning_marker,
-		      [abstract(warning_marker_info(T))]);
+		meta_call(warning_marker,
+			  [abstract(warning_marker_info(T))]);
 	list ->
-	    case list_suffix(T) of
+		case list_suffix(T) of
 		none ->
-		    meta_call(list,
-			      [list(meta_list(list_prefix(T)))]);
+			meta_call(list,
+				  [list(meta_list(list_prefix(T)))]);
 		S ->
-		    meta_call(list,
-			      [list(meta_list(list_prefix(T))),
-			       meta(S)])
-	    end;
+			meta_call(list,
+				  [list(meta_list(list_prefix(T))),
+				   meta(S)])
+		end;
 	tuple ->
-	    meta_call(tuple,
-		      [list(meta_list(tuple_elements(T)))]);
+		meta_call(tuple,
+			  [list(meta_list(tuple_elements(T)))]);
 	Type ->
-	    %% All remaining cases are handled using `subtrees'
-	    %% and `make_tree' to decompose and reassemble the
-	    %% nodes. More cases could of course be handled
-	    %% directly to get a more compact output, but I can't
-	    %% be bothered right now.
-	    meta_call(make_tree,
-		      [abstract(Type),
-		       meta_subtrees(subtrees(T))])
-    end.
+		%% All remaining cases are handled using `subtrees'
+		%% and `make_tree' to decompose and reassemble the
+		%% nodes. More cases could of course be handled
+		%% directly to get a more compact output, but I can't
+		%% be bothered right now.
+		meta_call(make_tree,
+			  [abstract(Type),
+			   meta_subtrees(subtrees(T))])
+	end.
 
 meta_list([T | Ts]) ->
-    [meta(T) | meta_list(Ts)];
+	[meta(T) | meta_list(Ts)];
 meta_list([]) ->
-    [].
+	[].
 
 meta_subtrees(Gs) ->
-    list([list([meta(T)
-		|| T <- G])
-	  || G <- Gs]).
+	list([list([meta(T)
+		 || T <- G])
+	 || G <- Gs]).
 
 meta_call(F, As) ->
-    application(atom(?MODULE), atom(F), As).
+	application(atom(?MODULE), atom(F), As).
 
 
 %% =====================================================================
@@ -6547,7 +6547,7 @@ meta_call(F, As) ->
 -spec tree(atom()) -> #tree{}.
 
 tree(Type) ->
-    tree(Type, []).
+	tree(Type, []).
 
 %% =====================================================================
 %% @doc <em>For special purposes only</em>. Creates an abstract syntax
@@ -6562,17 +6562,17 @@ tree(Type) ->
 %% === Notes: ===
 %% <ul>
 %%  <li>Any nodes created outside of this module must have type tags
-%%      distinct from those currently defined by this module; see
-%%      {@link type/1} for a complete list.</li>
+%%	  distinct from those currently defined by this module; see
+%%	  {@link type/1} for a complete list.</li>
 %%  <li>The type tag of a syntax tree node may also be used
-%%      as a primary tag by the `erl_parse' representation;
-%%      in that case, the selector functions for that node type
-%%      <em>must</em> handle both the abstract syntax tree and the
-%%      `erl_parse' form. The function `type(T)'
-%%      should return the correct type tag regardless of the
-%%      representation of `T', so that the user sees no
-%%      difference between `erl_syntax' and
-%%      `erl_parse' nodes.</li>
+%%	  as a primary tag by the `erl_parse' representation;
+%%	  in that case, the selector functions for that node type
+%%	  <em>must</em> handle both the abstract syntax tree and the
+%%	  `erl_parse' form. The function `type(T)'
+%%	  should return the correct type tag regardless of the
+%%	  representation of `T', so that the user sees no
+%%	  difference between `erl_syntax' and
+%%	  `erl_parse' nodes.</li>
 %% </ul>
 %%
 %% @see is_tree/1
@@ -6582,7 +6582,7 @@ tree(Type) ->
 -spec tree(atom(), term()) -> #tree{}.
 
 tree(Type, Data) ->
-    #tree{type = Type, data = Data}.
+	#tree{type = Type, data = Data}.
 
 
 %% =====================================================================
@@ -6598,9 +6598,9 @@ tree(Type, Data) ->
 -spec is_tree(syntaxTree()) -> boolean().
 
 is_tree(#tree{}) ->
-    true;
+	true;
 is_tree(_) ->
-    false.
+	false.
 
 
 %% =====================================================================
@@ -6638,9 +6638,9 @@ data(T) -> erlang:error({badarg, T}).
 -spec wrap(erl_parse()) -> #wrapper{}.
 
 wrap(Node) ->
-    %% We assume that Node is an old-school `erl_parse' tree.
-    #wrapper{type = type(Node), attr = #attr{pos = get_pos(Node)},
-	     tree = Node}.
+	%% We assume that Node is an old-school `erl_parse' tree.
+	#wrapper{type = type(Node), attr = #attr{pos = get_pos(Node)},
+		 tree = Node}.
 
 
 %% =====================================================================
@@ -6663,9 +6663,9 @@ unwrap(Node) -> Node.	 % This could also be a new-form node.
 -spec is_wrapper(term()) -> boolean().
 
 is_wrapper(#wrapper{}) ->
-    true;
+	true;
 is_wrapper(_) ->
-    false.
+	false.
 -endif.
 
 
@@ -6674,32 +6674,32 @@ is_wrapper(_) ->
 %% =====================================================================
 
 is_printable(S) ->
-    io_lib:printable_list(S).
+	io_lib:printable_list(S).
 
 %% Support functions for transforming lists of function names
 %% specified as `arity_qualifier' nodes.
 
 unfold_function_names(Ns, Pos) ->
-    F = fun ({Atom, Arity}) ->
+	F = fun ({Atom, Arity}) ->
 		N = arity_qualifier(atom(Atom), integer(Arity)),
 		set_pos(N, Pos)
 	end,
-    [F(N) || N <- Ns].
+	[F(N) || N <- Ns].
 
 fold_function_names(Ns) ->
-    [fold_function_name(N) || N <- Ns].
+	[fold_function_name(N) || N <- Ns].
 
 fold_function_name(N) ->
-    Name = arity_qualifier_body(N),
-    Arity = arity_qualifier_argument(N),
-    true = ((type(Name) =:= atom) and (type(Arity) =:= integer)),
-    {concrete(Name), concrete(Arity)}.
+	Name = arity_qualifier_body(N),
+	Arity = arity_qualifier_argument(N),
+	true = ((type(Name) =:= atom) and (type(Arity) =:= integer)),
+	{concrete(Name), concrete(Arity)}.
 
 fold_variable_names(Vs) ->
-    [variable_name(V) || V <- Vs].
+	[variable_name(V) || V <- Vs].
 
 unfold_variable_names(Vs, Pos) ->
-    [set_pos(variable(V), Pos) || V <- Vs].
+	[set_pos(variable(V), Pos) || V <- Vs].
 
 %% Support functions for transforming lists of record field definitions.
 %%
@@ -6712,20 +6712,20 @@ unfold_variable_names(Vs, Pos) ->
 %% expressions (see `record_access').
 
 fold_record_fields(Fs) ->
-    [fold_record_field(F) || F <- Fs].
+	[fold_record_field(F) || F <- Fs].
 
 fold_record_field(F) ->
-    Pos = get_pos(F),
-    Name = record_field_name(F),
-    case record_field_value(F) of
+	Pos = get_pos(F),
+	Name = record_field_name(F),
+	case record_field_value(F) of
 	none ->
-	    {record_field, Pos, Name};
+		{record_field, Pos, Name};
 	Value ->
-	    {record_field, Pos, Name, Value}
-    end.
+		{record_field, Pos, Name, Value}
+	end.
 
 unfold_record_fields(Fs) ->
-    [unfold_record_field(F) || F <- Fs].
+	[unfold_record_field(F) || F <- Fs].
 
 unfold_record_field({typed_record_field, Field, _Type}) ->
   unfold_record_field_1(Field);
@@ -6733,29 +6733,29 @@ unfold_record_field(Field) ->
   unfold_record_field_1(Field).
 
 unfold_record_field_1({record_field, Pos, Name}) ->
-    set_pos(record_field(Name), Pos);
+	set_pos(record_field(Name), Pos);
 unfold_record_field_1({record_field, Pos, Name, Value}) ->
-    set_pos(record_field(Name, Value), Pos).
+	set_pos(record_field(Name, Value), Pos).
 
 fold_binary_field_types(Ts) ->
-    [fold_binary_field_type(T) || T <- Ts].
+	[fold_binary_field_type(T) || T <- Ts].
 
 fold_binary_field_type(Node) ->
-    case type(Node) of
+	case type(Node) of
 	size_qualifier ->
-	    {concrete(size_qualifier_body(Node)),
-	     concrete(size_qualifier_argument(Node))};
+		{concrete(size_qualifier_body(Node)),
+		 concrete(size_qualifier_argument(Node))};
 	_ ->
-	    concrete(Node)
-    end.
+		concrete(Node)
+	end.
 
 unfold_binary_field_types(Ts, Pos) ->
-    [unfold_binary_field_type(T, Pos) || T <- Ts].
+	[unfold_binary_field_type(T, Pos) || T <- Ts].
 
 unfold_binary_field_type({Type, Size}, Pos) ->
-    set_pos(size_qualifier(atom(Type), integer(Size)), Pos);
+	set_pos(size_qualifier(atom(Type), integer(Size)), Pos);
 unfold_binary_field_type(Type, Pos) ->
-    set_pos(atom(Type), Pos).
+	set_pos(atom(Type), Pos).
 
 
 %% =====================================================================

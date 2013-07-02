@@ -15,13 +15,16 @@
 
 -export([create_model/1,
 		 model_option/3,
-		 create_field/1,
-		 normalize_field/1,
-		 field_option/3,
-		 set_field/2,
 		 normalize_model/1,
-		 build_model/1
+		 build_model/1,
+
+		 create_field/1,
+		 field_option/3,
+		 normalize_field/1,
+		 set_field/2
 		]).
+
+%% Model.
 
 create_model(Module) ->
 	#model{module=Module}.
@@ -32,15 +35,23 @@ model_option(init, InitFun, Model) ->
 model_option(_Option, _Val, _Model) ->
 	false.
 
+normalize_model(Model) ->
+	{ok, Model}.
+
+build_model(Model) ->
+	{Exports, Funs} = tq_record_generator:build_model(Model),
+	{lists:reverse(Exports), lists:reverse(Funs)}.
+
+%% Fields.
+
 create_field(Name) ->
 	#field{name=Name}.
 
 field_option(required, Value, Field) ->
 	Field2 = Field#field{is_required = Value},
 	{ok, Field2};
-field_option(default, DefaultValue, #field{record_options=RecOptions} = Field) ->
-	RecOptions2 = RecOptions#record_options{default_value = DefaultValue},
-	Field2 = Field#field{record_options=RecOptions2},
+field_option(default, DefaultValue, Field) ->
+	Field2 = Field#field{default_value=DefaultValue},
 	{ok, Field2};
 field_option(init, Init, Field) ->
 	Field2 = Field#field{init = Init},
@@ -48,13 +59,11 @@ field_option(init, Init, Field) ->
 field_option(mode, Mode, Field) ->
 	Field2 = Field#field{mode = mode_to_acl(Mode)},
 	{ok, Field2};
-field_option(type, Type, #field{record_options=RecOptions} = Field) ->
-	RecOptions2 = RecOptions#record_options{type = Type},
-	Field2 = Field#field{record_options = RecOptions2},
+field_option(type, Type, Field) ->
+	Field2 = Field#field{type = Type},
 	{ok, Field2};
-field_option(type_constructor, TypeConstructor, #field{record_options=RecOptions} = Field) ->
-	RecOptions2 = RecOptions#record_options{type_constructor = TypeConstructor},
-	Field2 = Field#field{record_options = RecOptions2},
+field_option(type_constructor, TypeConstructor, Field) ->
+	Field2 = Field#field{type_constructor = TypeConstructor},
 	{ok, Field2};
 field_option(get, Getter, Field) ->
 	Field2 = Field#field{getter = Getter},
@@ -68,17 +77,17 @@ field_option(record, StoresInRecord, Field) ->
 field_option(_Option, _Val, _Field) ->
 	false.
 
-set_field(Field, #model{fields=Fields} = Model) ->
-	Model#model{fields=[Field|Fields]}.
-
 normalize_field(Field) ->
 	Rules = [
-			 %% fun index_is_required_rule/1,
-			 %% fun default_alias_name_rule/1,
 			 fun get_set_record_rule/1,
 			 fun type_constructor_rule/1
 			],
 	tq_transform_utils:error_writer_foldl(fun(R, F) -> R(F) end, Field, Rules).
+
+set_field(Field, #model{fields=Fields} = Model) ->
+	Model#model{fields=[Field | Fields]}.
+
+%% Rules.
 
 get_set_record_rule(Field=#field{stores_in_record=false, getter=Getter, setter=Setter}) ->
 	case {Getter, Setter} of
@@ -94,13 +103,10 @@ get_set_record_rule(Field=#field{stores_in_record=false, getter=Getter, setter=S
 get_set_record_rule(Field) ->
 	{ok, Field#field{stores_in_record=true}}.
 
-type_constructor_rule(#field{record_options=
-								 #record_options{type_constructor=undefined, type=Type}=RecOptions
-							}=Field) ->
+type_constructor_rule(#field{type_constructor=undefined, type=Type}=Field) ->
 	case type_constructor(Type) of
 		{ok, TypeConstructor} ->
-			RecOptions2 = RecOptions#record_options{type_constructor=TypeConstructor},
-			Field2 = Field#field{record_options=RecOptions2},
+			Field2 = Field#field{type_constructor=TypeConstructor},
 			{ok, Field2};
 		{error, undefined} ->
 			Reason = lists:flatten(io_lib:format("type_constructor required for type: ~p", [Type])),
@@ -109,22 +115,15 @@ type_constructor_rule(#field{record_options=
 type_constructor_rule(Field) ->
 	{ok, Field}.
 
+%% Internal helpers.
+
 type_constructor(binary) -> {ok, none};
 type_constructor(integer) -> {ok, {tq_transform_utils, binary_to_integer}};
 type_constructor(float) -> {ok, {tq_transform_utils, binary_to_float}};
 type_constructor(_) -> {error, undefined}.
 
-
-
-normalize_model(Model) ->
-	{ok, Model}.
-
-build_model(Model) ->
-	{Exports, Funs} = tq_record_generator:build_model(Model),
-	{lists:reverse(Exports), lists:reverse(Funs)}.
-
-mode_to_acl(r)    -> #access_mode{r=true,  sr=true,  w=false, sw=false};
-mode_to_acl(w)    -> #access_mode{r=false, sr=false, w=true,  sw=true};
+mode_to_acl(r)	-> #access_mode{r=true,  sr=true,  w=false, sw=false};
+mode_to_acl(w)	-> #access_mode{r=false, sr=false, w=true,  sw=true};
 mode_to_acl(rw)   -> #access_mode{r=true,  sr=true,  w=true,  sw=true};
 mode_to_acl(sr)   -> #access_mode{r=false, sr=true,  w=false, sw=false};
 mode_to_acl(sw)   -> #access_mode{r=false, sr=false, w=false, sw=true};
@@ -156,7 +155,7 @@ get_set_record_rule_test_() ->
 								 end} || G <- Values, S <- Values],
 	Tests = Tests1 ++ Tests2,
 	F = fun(From, To) ->
-				?assertEqual(To,get_set_record_rule(From))
+				?assertEqual(To, get_set_record_rule(From))
 		end,
 	[fun() -> F(From, To) end || {From, To} <- Tests].
 

@@ -5,12 +5,6 @@
 		  sw = true :: boolean()
 		 }).
 
--record(record_options,{
-		  type = any :: field_type(), % Record type. Usefull for dializer
-		  type_constructor :: atom() | {atom(), atom()},
-		  default_value :: any()
-		 }).
-
 -record(field,{
 		  name :: binary(), % Field name which will be used to access property
 
@@ -23,7 +17,9 @@
 		  init = false :: true | false, % Init function required
 
 		  stores_in_record = true :: boolean(), % Set to true if field value stores in state record
-		  record_options = #record_options{} :: #record_options{} % Editional record options
+		  type = any :: field_type(), % Record type. Usefull for dializer
+		  type_constructor :: atom() | {atom(), atom()},
+		  default_value :: any()
 		 }).
 
 -record(model, {

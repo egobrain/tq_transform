@@ -39,12 +39,12 @@ build_model(Model) ->
 			   ],
 	lists:foldl(fun(F, {IBlock, FBlock}) ->
 						{IB, FB} = F(Model),
-						{[IB|IBlock], [FB|FBlock]}
+						{[IB | IBlock], [FB | FBlock]}
 				end, {[], []}, Builders).
 
 build_main_record(#model{module=Module, fields=Fields}) ->
 	FieldsInRecord = [F || F <- Fields, F#field.stores_in_record],
-	RecordFieldNames = [case F#field.record_options#record_options.default_value of
+	RecordFieldNames = [case F#field.default_value of
 							undefined ->
 								case is_write_only(F) of
 									true -> {F#field.name, '$write_only_stumb$'};
@@ -53,7 +53,7 @@ build_main_record(#model{module=Module, fields=Fields}) ->
 							Val -> {F#field.name, Val}
 						end || F <- Fields, F#field.stores_in_record],
 	DbFieldNames =  [{?changed_suffix(F#field.name),
-					  F#field.record_options#record_options.default_value =/= undefined}
+					  F#field.default_value =/= undefined}
 					 || F <- FieldsInRecord],
 	RecordFields = lists:flatten([{'$is_new$', true},
 								  RecordFieldNames,
@@ -62,7 +62,7 @@ build_main_record(#model{module=Module, fields=Fields}) ->
 	{[Attribute], []}.
 
 build_getter_and_setters(#model{module=Module, fields=Fields}) ->
-	NewFun = ?function(new, [?clause([], none, [?record(Module,[])])]),
+	NewFun = ?function(new, [?clause([], none, [?record(Module, [])])]),
 	NewExport = ?export(new, 0),
 	GetterFields = [F || F <- Fields, F#field.getter],
 	GetterFuns = [getter(Module, F) || F <- GetterFields],
@@ -84,14 +84,14 @@ getter(Module, #field{name=Name}) ->
 	?function(Name, [?clause([?var('Model')], none, [?access(?var('Model'), Module, Name)])]).
 setter(Module, #field{name=Name}) ->
 	?function(?prefix_set(Name),
-			  [?clause([?var('Val'),?var('Model')], none,
-					   [?cases(?eeq(?var('Val'),?access(?var('Model'), Module, Name)),
+			  [?clause([?var('Val'), ?var('Model')], none,
+					   [?cases(?eeq(?var('Val'), ?access(?var('Model'), Module, Name)),
 							   [?clause([?atom(true)], none,
 										[?var('Model')]),
 								?clause([?atom(false)], none,
-										[?record(?var('Model'),Module,
-												 [?field(Name,?var('Val')),
-												  ?field(?changed_suffix(Name),?atom(true))])])])])]).
+										[?record(?var('Model'), Module,
+												 [?field(Name, ?var('Val')),
+												  ?field(?changed_suffix(Name), ?atom(true))])])])])]).
 
 build_proplists(Model) ->
 	Funs = [to_proplist_function(Model),
@@ -99,9 +99,9 @@ build_proplists(Model) ->
 			from_bin_proplist_function(Model)
 		   ],
 	{Public0, Private0} = lists:foldl(fun({P, Pr}, {Pub, Priv}) ->
-											{[P|Pub], [Pr|Priv]};
+											{[P | Pub], [Pr | Priv]};
 									   (P, {Pub, Priv}) ->
-											{[P|Pub], Priv}
+											{[P | Pub], Priv}
 									end, {[], []}, Funs),
 	{Public, Private} = {lists:flatten(Public0), lists:flatten(Private0)},
 	Exports = export_funs(Public),
@@ -134,8 +134,8 @@ from_proplist_functions(#model{fields=Fields}) ->
 					 [?clause([?var('Proplist')], none,
 							  [?apply(from_proplist, [?var('Proplist'), DefaultOpts, ?apply(new, [])])])]),
 	Fun2 = ?function(from_proplist,
-					 [?clause([?var('Proplist'),?var('Model')], none,
-							  [?apply(from_proplist,[?var('Proplist'), DefaultOpts, ?var('Model')])])]),
+					 [?clause([?var('Proplist'), ?var('Model')], none,
+							  [?apply(from_proplist, [?var('Proplist'), DefaultOpts, ?var('Model')])])]),
 	Fun3 = ?function(from_proplist,
 					 [?clause([?var('Proplist'), ?var('Opts'), ?var('Model')], none,
 							  [?match(?var('Fun'), ?cases(?apply(lists, member, [?atom(safe), ?var('Opts')]),
@@ -143,15 +143,15 @@ from_proplist_functions(#model{fields=Fields}) ->
 																   [?func(from_proplist_safe_, 2)]),
 														   ?clause([?atom(false)], none,
 																   [?func(from_proplist_unsafe_, 2)])])),
-							   ?apply(tq_transform_utils,error_writer_foldl, [?var('Fun'), ?var('Model'), ?var('Proplist')])])]),
-					 DefaultClasuse = [?clause([?tuple([?var('Field'),?underscore]), ?underscore], none,
+							   ?apply(tq_transform_utils, error_writer_foldl, [?var('Fun'), ?var('Model'), ?var('Proplist')])])]),
+					 DefaultClasuse = [?clause([?tuple([?var('Field'), ?underscore]), ?underscore], none,
 											   [?error(?atom(unknown), ?var('Field'))])],
 	Fun_ = fun(Suffix, AccessModeOpt) ->
 				   ?function(?atom_join(from_proplist, Suffix),
 							 [?clause(
-								 [?tuple([?atom(F#field.name),?var('Val')]), ?var('Model')], none,
+								 [?tuple([?atom(F#field.name), ?var('Val')]), ?var('Model')], none,
 								 [?ok(?apply(?prefix_set(F#field.name), [?var('Val'), ?var('Model')]))])
-							  || F <- Fields,
+							 || F <- Fields,
 								 F#field.setter =/= undefined,
 								 element(AccessModeOpt, F#field.mode)] ++ DefaultClasuse)
 		   end,
@@ -174,8 +174,8 @@ from_bin_proplist_function(#model{fields=Fields}) ->
 																   [?func(from_bin_proplist_safe_, 2)]),
 														   ?clause([?atom(false)], none,
 																   [?func(from_bin_proplist_unsafe_, 2)])])),
-							   ?apply(tq_transform_utils,error_writer_foldl, [?var('Fun'), ?var('Model'), ?var('BinProplist')])])]),
-	DefaultClasuse = [?clause([?tuple([?var('Field'),?underscore]), ?underscore], none,
+							   ?apply(tq_transform_utils, error_writer_foldl, [?var('Fun'), ?var('Model'), ?var('BinProplist')])])]),
+	DefaultClasuse = [?clause([?tuple([?var('Field'), ?underscore]), ?underscore], none,
 							  [?error(?atom(unknown), ?var('Field'))])],
 	SetterClause = fun(F, Var) -> ?ok(?apply(?prefix_set(F#field.name), [?var(Var), ?var('Model')])) end,
 	Cases = fun(F, A) -> ?cases(A,
@@ -187,8 +187,8 @@ from_bin_proplist_function(#model{fields=Fields}) ->
 	Fun_ = fun(Suffix, AccessModeOpt) ->
 				   ?function(?atom_join(from_bin_proplist, Suffix),
 							 [?clause(
-								 [?tuple([?abstract(atom_to_binary(F#field.name)),?var('Bin')]), ?var('Model')], none,
-								 [case F#field.record_options#record_options.type_constructor of
+								 [?tuple([?abstract(atom_to_binary(F#field.name)), ?var('Bin')]), ?var('Model')], none,
+								 [case F#field.type_constructor of
 									  none ->
 										  SetterClause(F, 'Bin');
 									  {Mod, Fun} ->
@@ -196,7 +196,7 @@ from_bin_proplist_function(#model{fields=Fields}) ->
 									  Fun ->
 										  Cases(F, ?apply(Fun, [?var('Bin')]))
 								  end])
-							  || F <- Fields,
+							 || F <- Fields,
 								 F#field.setter =/= undefined,
 								 element(AccessModeOpt, F#field.mode)] ++ DefaultClasuse)
 		   end,
@@ -240,7 +240,7 @@ constructor1_function(#model{init_fun=InitFun, module=Module}) ->
 	?function(constructor,
 			  [?clause([?var('Fields')], none,
 					   [?match(?var('Constructors'),
-							   ?list_comp(?apply(field_constructor,[?var('F')]),
+							   ?list_comp(?apply(field_constructor, [?var('F')]),
 										  [?generator(?var('F'), ?var('Fields'))])),
 						?func([?clause([?var('List')], none,
 									   [?match(?var('Model'),
@@ -248,7 +248,7 @@ constructor1_function(#model{init_fun=InitFun, module=Module}) ->
 													  [?func([?clause([?tuple([?var('F'), ?var('A')]), ?var('M')], none,
 																	  [?apply_(?var('F'), [?var('A'), ?var('M')])])]),
 												  ?apply(new, []),
-												  ?apply(lists,zip,[?var('Constructors'),?var('List')])])),
+												  ?apply(lists, zip, [?var('Constructors'), ?var('List')])])),
 										FinalForm
 								  ]
 									  )])])]).
@@ -310,7 +310,7 @@ export_funs(Funs) ->
 	?export_all([{erl_syntax:atom_value(erl_syntax:function_name(F)),
 				  erl_syntax:function_arity(F)} || F <- Funs]).
 
-acc_if(true, Val, Acc) -> [Val|Acc];
+acc_if(true, Val, Acc) -> [Val | Acc];
 acc_if(false, _, Acc) -> Acc.
 
 atom_to_binary(Atom) ->

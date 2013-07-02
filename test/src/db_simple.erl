@@ -10,7 +10,7 @@
 		[
 		 required,
 		 {type, binary},
-		 record, init, get, set, 
+		 record, init, get, set,
 		 {default, <<"Default name">>},
 		 {mode, rw}
 		]}).
@@ -71,7 +71,7 @@ proplist_test() ->
 								 {name, <<"test">>},
 								 {custom_in_record, 10},
 								 {custom_not_in_record, 20}]),
-	
+
 	{ok, Model} = from_proplist(Proplist),
 	Proplist = lists:keysort(1, Model:to_proplist()).
 
@@ -85,7 +85,7 @@ bin_proplist_test() ->
 									{<<"custom_in_record">>, <<"10">>},
 									{<<"custom_not_in_record">>, <<"20">>}]),
 	{ok, Model} = from_bin_proplist(BinProplist),
-	Proplist = lists:keysort(1, Model:to_proplist()).	
-	
+	Proplist = lists:keysort(1, Model:to_proplist()).
+
 -endif.
 
