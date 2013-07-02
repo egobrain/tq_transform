@@ -1,4 +1,4 @@
-{application, tq_db,
+{application, tq_transform,
  [
   {description, "Easy sql models generator fo pgsql"},
   {vsn, "0.0.1"},
@@ -7,6 +7,6 @@
                   kernel,
                   stdlib
                  ]},
-  {mod, { tq_db_app, []}},
+  {mod, { tq_transform_app, []}},
   {env, [{plugins, [tq_record_transform]}]}
  ]}.

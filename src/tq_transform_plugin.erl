@@ -12,30 +12,21 @@
 %% ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 %% OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
--module(tq_db_sup).
+-module(tq_transform_plugin).
 
--behaviour(supervisor).
+-callback create_model(Name :: atom()) -> {ok, Model :: any()} | false.
+-callback model_option(Option, Value, Model) -> {ok, Model} | {error, Reason} | false when
+	  Option :: atom(),
+	  Value :: any(),
+	  Reason :: any().
 
-%% API
--export([start_link/0]).
+-callback create_field(Name :: atom()) -> {ok, Field :: any()} | false.
+-callback field_option(Option, Value, Field) -> {ok, Field} | {error, Reason} | false when
+	  Option :: atom(),
+	  Value :: any(),
+	  Reason :: any().
+-callback normalize_field(Field) -> {ok, Field} | {error, Reason :: any()}.
+-callback set_field(Field :: any(), Model) -> {ok, Model}.
 
-%% Supervisor callbacks
--export([init/1]).
-
-%% Helper macro for declaring children of supervisor
--define(CHILD(I, Type), {I, {I, start_link, []}, permanent, 5000, Type, [I]}).
-
-%% ===================================================================
-%% API functions
-%% ===================================================================
-
-start_link() ->
-    supervisor:start_link({local, ?MODULE}, ?MODULE, []).
-
-%% ===================================================================
-%% Supervisor callbacks
-%% ===================================================================
-
-init([]) ->
-    {ok, { {one_for_one, 5, 10}, []} }.
-
+-callback normalize_model(Model) -> {ok, Model} | {error, Reasons :: any()}.
+-callback build_model(Model :: any()) -> {Exports :: [any()], Funs :: [any()]}.

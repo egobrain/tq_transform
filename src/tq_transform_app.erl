@@ -12,21 +12,19 @@
 %% ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 %% OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
--module(tq_db_plugin).
+-module(tq_transform_app).
 
--callback create_model(Name :: atom()) -> {ok, Model :: any()} | false.
--callback model_option(Option, Value, Model) -> {ok, Model} | {error, Reason} | false when
-	  Option :: atom(),
-	  Value :: any(),
-	  Reason :: any().
+-behaviour(application).
 
--callback create_field(Name :: atom()) -> {ok, Field :: any()} | false.
--callback field_option(Option, Value, Field) -> {ok, Field} | {error, Reason} | false when
-	  Option :: atom(),
-	  Value :: any(),
-	  Reason :: any().
--callback normalize_field(Field) -> {ok, Field} | {error, Reason :: any()}.
--callback set_field(Field :: any(), Model) -> {ok, Model}.
+%% Application callbacks
+-export([start/2, stop/1]).
 
--callback normalize_model(Model) -> {ok, Model} | {error, Reasons :: any()}.
--callback build_model(Model :: any()) -> {Exports :: [any()], Funs :: [any()]}.
+%% ===================================================================
+%% Application callbacks
+%% ===================================================================
+
+start(_StartType, _StartArgs) ->
+    tq_transform_sup:start_link().
+
+stop(_State) ->
+    ok.

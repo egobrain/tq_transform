@@ -12,7 +12,7 @@
 %% ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 %% OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
--module(tq_db_utils).
+-module(tq_transform_utils).
 
 -export([error_writer_foldl/3,
 		 error_writer_map/2

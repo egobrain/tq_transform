@@ -12,7 +12,7 @@
 %% ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 %% OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
--module(tq_db_transform).
+-module(tq_transform).
 
 -export([parse_transform/2]).
 
@@ -27,9 +27,9 @@
 -define(DBG(F, D), io:format("~p:~p "++F++"~n", [?FILE, ?LINE| D])).
 
 start() ->
-	case application:start(tq_db) of
+	case application:start(tq_transform) of
 		ok -> ok;
-		{error, {already_started, tq_db}} -> ok;
+		{error, {already_started, tq_transform}} -> ok;
 		{error, _Reason} = Err -> Err
 	end.
 	
@@ -82,7 +82,7 @@ transform_node(Node={attribute, Line, model, Opts}, State) ->
 	end;
 
 transform_node(Node={attribute, _Line, module, Module}, State) ->
-	{ok, Plugins} = application:get_env(tq_db, plugins),
+	{ok, Plugins} = application:get_env(tq_transform, plugins),
 	Plugins2 = [{P, P:create_model(Module)} || P <- Plugins],
 	State2 = State#state{plugins = Plugins2},
 	{Node, State2};
@@ -116,7 +116,7 @@ create_fields(Name, Opts, #state{plugins=Plugins}) ->
 							{error, _} = Err -> Err
 						end
 				end,
-	case tq_db_utils:error_writer_foldl(OptionFun, Fields0, Opts) of
+	case tq_transform_utils:error_writer_foldl(OptionFun, Fields0, Opts) of
 		{ok, Fields2} ->
 			normalize_fields(Fields2);
 		{error, _} = Err ->
@@ -131,7 +131,7 @@ model_options(Opts, #state{plugins=Plugins}=State) ->
 							{error, _} = Err -> Err
 						end
 				end,
-	case tq_db_utils:error_writer_foldl(OptionFun, Plugins, Opts) of
+	case tq_transform_utils:error_writer_foldl(OptionFun, Plugins, Opts) of
 		{ok, Plugins2} ->
 			State2 = State#state{plugins=Plugins2},
 			{ok, State2};
@@ -183,7 +183,7 @@ normalize_fields(Fields) ->
 								   Err
 						   end
 				   end,
-	tq_db_utils:error_writer_map(NormalizeFun, Fields).
+	tq_transform_utils:error_writer_map(NormalizeFun, Fields).
 
 %% Validators.
 
@@ -194,7 +194,7 @@ normalize_models(#state{plugins=Plugins}=State) ->
 						   {error, _} = Err -> Err
 					   end
 			   end,
-	case tq_db_utils:error_writer_map(ValidFun, Plugins) of
+	case tq_transform_utils:error_writer_map(ValidFun, Plugins) of
 		{ok, Plugins2} ->
 			State2 = State#state{plugins=Plugins2},
 			{ok, State2};

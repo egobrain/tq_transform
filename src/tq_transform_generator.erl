@@ -12,7 +12,7 @@
 %% ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 %% OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
--module(tq_db_generator).
+-module(tq_transform_generator).
 
 -include("include/records.hrl").
 -include("include/ast_helpers.hrl").
@@ -143,7 +143,7 @@ from_proplist_functions(#model{fields=Fields}) ->
 																   [?func(from_proplist_safe_, 2)]),
 														   ?clause([?atom(false)], none,
 																   [?func(from_proplist_unsafe_, 2)])])),
-							   ?apply(tq_db_utils,error_writer_foldl, [?var('Fun'), ?var('Model'), ?var('Proplist')])])]),
+							   ?apply(tq_transform_utils,error_writer_foldl, [?var('Fun'), ?var('Model'), ?var('Proplist')])])]),
 					 DefaultClasuse = [?clause([?tuple([?var('Field'),?underscore]), ?underscore], none,
 											   [?error(?atom(unknown), ?var('Field'))])],
 	Fun_ = fun(Suffix, AccessModeOpt) ->
@@ -174,7 +174,7 @@ from_bin_proplist_function(#model{fields=Fields}) ->
 																   [?func(from_bin_proplist_safe_, 2)]),
 														   ?clause([?atom(false)], none,
 																   [?func(from_bin_proplist_unsafe_, 2)])])),
-							   ?apply(tq_db_utils,error_writer_foldl, [?var('Fun'), ?var('Model'), ?var('BinProplist')])])]),
+							   ?apply(tq_transform_utils,error_writer_foldl, [?var('Fun'), ?var('Model'), ?var('BinProplist')])])]),
 	DefaultClasuse = [?clause([?tuple([?var('Field'),?underscore]), ?underscore], none,
 							  [?error(?atom(unknown), ?var('Field'))])],
 	SetterClause = fun(F, Var) -> ?ok(?apply(?prefix_set(F#field.name), [?var(Var), ?var('Model')])) end,
@@ -279,7 +279,7 @@ build_validators(#model{module=Module, fields=Fields}) ->
 													 ?access(?var('Model'), Module, F#field.name)])
 												 || F <- Fields,
 													F#field.stores_in_record])),
-								   ?apply(tq_db_utils, valid, [?var('Data')])
+								   ?apply(tq_transform_utils, valid, [?var('Data')])
 								  ])]),
 	Funs = [ValidatorFun, ValidFun],
 	Exports = export_funs(Funs),

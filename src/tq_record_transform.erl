@@ -9,7 +9,7 @@
 
 -module(tq_record_transform).
 
--behavior(tq_db_plugin).
+-behavior(tq_transform_plugin).
 
 -include("include/records.hrl").
 
@@ -78,7 +78,7 @@ normalize_field(Field) ->
 			 fun get_set_record_rule/1,
 			 fun type_constructor_rule/1
 			],
-	tq_db_utils:error_writer_foldl(fun(R, F) -> R(F) end, Field, Rules).
+	tq_transform_utils:error_writer_foldl(fun(R, F) -> R(F) end, Field, Rules).
 
 get_set_record_rule(Field=#field{stores_in_record=false, getter=Getter, setter=Setter}) ->
 	case {Getter, Setter} of
@@ -110,8 +110,8 @@ type_constructor_rule(Field) ->
 	{ok, Field}.
 
 type_constructor(binary) -> {ok, none};
-type_constructor(integer) -> {ok, {tq_db_utils, binary_to_integer}};
-type_constructor(float) -> {ok, {tq_db_utils, binary_to_float}};
+type_constructor(integer) -> {ok, {tq_transform_utils, binary_to_integer}};
+type_constructor(float) -> {ok, {tq_transform_utils, binary_to_float}};
 type_constructor(_) -> {error, undefined}.
 
 
@@ -121,7 +121,7 @@ normalize_model(Model) ->
 
 build_model(Model) ->
 	io:format("!!! ~p ~n",[Model]),
-	{Exports, Funs} = tq_db_generator:build_model(Model),
+	{Exports, Funs} = tq_transform_generator:build_model(Model),
 	{lists:reverse(Exports), lists:reverse(Funs)}.
 
 mode_to_acl(r)    -> #access_mode{r=true,  sr=true,  w=false, sw=false};
