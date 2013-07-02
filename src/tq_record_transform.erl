@@ -122,8 +122,8 @@ type_constructor(integer) -> {ok, {tq_transform_utils, binary_to_integer}};
 type_constructor(float) -> {ok, {tq_transform_utils, binary_to_float}};
 type_constructor(_) -> {error, undefined}.
 
-mode_to_acl(r)	-> #access_mode{r=true,  sr=true,  w=false, sw=false};
-mode_to_acl(w)	-> #access_mode{r=false, sr=false, w=true,  sw=true};
+mode_to_acl(r)    -> #access_mode{r=true,  sr=true,  w=false, sw=false};
+mode_to_acl(w)    -> #access_mode{r=false, sr=false, w=true,  sw=true};
 mode_to_acl(rw)   -> #access_mode{r=true,  sr=true,  w=true,  sw=true};
 mode_to_acl(sr)   -> #access_mode{r=false, sr=true,  w=false, sw=false};
 mode_to_acl(sw)   -> #access_mode{r=false, sr=false, w=false, sw=true};
