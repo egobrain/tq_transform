@@ -8,5 +8,5 @@
                   stdlib
                  ]},
   {mod, { tq_db_app, []}},
-  {env, []}
+  {env, [{test, "My test string"}]}
  ]}.

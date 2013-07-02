@@ -2,23 +2,23 @@
 -compile({parse_transform, tq_db_transform}).
 
 %% Test
--field({r,    [{type, integer}, {mode,r}]}).
--field({w,    [{type, integer}, {mode,w}]}).
--field({rw,   [{type, integer}, {mode,rw}]}).
--field({sr,   [{type, integer}, {mode,sr}]}).
--field({sw,   [{type, integer}, {mode,sw}]}).
--field({srsw, [{type, integer}, {mode,srsw}]}).
--field({rsw,  [{type, integer}, {mode,rsw}]}).
--field({srw,  [{type, integer}, {mode,srw}]}).
+-field({r,    [{type, integer}, {mode, r}]}).
+-field({w,    [{type, integer}, {mode, w}]}).
+-field({rw,   [{type, integer}, {mode, rw}]}).
+-field({sr,   [{type, integer}, {mode, sr}]}).
+-field({sw,   [{type, integer}, {mode, sw}]}).
+-field({srsw, [{type, integer}, {mode, srsw}]}).
+-field({rsw,  [{type, integer}, {mode, rsw}]}).
+-field({srw,  [{type, integer}, {mode, srw}]}).
 
--field({r_default,    [{type, integer}, {default, 100}, {mode,r}]}).
--field({w_default,    [{type, integer}, {default, 200}, {mode,w}]}).
--field({rw_default,   [{type, integer}, {default, 300}, {mode,rw}]}).
--field({sr_default,   [{type, integer}, {default, 400}, {mode,sr}]}).
--field({sw_default,   [{type, integer}, {default, 500}, {mode,sw}]}).
--field({srsw_default, [{type, integer}, {default, 600}, {mode,srsw}]}).
--field({rsw_default,  [{type, integer}, {default, 700}, {mode,rsw}]}).
--field({srw_default,  [{type, integer}, {default, 800}, {mode,srw}]}).
+-field({r_default,    [{type, integer}, {default, 100}, {mode, r}]}).
+-field({w_default,    [{type, integer}, {default, 200}, {mode, w}]}).
+-field({rw_default,   [{type, integer}, {default, 300}, {mode, rw}]}).
+-field({sr_default,   [{type, integer}, {default, 400}, {mode, sr}]}).
+-field({sw_default,   [{type, integer}, {default, 500}, {mode, sw}]}).
+-field({srsw_default, [{type, integer}, {default, 600}, {mode, srsw}]}).
+-field({rsw_default,  [{type, integer}, {default, 700}, {mode, rsw}]}).
+-field({srw_default,  [{type, integer}, {default, 800}, {mode, srw}]}).
 
 -model([{table, <<"test">>}]).
 
@@ -37,19 +37,37 @@ write_only_stumb_test_() ->
 			],
 	[{atom_to_list(F), fun() -> R = element(Id, Model) end} || {{F, Id}, R} <- Tests].
 
-from_proplist_test() ->
-	?assertEqual({error,[{unknown,r},
-						 {unknown,sr}]},
-				 from_proplist([{Opt, Opt} || Opt <- ?Opts])).
+from_proplist_test_() ->
+	Data = [{Opt, 1} || Opt <- ?Opts],
+	[{"safe", fun() ->
+					  ?assertEqual({error,[{unknown, r},
+										   {unknown, sr}]},
+								   from_proplist(Data, [safe], new()))
+			  end},
+	 {"unsafe", fun() ->
+						?assertEqual({error,[{unknown, r},
+											 {unknown, sr},
+											 {unknown, sw},
+											 {unknown, srsw},
+											 {unknown, rsw}]},
+									 from_proplist(Data, [], new()))
+				end}].
 
-from_bin_proplist_test() ->
-	?assertEqual({error,[{unknown,<<"r">>},
-						 {unknown,<<"sr">>},
-						 {unknown,<<"sw">>},
-						 {unknown,<<"srsw">>},
-						 {unknown,<<"rsw">>}
-						]},
-				 from_bin_proplist([{list_to_binary(atom_to_list(Opt)), <<"1">>} || Opt <- ?Opts])).
+from_bin_proplist_test_() ->
+	Data = [{list_to_binary(atom_to_list(Opt)), <<"1">>} || Opt <- ?Opts],
+	[{"safe", fun() ->
+					  ?assertEqual({error,[{unknown, <<"r">>},
+										   {unknown, <<"sr">>}]},
+								   from_bin_proplist(Data, [safe], new()))
+			  end},
+	 {"unsafe", fun() ->
+						?assertEqual({error,[{unknown, <<"r">>},
+											 {unknown, <<"sr">>},
+											 {unknown, <<"sw">>},
+											 {unknown, <<"srsw">>},
+											 {unknown, <<"rsw">>}]},
+									 from_bin_proplist(Data, [], new()))
+				end}].
 
 to_proplist_test() ->
 	WOpts = [%% {r,1},

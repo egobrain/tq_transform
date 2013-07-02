@@ -104,54 +104,87 @@ setter(Module, #field{name=Name, stores_in_database=InDb}) ->
 	?function(FunctionName, [?clause([?var('Val'),?var('Model')], none, [Setter])]).
 
 build_proplists(Model) ->
-	Funs = lists:flatten(
-			 [to_proplist_function(Model),
-			  from_proplist_functions(Model),
-			  from_bin_proplist_function(Model)
-			 ]),
-	Exports = export_funs(Funs),
-	{ok, {Exports, Funs}}.
+	Funs = [to_proplist_function(Model),
+			from_proplist_functions(Model),
+			from_bin_proplist_function(Model)
+		   ],
+	{Public0, Private0} = lists:foldl(fun({P, Pr}, {Pub, Priv}) ->
+											{[P|Pub], [Pr|Priv]};
+									   (P, {Pub, Priv}) ->
+											{[P|Pub], Priv}
+									end, {[], []}, Funs),
+	{Public, Private} = {lists:flatten(Public0), lists:flatten(Private0)},
+	Exports = export_funs(Public),
+	{ok, {Exports, Public ++ Private}}.
 
 to_proplist_function(#model{fields=Fields}) ->
-	?function(to_proplist,
-			  [?clause([?var('Model')], none,
-					   [?list([?tuple([?atom(F#field.name),?apply(F#field.name, [?var('Model')])]) ||
-								  F <- Fields,
-								  F#field.mode#access_mode.sr,
-								  F#field.getter =/= false
-							  ])])]).
+	DefaultOpts = ?abstract([safe]),
+	Fun_ = fun(AccessModeOpt) ->
+				   ?list([?tuple([?atom(F#field.name), ?apply(F#field.name, [?var('Model')])]) ||
+							 F <- Fields,
+							 element(AccessModeOpt, F#field.mode),
+							 F#field.getter =/= false
+						 ])
+		   end,
+	Fun1 = ?function(to_proplist,
+					 [?clause([?var('Model')], none,
+							  [?apply(to_proplist, [DefaultOpts, ?var('Model')])])]),
+	Fun2 = ?function(to_proplist,
+					 [?clause([?var('Opts'), ?var('Model')], none,
+							  [?cases(?apply(lists, member, [?atom(safe), ?var('Opts')]),
+									  [?clause([?atom(true)], none,
+											   [Fun_(#access_mode.sr)]),
+									   ?clause([?atom(false)], none,
+											   [Fun_(#access_mode.r)])])])]),
+	[Fun1, Fun2].
 
-from_proplist_functions(#model{fields=Fields}) ->	
+from_proplist_functions(#model{fields=Fields}) ->
+	DefaultOpts = ?abstract([safe]),
 	Fun1 = ?function(from_proplist,
 					 [?clause([?var('Proplist')], none,
-							  [?apply(from_proplist,[?var('Proplist'), ?apply(new, [])])])]),
+							  [?apply(from_proplist, [?var('Proplist'), DefaultOpts, ?apply(new, [])])])]),
 	Fun2 = ?function(from_proplist,
 					 [?clause([?var('Proplist'),?var('Model')], none,
-							  [?apply(tq_db_utils,error_writer_foldl,
-									  [?func(from_proplist_,2),
-									   ?var('Model'),
-									   ?var('Proplist')])])]),
-	DefaultClasuse = [?clause([?tuple([?var('Field'),?underscore]), ?underscore], none,
-							  [?error(?atom(unknown), ?var('Field'))])],
-	Fun_ = ?function(from_proplist_,
-					 [?clause(
-						 [?tuple([?atom(F#field.name),?var('Val')]), ?var('Model')], none,
-						 [?ok(?apply(?prefix_set(F#field.name), [?var('Val'), ?var('Model')]))])
-					  || F <- Fields,
-						 F#field.setter =/= undefined,
-						 F#field.mode#access_mode.sw] ++ DefaultClasuse),
-	[Fun1, Fun2, Fun_].
+							  [?apply(from_proplist,[?var('Proplist'), DefaultOpts, ?var('Model')])])]),
+	Fun3 = ?function(from_proplist,
+					 [?clause([?var('Proplist'), ?var('Opts'), ?var('Model')], none,
+							  [?match(?var('Fun'), ?cases(?apply(lists, member, [?atom(safe), ?var('Opts')]),
+														  [?clause([?atom(true)], none,
+																   [?func(from_proplist_safe_, 2)]),
+														   ?clause([?atom(false)], none,
+																   [?func(from_proplist_unsafe_, 2)])])),
+							   ?apply(tq_db_utils,error_writer_foldl, [?var('Fun'), ?var('Model'), ?var('Proplist')])])]),
+					 DefaultClasuse = [?clause([?tuple([?var('Field'),?underscore]), ?underscore], none,
+											   [?error(?atom(unknown), ?var('Field'))])],
+	Fun_ = fun(Suffix, AccessModeOpt) ->
+				   ?function(?atom_join(from_proplist, Suffix),
+							 [?clause(
+								 [?tuple([?atom(F#field.name),?var('Val')]), ?var('Model')], none,
+								 [?ok(?apply(?prefix_set(F#field.name), [?var('Val'), ?var('Model')]))])
+							  || F <- Fields,
+								 F#field.setter =/= undefined,
+								 element(AccessModeOpt, F#field.mode)] ++ DefaultClasuse)
+		   end,
+	FunSafe_ = Fun_(safe_, #access_mode.sw),
+	FunUnsafe_ = Fun_(unsafe_, #access_mode.w),
+	{[Fun1, Fun2, Fun3], [FunSafe_, FunUnsafe_]}.
 
 from_bin_proplist_function(#model{fields=Fields}) ->
+	DefaultOpts = ?abstract([]),
 	Fun1 = ?function(from_bin_proplist,
 					 [?clause([?var('BinProplist')], none,
-							  [?apply(from_bin_proplist, [?var('BinProplist'), ?apply(new, [])])])]),
+							  [?apply(from_bin_proplist, [?var('BinProplist'), DefaultOpts, ?apply(new, [])])])]),
 	Fun2 = ?function(from_bin_proplist,
-					 [?clause([?var('BinProplist'),?var('Model')], none,
-							  [?apply(tq_db_utils,error_writer_foldl,
-									  [?func(from_bin_proplist_,2),
-									   ?var('Model'),
-									   ?var('BinProplist')])])]),
+					 [?clause([?var('BinProplist'), ?var('Model')], none,
+							  [?apply(from_bin_proplist, [?var('BinProplist'), DefaultOpts, ?var('Model')])])]),
+	Fun3 = ?function(from_bin_proplist,
+					 [?clause([?var('BinProplist'), ?var('Opts'), ?var('Model')], none,
+							  [?match(?var('Fun'), ?cases(?apply(lists, member, [?atom(safe), ?var('Opts')]),
+														  [?clause([?atom(true)], none,
+																   [?func(from_bin_proplist_safe_, 2)]),
+														   ?clause([?atom(false)], none,
+																   [?func(from_bin_proplist_unsafe_, 2)])])),
+							   ?apply(tq_db_utils,error_writer_foldl, [?var('Fun'), ?var('Model'), ?var('BinProplist')])])]),
 	DefaultClasuse = [?clause([?tuple([?var('Field'),?underscore]), ?underscore], none,
 							  [?error(?atom(unknown), ?var('Field'))])],
 	SetterClause = fun(F, Var) -> ?ok(?apply(?prefix_set(F#field.name), [?var(Var), ?var('Model')])) end,
@@ -161,21 +194,25 @@ from_bin_proplist_function(#model{fields=Fields}) ->
 								?clause([?error(?var('Reason'))], none,
 										[?error(?tuple([?var('Reason'), ?atom(F#field.name)]))])])
 		   end,
-	Fun_ = ?function(from_bin_proplist_,
-					 [?clause(
-						 [?tuple([?abstract(atom_to_binary(F#field.name)),?var('Bin')]), ?var('Model')], none,
-						 [case F#field.record_options#record_options.type_constructor of
-							  none ->
-								  SetterClause(F, 'Bin');
-							  {Mod, Fun} ->
-								  Cases(F, ?apply(Mod, Fun, [?var('Bin')]));
-							  Fun ->
-								  Cases(F, ?apply(Fun, [?var('Bin')]))
-						  end])
-					  || F <- Fields,
-						 F#field.setter =/= undefined,
-						 F#field.mode#access_mode.w] ++ DefaultClasuse),
-	[Fun1, Fun2, Fun_].
+	Fun_ = fun(Suffix, AccessModeOpt) ->
+				   ?function(?atom_join(from_bin_proplist, Suffix),
+							 [?clause(
+								 [?tuple([?abstract(atom_to_binary(F#field.name)),?var('Bin')]), ?var('Model')], none,
+								 [case F#field.record_options#record_options.type_constructor of
+									  none ->
+										  SetterClause(F, 'Bin');
+									  {Mod, Fun} ->
+										  Cases(F, ?apply(Mod, Fun, [?var('Bin')]));
+									  Fun ->
+										  Cases(F, ?apply(Fun, [?var('Bin')]))
+								  end])
+							  || F <- Fields,
+								 F#field.setter =/= undefined,
+								 element(AccessModeOpt, F#field.mode)] ++ DefaultClasuse)
+		   end,
+	FunSafe_ = Fun_(safe_, #access_mode.sw),
+	FunUnsafe_ = Fun_(unsafe_, #access_mode.w),
+	{[Fun1, Fun2, Fun3], [FunSafe_, FunUnsafe_]}.
 
 build_internal_functions(Model) ->
 	Funs = [changed_fields_function(Model),

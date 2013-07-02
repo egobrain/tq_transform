@@ -71,7 +71,7 @@ error_writer_foldl_test_() ->
 		  end,
 	Tests = [
 			 {[1,2,3,4], {ok, 10}},
-			 {[1,2,3, e1, 4,5, e2], {error, [{not_integer, e2}, {not_integer, e1}]}},
+			 {[1,2,3, e1, 4,5, e2], {error, [{not_integer, e1}, {not_integer, e2}]}},
 			 {[1,2,3,error], {error, [{not_integer, error}]}},
 			 {[], {ok, 0}},
 			 {[error], {error, [{not_integer, error}]}},

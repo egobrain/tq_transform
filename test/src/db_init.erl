@@ -16,9 +16,9 @@
 		 {default, 1}
 		]}).
 
--model([{table, <<"test">>}]).
-
--init(init).
+-model([{table, <<"test">>},
+		{init, init}
+	   ]).
 
 init(Model) ->
 	Model:set_counter(Model:counter()*3).

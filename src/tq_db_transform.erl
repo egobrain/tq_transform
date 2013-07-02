@@ -19,7 +19,7 @@
 -include("include/records.hrl").
 -include("include/ast_helpers.hrl").
 
--define(DBG(F, D), io:format("~p:~p "++F, [?FILE, ?LINE| D])).
+-define(DBG(F, D), io:format("~p:~p "++F++"~n", [?FILE, ?LINE| D])).
 
 parse_transform(Ast, _Options)->
 	try
@@ -78,9 +78,7 @@ transform_node(Node={attribute, Line, model, Opts}, Model) ->
 			Node2 = error_ast(Line, "Wrong model spec"),
 			{Node2, Model}
 	end;
-transform_node(Node={attribute, _Line, init, InitFun}, Model) ->
-	Model2 = Model#model{init_fun = InitFun},
-	{Node, Model2};
+
 transform_node(Node={attribute, _Line, module, Module}, Model) ->
 	Model2 = Model#model{module = Module},
 	{Node, Model2};
@@ -107,6 +105,9 @@ transform_node(Node, State) ->
 %% Model
 model_option(table, Table, Model) ->
 	Model2 = Model#model{table = Table},
+	{ok, Model2};
+model_option(init, InitFun, Model) ->
+	Model2 = Model#model{init_fun=InitFun},
 	{ok, Model2};
 model_option(Name, _, _) ->
 	{error, {unknown, Name}}.
