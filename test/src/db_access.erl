@@ -20,8 +20,6 @@
 -field({rsw_default,  [{type, integer}, {default, 700}, {mode, rsw}]}).
 -field({srw_default,  [{type, integer}, {default, 800}, {mode, srw}]}).
 
--model([{table, <<"test">>}]).
-
 -ifdef(TEST).
 -include_lib("eunit/include/eunit.hrl").
 

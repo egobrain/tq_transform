@@ -4,17 +4,13 @@
 %% Test
 -field({id,
 		[
-		 index,
-		 {db_type, integer},
 		 {type, integer}
 		]}).
 -field({name,
 		[
 		 required,
-		 {db_alias, <<"db_name">>},
-		 {db_type, string},
 		 {type, binary},
-		 db, record, init, get, set, 
+		 record, init, get, set, 
 		 {default, <<"Default name">>},
 		 {mode, rw}
 		]}).
@@ -22,7 +18,6 @@
 -field({custom_in_record,
 		[
 		 {type, integer},
-		 {db, false},
 		 {record, true},
 		 {get, custom},
 		 {set, custom}
@@ -31,15 +26,10 @@
 -field({custom_not_in_record,
 		[
 		 {type, integer},
-		 {db, false},
 		 {record, false},
 		 {get, custom},
 		 {set, custom}
 		]}).
-
--model([
-		{table, <<"test">>}
-	   ]).
 
 set_custom_in_record(V, Model) ->
 	Model2 = Model#?MODULE{custom_in_record = V},

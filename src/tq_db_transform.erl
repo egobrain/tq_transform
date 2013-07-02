@@ -16,27 +16,35 @@
 
 -export([parse_transform/2]).
 
--include("include/records.hrl").
+%% -include("include/records.hrl").
 -include("include/ast_helpers.hrl").
+
+-record(state,{
+		  module,
+		  plugins
+		 }).
 
 -define(DBG(F, D), io:format("~p:~p "++F++"~n", [?FILE, ?LINE| D])).
 
+start() ->
+	case application:start(tq_db) of
+		ok -> ok;
+		{error, {already_started, tq_db}} -> ok;
+		{error, _Reason} = Err -> Err
+	end.
+	
+
 parse_transform(Ast, _Options)->
 	try
+		ok = start(),
 		%% ?DBG("~n~p~n=======~n", [Ast]),
 		%% ?DBG("~n~s~n=======~n", [pretty_print(Ast)]),
-		{Ast2, Model} = lists:mapfoldl(fun transform_node/2, #model{}, Ast),
+		{Ast2, State2} = lists:mapfoldl(fun transform_node/2, #state{}, Ast),
 		{ModuleBlock, InfoBlock, FunctionsBlock} = split_ast(Ast2),
-		Ast3 = case valid_model(Model) of
-				   {ok, Model} ->
-					   case tq_db_generator:build_model(Model) of
-						   {ok, {IBlock, FBlock}} ->
-							   IBlock2 = lists:reverse(IBlock),
-							   FBlock2 = lists:reverse(FBlock),
-							   revert(lists:flatten([ModuleBlock, IBlock2, InfoBlock, FBlock2, FunctionsBlock]));
-						   {error, Reasons} ->
-							   Ast2 ++ [global_error_ast(1, R) || R <- Reasons]
-					   end;
+		Ast3 = case normalize_models(State2) of
+				   {ok, State3} ->
+					   {IBlock, FBlock} = build_models(State3),
+					   revert(lists:flatten([ModuleBlock, IBlock, InfoBlock, FBlock, FunctionsBlock]));
 				   {error, Reasons} ->
 					   Ast2 ++ [global_error_ast(1, R) || R <- Reasons]
 			   end,
@@ -59,73 +67,103 @@ split_ast(Ast) ->
 													   end, RestBlock, 'before'),
 	{ModuleBlock, InfoBlock, FunctionsBlock}.
 
-transform_node(Node={attribute, Line, model, Opts}, Model) ->
+transform_node(Node={attribute, Line, model, Opts}, State) ->
 	case is_list(Opts) of
 		true ->
-			OptionFun = fun(Val, M) ->
-								case normalize_option(Val) of
-									{ok, {OptionName, Data}} -> model_option(OptionName, Data, M);
-									{error, _} = Err -> Err
-								end
-						end,
-			case tq_db_utils:error_writer_foldl(OptionFun, Model, Opts) of
-				{ok, Model2} ->
-					{Node, Model2};
+			case model_options(Opts, State) of
+				{ok, State2} ->
+					{Node, State2};
 				{error, _} = Err ->
-					{error_ast(Line, Err), Model}
+					{error_ast(Line, Err), State}
 			end;
 		false ->
 			Node2 = error_ast(Line, "Wrong model spec"),
-			{Node2, Model}
+			{Node2, State}
 	end;
 
-transform_node(Node={attribute, _Line, module, Module}, Model) ->
-	Model2 = Model#model{module = Module},
-	{Node, Model2};
-transform_node(Node={attribute, Line, field, FieldOpts}, #model{fields=Fields} = Model) ->
+transform_node(Node={attribute, _Line, module, Module}, State) ->
+	{ok, Plugins} = application:get_env(tq_db, plugins),
+	Plugins2 = [{P, P:create_model(Module)} || P <- Plugins],
+	State2 = State#state{plugins = Plugins2},
+	{Node, State2};
+transform_node(Node={attribute, Line, field, FieldOpts}, State) ->
 	case FieldOpts of
 		{Name, Opts} when is_atom(Name) andalso is_list(Opts) ->
-			case create_field(Name, Opts) of
-				{ok, Field} ->
-					Model2 = Model#model{fields=[Field | Fields]},
-					{Node, Model2};
+			case create_fields(Name, Opts, State) of
+				{ok, Fields} ->
+					Plugins = [{P, P:set_field(F, S)} || {P, F, S} <- Fields],
+					State2 = State#state{plugins=Plugins},
+					{Node, State2};
 				{error, Reasons} ->
 					Node2 = [begin
 								 io:format("ERROR: ~s~n", [R]),
 								 global_error_ast(Line, R)
 							 end || R <- Reasons],
-					{Node2, Model}
+					{Node2, State}
 			end;
 		_ ->
-			{error_ast(Line, "Wrong field spec"), Model}
+			{error_ast(Line, "Wrong field spec"), State}
 	end;
 transform_node(Node, State) ->
 	{Node, State}.
 
-%% Model
-model_option(table, Table, Model) ->
-	Model2 = Model#model{table = Table},
-	{ok, Model2};
-model_option(init, InitFun, Model) ->
-	Model2 = Model#model{init_fun=InitFun},
-	{ok, Model2};
-model_option(Name, _, _) ->
-	{error, {unknown, Name}}.
-
-create_field(Name, Opts) ->
-	Field = #field{name = Name},
-	OptionFun = fun(Val, State) ->
+create_fields(Name, Opts, #state{plugins=Plugins}) ->
+	Fields0 = [{P, P:create_field(Name), S} || {P, S} <- Plugins],
+	OptionFun = fun(Val, Fields) ->
 						case normalize_option(Val) of
-							{ok, {OptionName, Data}} -> option(OptionName, Data, State);
+							{ok, {OptionName, Data}} ->
+								try_field_option(OptionName, Data, Fields);
 							{error, _} = Err -> Err
 						end
 				end,
-	case tq_db_utils:error_writer_foldl(OptionFun, Field, Opts) of
-		{ok, Field2} ->
-			normalize_field(Field2);
+	case tq_db_utils:error_writer_foldl(OptionFun, Fields0, Opts) of
+		{ok, Fields2} ->
+			normalize_fields(Fields2);
 		{error, _} = Err ->
 			Err
-	end.	
+	end.
+
+model_options(Opts, #state{plugins=Plugins}=State) ->
+	OptionFun = fun(Val, Models) ->
+						case normalize_option(Val) of
+							{ok, {OptionName, Data}} ->
+								try_model_option(OptionName, Data, Models);
+							{error, _} = Err -> Err
+						end
+				end,
+	case tq_db_utils:error_writer_foldl(OptionFun, Plugins, Opts) of
+		{ok, Plugins2} ->
+			State2 = State#state{plugins=Plugins2},
+			{ok, State2};
+		{error, _} = Err -> Err
+	end.
+
+try_field_option(Option, Data, Fields) ->
+	try_field_option(Option, Data, Fields, []).
+try_field_option(Option, _Data, [], _) ->
+	{error, "Unknown field option " ++ atom_to_list(Option)};
+try_field_option(Option, Data, [{P, F, S}|Rest], Acc) ->
+	case P:field_option(Option, Data, F) of
+		{ok, F2} ->
+			{ok, lists:reverse(Acc) ++ [{P, F2, S}|Rest]};
+		false ->
+			try_field_option(Option, Data, Rest, [{P, F, S}|Acc]);
+		{error, _} = Err -> Err
+	end.
+
+try_model_option(Option, Data, Models) ->
+	try_model_option(Option, Data, Models, []).
+try_model_option(Option, _Data, [], _) ->
+	{error, "Unknown model option " ++ atom_to_list(Option)};
+try_model_option(Option, Data, [{P, M}|Rest], Acc) ->
+	case P:model_option(Option, Data, M) of
+		{ok, M2} ->
+			{ok, lists:reverse(Acc) ++ [{P, M2}|Rest]};
+		false ->
+			try_model_option(Option, Data, Rest, [{P, M}|Acc]);
+		{error, _} = Err -> Err
+	end.
+
 
 normalize_option({Name, Value}) when is_atom(Name) ->
 	{ok, {Name, Value}};
@@ -134,132 +172,43 @@ normalize_option(Name) when is_atom(Name) ->
 normalize_option(Val) ->
 	{error, {"Wrong option spec", Val}}.
 
-option(index, Value, Field) ->
-	Field2 = Field#field{is_index = Value},
-	{ok, Field2};
-option(required, Value, Field) ->
-	Field2 = Field#field{is_required = Value},
-	{ok, Field2};
-%% DB
-option(db, StoresInDB, Field) ->
-	Field2 = Field#field{stores_in_database = StoresInDB},
-	{ok, Field2};
-option(db_alias, Alias, #field{db_options=DbOptions} = Field) ->
-	DbOptions2 = DbOptions#db_options{alias=Alias},
-	Field2 = Field#field{db_options=DbOptions2},
-	{ok, Field2};
-option(db_type, Alias, #field{db_options=DbOptions} = Field) ->
-	DbOptions2 = DbOptions#db_options{type=Alias},
-	Field2 = Field#field{db_options=DbOptions2},
-	{ok, Field2};
-%% Record
-option(default, DefaultValue, #field{record_options=RecOptions} = Field) ->
-	RecOptions2 = RecOptions#record_options{default_value = DefaultValue},
-	Field2 = Field#field{record_options=RecOptions2},
-	{ok, Field2};
-option(init, Init, Field) ->
-	Field2 = Field#field{init = Init},
-	{ok, Field2};
-option(mode, Mode, Field) ->
-	Field2 = Field#field{mode = mode_to_acl(Mode)},
-	{ok, Field2};
-option(type, Type, #field{record_options=RecOptions} = Field) ->
-	RecOptions2 = RecOptions#record_options{type = Type},
-	Field2 = Field#field{record_options = RecOptions2},
-	{ok, Field2};
-option(type_constructor, TypeConstructor, #field{record_options=RecOptions} = Field) ->
-	RecOptions2 = RecOptions#record_options{type_constructor = TypeConstructor},
-	Field2 = Field#field{record_options = RecOptions2},
-	{ok, Field2};
-option(get, Getter, Field) ->
-	Field2 = Field#field{getter = Getter},
-	{ok, Field2};
-option(set, Setter, Field) ->
-	Field2 = Field#field{setter = Setter},
-	{ok, Field2};
-option(record, StoresInRecord, Field) ->
-	Field2 = Field#field{stores_in_record = StoresInRecord},
-	{ok, Field2};
-option(Name,_,_) ->
-	{error, {"Unknown option", Name}}.
-
-mode_to_acl(r)    -> #access_mode{r=true,  sr=true,  w=false, sw=false};
-mode_to_acl(w)    -> #access_mode{r=false, sr=false, w=true,  sw=true};
-mode_to_acl(rw)   -> #access_mode{r=true,  sr=true,  w=true,  sw=true};
-mode_to_acl(sr)   -> #access_mode{r=false, sr=true,  w=false, sw=false};
-mode_to_acl(sw)   -> #access_mode{r=false, sr=false, w=false, sw=true};
-mode_to_acl(srsw) -> #access_mode{r=false, sr=true,  w=false, sw=true};
-mode_to_acl(rsw)  -> #access_mode{r=true,  sr=true,  w=false, sw=true};
-mode_to_acl(srw)  -> #access_mode{r=false, sr=true,  w=true,  sw=true}.
-
 %% Field rules.
 
-normalize_field(Field) ->
-	Rules = [
-			 fun index_is_required_rule/1,
-			 fun default_alias_name_rule/1,
-			 fun get_set_record_rule/1,
-			 fun type_constructor_rule/1
-			],
-	tq_db_utils:error_writer_foldl(fun(R, F) -> R(F) end, Field, Rules).
-
-index_is_required_rule(Field=#field{is_index=true}) ->
-	{ok, Field#field{is_required = true}};
-index_is_required_rule(Field) -> {ok, Field}.
-
-default_alias_name_rule(Field=#field{name=Name, stores_in_database = true, db_options=DbOptions}) when
-	  DbOptions#db_options.alias =:= undefined ->
-	DbOptions2 = DbOptions#db_options{alias = atom_to_binary(Name)},
-	{ok, Field#field{db_options=DbOptions2}};
-default_alias_name_rule(Field) -> {ok, Field}.
-
-
-get_set_record_rule(Field=#field{stores_in_record=false, getter=Getter, setter=Setter}) ->
-	case {Getter, Setter} of
-		{true, true} ->
-			{error, "Storing in record required for default getter and setter"};
-		{true, _} ->
-			{error, "Storing in record required for default getter"};
-		{_, true} ->
-			{error, "Storing in record required for default setter"};
-		{_, _} ->
-			{ok, Field}
-	end;
-get_set_record_rule(Field) ->
-	{ok, Field#field{stores_in_record=true}}.
-
-type_constructor_rule(#field{record_options=
-								 #record_options{type_constructor=undefined, type=Type}=RecOptions
-							}=Field) ->
-	case type_constructor(Type) of
-		{ok, TypeConstructor} ->
-			RecOptions2 = RecOptions#record_options{type_constructor=TypeConstructor},
-			Field2 = Field#field{record_options=RecOptions2},
-			{ok, Field2};
-		{error, undefined} ->
-			Reason = lists:flatten(io_lib:format("type_constructor required for type: ~p", [Type])),
-			{error, Reason}
-	end;
-type_constructor_rule(Field) ->
-	{ok, Field}.
-
-type_constructor(binary) -> {ok, none};
-type_constructor(integer) -> {ok, {tq_db_utils, binary_to_integer}};
-type_constructor(float) -> {ok, {tq_db_utils, binary_to_float}};
-type_constructor(_) -> {error, undefined}.
+normalize_fields(Fields) ->
+	NormalizeFun = fun({P, F, S}) ->
+						   case P:normalize_field(F) of
+							   {ok, F2} ->
+								   {ok, {P, F2, S}};
+							   {error, _} = Err ->
+								   Err
+						   end
+				   end,
+	tq_db_utils:error_writer_map(NormalizeFun, Fields).
 
 %% Validators.
 
-valid_model(Model) ->
-	Validators = [
-				  fun table_required_validator/1
-				 ],
-	tq_db_utils:error_writer_foldl(fun(F, M) -> F(M) end, Model, Validators).
+normalize_models(#state{plugins=Plugins}=State) ->
+	ValidFun = fun({P, M}) ->
+					   case P:normalize_model(M) of
+						   {ok, M2} -> {ok, {P, M2}};
+						   {error, _} = Err -> Err
+					   end
+			   end,
+	case tq_db_utils:error_writer_map(ValidFun, Plugins) of
+		{ok, Plugins2} ->
+			State2 = State#state{plugins=Plugins2},
+			{ok, State2};
+		{error, _} = Err -> Err
+	end.
 
-table_required_validator(#model{table=undefined}) ->
-	{error, "Table name required"};
-table_required_validator(Model) -> {ok, Model}.
+%% Builder.
 
+build_models(#state{plugins=Plugins}) ->
+	lists:foldl(fun({P, M}, {Exports, Funs}) ->
+						{Es, Fs} = P:build_model(M),
+						{[Es|Exports], [Fs|Funs]}
+				end, {[], []}, Plugins).
+				
 %% Internal helpers.
 
 -spec ast_split_with(Fun, List, 'before') -> {List1, List2} when
@@ -290,91 +239,25 @@ ast_split_with(_Fun, [], Opt, Acc) ->
 			{error, not_found}
 	end.
 
--spec error_ast(Line, Reason) -> {error, {Line, Reason}} when
-	  Line  :: non_neg_integer(),
-	  Reason :: any().
 error_ast(Line, Reason) ->
 	{error, {Line, Reason}}.
 
 global_error_ast(Line, Reason) ->
 	{error, {Line, erl_parse, Reason}}.
 
--spec revert(parse_trans:forms()) ->
-					parse_trans:forms().
 revert(Tree) ->
     [erl_syntax:revert(T) || T <- lists:flatten(Tree)].
 
--spec pretty_print(parse_trans:forms()) -> iolist().
 pretty_print(Forms0) ->
 	Forms = epp:restore_typed_record_fields(revert(Forms0)),
     [io_lib:fwrite("~s~n",
 				   [lists:flatten([erl_pp:form(Fm) ||
 									  Fm <- Forms])])].
 
-atom_to_binary(Atom) ->
-	list_to_binary(atom_to_list(Atom)).
-
 %% Tests.
 
 -ifdef(TEST).
 -include_lib("eunit/include/eunit.hrl").
-
-index_is_required_rule_test_() ->
-	C = fun({IsIndex, IsRequired}) -> #field{is_index=IsIndex, is_required=IsRequired} end,
-	Tests = [
-			 {{true, true}, {true, true}},
-			 {{true, false}, {true, true}},
-			 {{false, true}, {false, true}},
-			 {{false, false}, {false, false}}
-			],
-	F = fun(From, To) ->
-				{ok, R} = index_is_required_rule(C(From)),
-				R = C(To)
-		end,
-	[fun() -> F(From, To) end || {From, To} <- Tests].
-
-default_alias_name_rule_test_() ->
-	C = fun({Name, InDb, Alias}) ->
-				#field{name=Name, stores_in_database=InDb, db_options=#db_options{alias=Alias}}
-		end,
-	Tests = [
-			 {{name, true, undefined}, {name, true, <<"name">>}},
-			 {{name, false, undefined}, {name, false, undefined}},
-			 {{name, true, <<"test">>}, {name, true, <<"test">>}},
-			 {{name, false, <<"test">>}, {name, false, <<"test">>}}
-			],
-	F = fun(From, To) ->
-				{ok, R} = default_alias_name_rule(C(From)),
-				R = C(To)
-		end,
-	[fun() -> F(From, To) end || {From, To} <- Tests].
-
-
-
-get_set_record_rule_test_() ->
-	C = fun({Stored, Getter, Setter}) -> #field{stores_in_record=Stored, getter=Getter, setter=Setter} end,
-	Default = fun(undefined) -> true;
-				 (V) -> V
-			  end,
-	Values = [true, false, custom],
-	Tests1 = [{C({St, G, S}), {ok, C({Default(St), Default(G), Default(S)})}} || St <- [undefined, true], G <- Values, S <- Values],
-
-	%% Test case when stores_in_record manually set to false.
-	Tests2 = [{C({false, G, S}), case {Default(G), Default(S)} of
-								  {true, true} ->
-									  {error, "Storing in record required for default getter and setter"};
-								  {true, _} ->
-									  {error, "Storing in record required for default getter"};
-								  {_, true} ->
-									  {error, "Storing in record required for default setter"};
-								  {G1, S1} ->
-									  {ok, C({false, G1, S1})}
-								 end} || G <- Values, S <- Values],
-	Tests = Tests1 ++ Tests2,
-	F = fun(From, To) ->
-				?assertEqual(To,get_set_record_rule(From))
-		end,
-	[fun() -> F(From, To) end || {From, To} <- Tests].
 
 ast_split_test_() ->
 	Tests = [

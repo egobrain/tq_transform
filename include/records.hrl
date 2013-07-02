@@ -1,8 +1,3 @@
--record(db_options,{
-		  type :: string | integer | datetime,
-		  alias :: binary() % Name of field in DB
-		 }).
-
 -record(access_mode,{
 		  r = true :: boolean(),
 		  sr = true :: boolean(),
@@ -28,16 +23,12 @@
 		  init = false :: true | false, % Init function required
 
 		  stores_in_record = true :: boolean(), % Set to true if field value stores in state record
-		  record_options = #record_options{} :: #record_options{}, % Editional record options
-
-		  stores_in_database = true :: boolean(), % Set to true if field value stores in state DB
-		  db_options = #db_options{} :: #db_options{} % Editional DB record options
+		  record_options = #record_options{} :: #record_options{} % Editional record options
 		 }).
 
 -record(model, {
 		  module :: atom(),
 		  fields = [] :: [#field{}],
-		  table :: atom(),
 		  init_fun :: atom() | {atom(), atom()}
 		 }).
 

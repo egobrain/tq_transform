@@ -25,11 +25,10 @@
 
 %% Build result ast.
 
--spec build_model(Model) -> {ok, {InfoAst, FunctionsAst}} | {error, Reason} when
+-spec build_model(Model) -> {InfoAst, FunctionsAst} when
 	  Model :: #model{},
 	  InfoAst :: erl_syntax:syntaxTree(),
-	  FunctionsAst :: erl_syntax:syntaxTree(),
-	  Reason :: any().
+	  FunctionsAst :: erl_syntax:syntaxTree().
 build_model(Model) ->
 	Builders = [
 				fun build_main_record/1,
@@ -38,14 +37,10 @@ build_model(Model) ->
 				fun build_internal_functions/1,
 				fun build_validators/1
 			   ],
-	tq_db_utils:error_writer_foldl(fun(F, {IBlock, FBlock}) ->
-										   case F(Model) of
-											   {ok, {IB, FB}} ->
-												   {ok, {[IB|IBlock], [FB|FBlock]}};
-											   {error, _} = Err ->
-												   Err
-										   end
-								   end, {[], []}, Builders).
+	lists:foldl(fun(F, {IBlock, FBlock}) ->
+						{IB, FB} = F(Model),
+						{[IB|IBlock], [FB|FBlock]}
+				end, {[], []}, Builders).
 
 build_main_record(#model{module=Module, fields=Fields}) ->
 	FieldsInRecord = [F || F <- Fields, F#field.stores_in_record],
@@ -59,12 +54,12 @@ build_main_record(#model{module=Module, fields=Fields}) ->
 						end || F <- Fields, F#field.stores_in_record],
 	DbFieldNames =  [{?changed_suffix(F#field.name),
 					  F#field.record_options#record_options.default_value =/= undefined}
-					 || F <- FieldsInRecord, F#field.stores_in_database],
+					 || F <- FieldsInRecord],
 	RecordFields = lists:flatten([{'$is_new$', true},
 								  RecordFieldNames,
 								  DbFieldNames]),
 	Attribute = def_record(Module, RecordFields),
-	{ok, {[Attribute], []}}.
+	{[Attribute], []}.
 
 build_getter_and_setters(#model{module=Module, fields=Fields}) ->
 	NewFun = ?function(new, [?clause([], none, [?record(Module,[])])]),
@@ -83,25 +78,20 @@ build_getter_and_setters(#model{module=Module, fields=Fields}) ->
 	IsNewExport = ?export(is_new, 1),
 	Funs = [NewFun, GetterFuns, SetterFuns, IsNewFun],
 	Exports = [NewExport, GetterExports, CustomGettersExports, SetterExports, CustomSettersExports, IsNewExport],
-	{ok, {Exports, Funs}}.
+	{Exports, Funs}.
 
 getter(Module, #field{name=Name}) ->
-	  ?function(Name, [?clause([?var('Model')], none, [?access(?var('Model'), Module, Name)])]).
-setter(Module, #field{name=Name, stores_in_database=InDb}) ->
-	FunctionName = ?prefix_set(Name),
-	Setter = case InDb of
-				 true ->
-					 ?cases(?eeq(?var('Val'),?access(?var('Model'), Module, Name)),
-							[?clause([?atom(true)], none,
-									 [?var('Model')]),
-							 ?clause([?atom(false)], none,
-									 [?record(?var('Model'),Module,
-												  [?field(Name,?var('Val')),
-												   ?field(?changed_suffix(Name),?atom(true))])])]);
-				 false ->
-					 ?ok(?record(?var('Model'), Module, [?field(Name,?var('Val'))]))
-			 end,
-	?function(FunctionName, [?clause([?var('Val'),?var('Model')], none, [Setter])]).
+	?function(Name, [?clause([?var('Model')], none, [?access(?var('Model'), Module, Name)])]).
+setter(Module, #field{name=Name}) ->
+	?function(?prefix_set(Name),
+			  [?clause([?var('Val'),?var('Model')], none,
+					   [?cases(?eeq(?var('Val'),?access(?var('Model'), Module, Name)),
+							   [?clause([?atom(true)], none,
+										[?var('Model')]),
+								?clause([?atom(false)], none,
+										[?record(?var('Model'),Module,
+												 [?field(Name,?var('Val')),
+												  ?field(?changed_suffix(Name),?atom(true))])])])])]).
 
 build_proplists(Model) ->
 	Funs = [to_proplist_function(Model),
@@ -115,7 +105,7 @@ build_proplists(Model) ->
 									end, {[], []}, Funs),
 	{Public, Private} = {lists:flatten(Public0), lists:flatten(Private0)},
 	Exports = export_funs(Public),
-	{ok, {Exports, Public ++ Private}}.
+	{Exports, Public ++ Private}.
 
 to_proplist_function(#model{fields=Fields}) ->
 	DefaultOpts = ?abstract([safe]),
@@ -216,18 +206,15 @@ from_bin_proplist_function(#model{fields=Fields}) ->
 
 build_internal_functions(Model) ->
 	Funs = [changed_fields_function(Model),
-			meta1_function(Model),
-			meta2_function(Model),
 			field_constructor_function(Model),
-			constructor0_function(),
 			constructor1_function(Model)
 		   ],
 	Exports = export_funs(Funs),
-	{ok, {Exports, Funs}}.
+	{Exports, Funs}.
 
 changed_fields_function(#model{module=Module, fields=Fields}) ->
 	AllowedFields = [F#field.name || F <- Fields,
-									 F#field.stores_in_database,
+									 F#field.stores_in_record,
 									 F#field.setter,
 									 F#field.mode#access_mode.sw],
 	ListAst = ?list([?tuple([?atom(F),
@@ -242,10 +229,6 @@ changed_fields_function(#model{module=Module, fields=Fields}) ->
 											   ListAst),
 									?var('Changed')]
 								  )])]).
-constructor0_function() ->
-	?function(constructor,
-			  [?clause([], none,
-					   [?apply(constructor, [?apply('$meta$', [?atom(db_fields)])])])]).
 
 constructor1_function(#model{init_fun=InitFun, module=Module}) ->
 	SetIsNotNew = ?record(?var('Model'), Module, [?field('$is_new$', ?atom(false))]),
@@ -270,29 +253,6 @@ constructor1_function(#model{init_fun=InitFun, module=Module}) ->
 								  ]
 									  )])])]).
 
-meta1_function(#model{table=Table, fields=Fields}) ->
-	Clauses = [?clause([?atom(table)], none, [?abstract(Table)]),
-			   ?clause([?atom(db_fields)], none, [?list([?atom(F#field.name) || F <- Fields,
-																				F#field.stores_in_database])]),
-			   ?clause([?atom(record_fields)], none, [?list([?atom(F#field.name) || F <- Fields,
-																					F#field.stores_in_record])])
-			  ],
-	?function('$meta$', Clauses).
-
-meta2_function(#model{fields=Fields}) ->
-	Clauses = [?clause([?atom(db_type), ?var('Field')], none,
-					   [?cases(?var('Field'),
-							   [?clause([?atom(F#field.name)], none,
-										[?atom(F#field.db_options#db_options.type)])
-								|| F <- Fields, F#field.stores_in_record])]),
-			   ?clause([?atom(db_alias), ?var('Field')], none,
-					   [?cases(?var('Field'),
-							   [?clause([?atom(F#field.name)], none,
-										[?abstract(F#field.db_options#db_options.alias)])
-								|| F <- Fields, F#field.stores_in_record])])
-			  ],		  
-	?function('$meta$', Clauses).
-
 field_constructor_function(#model{fields=Fields}) ->
 	DefaultClasuse = ?clause([?var('Fun')], [?nif_is_function(?var('Fun'))], [?var('Fun')]),
 	?function(field_constructor,
@@ -300,7 +260,6 @@ field_constructor_function(#model{fields=Fields}) ->
 					   [?func([?clause([?var('Val'), ?var('Model')], none,
 									   [?apply(?prefix_set(F#field.name), [?var('Val'), ?var('Model')])])])]) ||
 				  F <- Fields,
-				  F#field.stores_in_database,
 				  F#field.setter
 			  ] ++ [DefaultClasuse]).
 
@@ -324,7 +283,7 @@ build_validators(#model{module=Module, fields=Fields}) ->
 								  ])]),
 	Funs = [ValidatorFun, ValidFun],
 	Exports = export_funs(Funs),
-	{ok, {Exports, Funs}}.
+	{Exports, Funs}.
 
 validator(_Validators, IsRequired, IsWriteOnly) ->
 	WO_clause = ?clause([?atom('$write_only_stumb$')], none, [?atom(ok)]),

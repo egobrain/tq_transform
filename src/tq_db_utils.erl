@@ -14,7 +14,9 @@
 
 -module(tq_db_utils).
 
--export([error_writer_foldl/3]).
+-export([error_writer_foldl/3,
+		 error_writer_map/2
+		]).
 
 -export([valid/1]).
 
@@ -40,6 +42,26 @@ error_writer_foldl(Fun, InitState, Opts) ->
 	case ResultErrors of
 		[] -> {ok, ResultState};
 		_ -> {error, lists:reverse(ResultErrors)}
+	end.
+
+-spec error_writer_map(Fun, ArgsList) -> {ok, ResultList} | {error, Errors} when
+	  Fun :: fun((Arg) -> {ok, Result} | {error, Error}),
+	  ArgsList :: [Arg],
+	  ResultList :: [Result],
+	  Errors :: [Error].
+error_writer_map(Fun, List) when is_list(List) ->
+	MapFun = fun(Item, Acc) ->
+					 case Fun(Item) of
+						 {ok, Res} ->
+							 {ok, [Res | Acc]};
+						 {error, Reason} ->
+							 {error, Reason}
+					 end
+			 end,
+	case error_writer_foldl(MapFun, [], List) of
+		{ok, Result} ->
+			{ok, lists:reverse(Result)};
+		{error, _} = Err -> Err
 	end.
 
 binary_to_integer(Bin) when is_binary(Bin) ->
@@ -78,6 +100,21 @@ error_writer_foldl_test_() ->
 			 {[1], {ok, 1}}
 			],
 	F = fun(D, R) -> R = error_writer_foldl(Sum, 0, D) end,
+	[fun() -> F(From, To) end || {From, To} <- Tests].
+
+error_writer_map_test_() ->
+	Sum = fun (Int) when is_integer(Int) -> {ok, Int+10};
+			  (Other) -> {error, {not_integer, Other}}
+		  end,
+	Tests = [
+			 {[1,2,3,4], {ok, [11,12,13,14]}},
+			 {[1,2,3, e1, 4,5, e2], {error, [{not_integer, e1}, {not_integer, e2}]}},
+			 {[1,2,3,error], {error, [{not_integer, error}]}},
+			 {[], {ok, []}},
+			 {[error], {error, [{not_integer, error}]}},
+			 {[1], {ok, [11]}}
+			],
+	F = fun(D, R) -> R = error_writer_map(Sum, D) end,
 	[fun() -> F(From, To) end || {From, To} <- Tests].
 
 -endif.

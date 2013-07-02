@@ -2,12 +2,6 @@
 -compile({parse_transform, tq_db_transform}).
 
 %% Test
--field({id,
-		[
-		 index,
-		 {db_type, integer},
-		 {type, integer}
-		]}).
 -field({counter,
 		[
 		 required,
@@ -16,7 +10,7 @@
 		 {default, 1}
 		]}).
 
--model([{table, <<"test">>},
+-model([
 		{init, init}
 	   ]).
 
