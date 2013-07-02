@@ -50,7 +50,11 @@ build_model(Model) ->
 build_main_record(#model{module=Module, fields=Fields}) ->
 	FieldsInRecord = [F || F <- Fields, F#field.stores_in_record],
 	RecordFieldNames = [case F#field.record_options#record_options.default_value of
-							undefined -> F#field.name;
+							undefined ->
+								case is_write_only(F) of
+									true -> {F#field.name, '$write_only_stumb$'};
+									false -> F#field.name
+								end;
 							Val -> {F#field.name, Val}
 						end || F <- Fields, F#field.stores_in_record],
 	DbFieldNames =  [{?changed_suffix(F#field.name),
@@ -150,31 +154,28 @@ from_bin_proplist_function(#model{fields=Fields}) ->
 									   ?var('BinProplist')])])]),
 	DefaultClasuse = [?clause([?tuple([?var('Field'),?underscore]), ?underscore], none,
 							  [?error(?atom(unknown), ?var('Field'))])],
-	EClause = fun(F) -> ?clause([?error(?var('Reason'))], none,
-								[?error(?tuple([?var('Reason'), ?atom(F#field.name)]))])
-			  end,
+	SetterClause = fun(F, Var) -> ?ok(?apply(?prefix_set(F#field.name), [?var(Var), ?var('Model')])) end,
+	Cases = fun(F, A) -> ?cases(A,
+							   [?clause([?ok(?var('Val'))], none,
+										[SetterClause(F, 'Val')]),
+								?clause([?error(?var('Reason'))], none,
+										[?error(?tuple([?var('Reason'), ?atom(F#field.name)]))])])
+		   end,
 	Fun_ = ?function(from_bin_proplist_,
 					 [?clause(
 						 [?tuple([?abstract(atom_to_binary(F#field.name)),?var('Bin')]), ?var('Model')], none,
-						 [?cases(type_constructor(F,?var('Bin')),
-								 [?clause([?ok(?var('Val'))], none,
-										  %% [?cases(?apply_(?apply(validator,[?atom(F#field.name)]),[?var('Val')]),
-										  %% 		  [?clause([?atom(ok)], none,
-														   [?ok(?apply(?prefix_set(F#field.name), [?var('Val'), ?var('Model')]))]),
-												   %% EClause(F)])]),
-								  EClause(F)])])
+						 [case F#field.record_options#record_options.type_constructor of
+							  none ->
+								  SetterClause(F, 'Bin');
+							  {Mod, Fun} ->
+								  Cases(F, ?apply(Mod, Fun, [?var('Bin')]));
+							  Fun ->
+								  Cases(F, ?apply(Fun, [?var('Bin')]))
+						  end])
 					  || F <- Fields,
 						 F#field.setter =/= undefined,
 						 F#field.mode#access_mode.w] ++ DefaultClasuse),
 	[Fun1, Fun2, Fun_].
-
-type_constructor(Field, A) ->
-	case Field#field.record_options#record_options.type_constructor of
-		{M, F} ->
-			?apply(M, F, [A]);
-		F ->
-			?apply(F, [A])
-	end.
 
 build_internal_functions(Model) ->
 	Funs = [changed_fields_function(Model),
@@ -301,7 +302,7 @@ validator(_Validators, IsRequired, IsWriteOnly) ->
 
 is_write_only(Field) ->
 	AccessMode = Field#field.mode,
-	not AccessMode#access_mode.sw.
+	not AccessMode#access_mode.sr.
 
 def_record(Name, Fields) ->
 	?def_record(Name, [case F of

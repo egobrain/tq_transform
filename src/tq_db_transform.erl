@@ -182,14 +182,14 @@ option(record, StoresInRecord, Field) ->
 option(Name,_,_) ->
 	{error, {"Unknown option", Name}}.
 
-mode_to_acl(r) -> #access_mode{r=true, sr=true};
-mode_to_acl(w) -> #access_mode{w=true, sw=true};
-mode_to_acl(rw) -> #access_mode{r=true, sr=true, w=true, sw=true};
-mode_to_acl(sr) -> #access_mode{sr=true};
-mode_to_acl(sw) -> #access_mode{sw=true};
-mode_to_acl(srsw) -> #access_mode{sr=true, sw=true};
-mode_to_acl(rsw) -> #access_mode{r=true, sr=true, sw=true};
-mode_to_acl(srw) -> #access_mode{sr=true, w=true, sw=true}.
+mode_to_acl(r)    -> #access_mode{r=true,  sr=true,  w=false, sw=false};
+mode_to_acl(w)    -> #access_mode{r=false, sr=false, w=true,  sw=true};
+mode_to_acl(rw)   -> #access_mode{r=true,  sr=true,  w=true,  sw=true};
+mode_to_acl(sr)   -> #access_mode{r=false, sr=true,  w=false, sw=false};
+mode_to_acl(sw)   -> #access_mode{r=false, sr=false, w=false, sw=true};
+mode_to_acl(srsw) -> #access_mode{r=false, sr=true,  w=false, sw=true};
+mode_to_acl(rsw)  -> #access_mode{r=true,  sr=true,  w=false, sw=true};
+mode_to_acl(srw)  -> #access_mode{r=false, sr=true,  w=true,  sw=true}.
 
 %% Field rules.
 
@@ -232,7 +232,7 @@ type_constructor_rule(#field{record_options=
 							}=Field) ->
 	case type_constructor(Type) of
 		{ok, TypeConstructor} ->
-			RecOptions2 = RecOptions#record_options{type_constructor={tq_db_utils, TypeConstructor}},
+			RecOptions2 = RecOptions#record_options{type_constructor=TypeConstructor},
 			Field2 = Field#field{record_options=RecOptions2},
 			{ok, Field2};
 		{error, undefined} ->
@@ -242,9 +242,9 @@ type_constructor_rule(#field{record_options=
 type_constructor_rule(Field) ->
 	{ok, Field}.
 
-type_constructor(binary) -> {ok, binary_to_binary};
-type_constructor(integer) -> {ok, binary_to_integer};
-type_constructor(float) -> {ok, binary_to_float};
+type_constructor(binary) -> {ok, none};
+type_constructor(integer) -> {ok, {tq_db_utils, binary_to_integer}};
+type_constructor(float) -> {ok, {tq_db_utils, binary_to_float}};
 type_constructor(_) -> {error, undefined}.
 
 %% Validators.

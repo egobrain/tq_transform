@@ -27,9 +27,6 @@ init(Model) ->
 -ifdef(TEST).
 -include_lib("eunit/include/eunit.hrl").
 
--define(join(A, B), list_to_atom(atom_to_list(A)++"_"++atom_to_list(B))).
--define(prefix_set(A), ?join(set, A)).
-
 init_test_() ->
 	C = fun(V) ->
 				{ok, Model} = from_proplist([{counter, V}]),
@@ -37,7 +34,6 @@ init_test_() ->
 		end,
 	[fun() -> ?assertEqual(C(3), (constructor([]))([])) end,
 	 fun() -> ?assertEqual(C(15), (constructor([counter]))([5])) end].
-	
-	
+
 -endif.
 

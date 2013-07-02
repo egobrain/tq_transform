@@ -18,8 +18,7 @@
 
 -export([valid/1]).
 
--export([binary_to_binary/1,
-		 binary_to_integer/1,
+-export([binary_to_integer/1,
 		 binary_to_float/1]).
 
 -spec error_writer_foldl(Fun, State, List) -> {ok, NewState} | {error, Reasons} when
@@ -30,8 +29,6 @@ error_writer_foldl(Fun, InitState, Opts) ->
 	{ResultState, ResultErrors} =
 		lists:foldl(fun(Val, {State, Errors}) ->
 							case Fun(Val, State) of
-								%% ok ->
-								%% 	{State, Errors};
 								{ok, State2} ->
 									{State2, Errors};
 								{error, Reason} ->
@@ -42,12 +39,8 @@ error_writer_foldl(Fun, InitState, Opts) ->
 				   Opts),
 	case ResultErrors of
 		[] -> {ok, ResultState};
-		_ -> {error, ResultErrors}
+		_ -> {error, lists:reverse(ResultErrors)}
 	end.
-
-
-binary_to_binary(Bin) when is_binary(Bin) ->
-	{ok, Bin}.
 
 binary_to_integer(Bin) when is_binary(Bin) ->
 	case string:to_integer(binary_to_list(Bin)) of
