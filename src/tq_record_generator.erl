@@ -44,7 +44,7 @@ build_model(Model) ->
 
 build_main_record(#model{module=Module, fields=Fields}) ->
 	FieldsInRecord = [F || F <- Fields, F#field.stores_in_record],
-	RecordFieldNames = [case F#field.record_options#record_options.default_value of
+	RecordFieldNames = [case F#field.default_value of
 							undefined ->
 								case is_write_only(F) of
 									true -> {F#field.name, '$write_only_stumb$'};
@@ -53,7 +53,7 @@ build_main_record(#model{module=Module, fields=Fields}) ->
 							Val -> {F#field.name, Val}
 						end || F <- Fields, F#field.stores_in_record],
 	DbFieldNames =  [{?changed_suffix(F#field.name),
-					  F#field.record_options#record_options.default_value =/= undefined}
+					  F#field.default_value =/= undefined}
 					 || F <- FieldsInRecord],
 	RecordFields = lists:flatten([{'$is_new$', true},
 								  RecordFieldNames,
@@ -188,7 +188,7 @@ from_bin_proplist_function(#model{fields=Fields}) ->
 				   ?function(?atom_join(from_bin_proplist, Suffix),
 							 [?clause(
 								 [?tuple([?abstract(atom_to_binary(F#field.name)),?var('Bin')]), ?var('Model')], none,
-								 [case F#field.record_options#record_options.type_constructor of
+								 [case F#field.type_constructor of
 									  none ->
 										  SetterClause(F, 'Bin');
 									  {Mod, Fun} ->
