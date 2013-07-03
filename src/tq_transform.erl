@@ -220,11 +220,23 @@ normalize_models(#state{plugins=Plugins}=State) ->
 
 %% Builder.
 
-build_models(#state{plugins=Plugins}) ->
+build_models(#state{plugins=Plugins}=State) ->
+	MetaBlock = meta_functions(State),
 	lists:foldl(fun({P, M}, {Exports, Funs}) ->
 						{Es, Fs} = P:build_model(M),
 						{[Es | Exports], [Fs | Funs]}
-				end, {[], []}, Plugins).
+				end, MetaBlock, Plugins).
+
+meta_functions(#state{plugins=Plugins}) ->
+	MetaClauses = lists:flatten([P:meta_clauses(M) || {P, M} <- Plugins]),
+	case MetaClauses of
+		[] ->
+			{[], []};
+		_ ->
+			MetaFun = ?function('$meta', MetaClauses),
+			Export = ?export_fun(MetaFun),
+			{[Export], [MetaFun]}
+	end.
 
 %% Internal helpers.
 

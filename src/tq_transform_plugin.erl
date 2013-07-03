@@ -29,4 +29,6 @@
 -callback set_field(Field :: any(), Model) -> {ok, Model}.
 
 -callback normalize_model(Model) -> {ok, Model} | {error, Reasons :: any()}.
--callback build_model(Model :: any()) -> {Exports :: [any()], Funs :: [any()]}.
+-callback build_model(Model :: any()) -> {Exports :: [erl_syntax:forms()], Funs :: [erl_syntax:forms()]}.
+
+-callback meta_clauses(Model :: any()) -> [Clauses :: erl_syntax:forms()].

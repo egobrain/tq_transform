@@ -21,7 +21,9 @@
 		 create_field/1,
 		 field_option/3,
 		 normalize_field/1,
-		 set_field/2
+		 set_field/2,
+
+		 meta_clauses/1
 		]).
 
 %% Model.
@@ -86,6 +88,10 @@ normalize_field(Field) ->
 
 set_field(Field, #model{fields=Fields} = Model) ->
 	Model#model{fields=[Field | Fields]}.
+
+%% Meta.
+
+meta_clauses(_Model) -> [].
 
 %% Rules.
 
