@@ -53,6 +53,8 @@
 -define(export(Fun,Arity),?attribute(export,[?list([?arity_qualifier(Fun, Arity)])])).
 -define(export_all(List), ?attribute(export,[?list([?arity_qualifier(Fun, Arity) || {Fun, Arity} <- List])])).
 -define(def_record(Name, Fields), ?attribute(record,[?atom(Name), ?tuple(Fields)])).
+-define(export_fun(Fun), ?export(erl_syntax:atom_value(erl_syntax:function_name(Fun)), erl_syntax:function_arity(Fun))).
+-define(export_funs(Funs), ?export_all([{erl_syntax:atom_value(erl_syntax:function_name(F__)), erl_syntax:function_arity(F__)} || F__ <- Funs])).
 
 -define(ok(A),?tuple([?atom(ok),A])).
 -define(error(A),?tuple([?atom(error),A])).

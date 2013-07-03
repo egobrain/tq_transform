@@ -66,12 +66,12 @@ build_getter_and_setters(#model{module=Module, fields=Fields}) ->
 	NewExport = ?export(new, 0),
 	GetterFields = [F || F <- Fields, F#field.getter],
 	GetterFuns = [getter(Module, F) || F <- GetterFields],
-	GetterExports = export_funs(GetterFuns),
+	GetterExports = ?export_funs(GetterFuns),
 	CustomGettersExports = ?export_all([{F#field.name, 1} || F <- Fields, F#field.getter =:= custom]),
 
 	SetterFields = [F || F <- Fields, F#field.setter],
 	SetterFuns = [setter(Module, F) || F <- SetterFields],
-	SetterExports = export_funs(SetterFuns),
+	SetterExports = ?export_funs(SetterFuns),
 	CustomSettersExports = ?export_all([{?prefix_set(F#field.name), 2} || F <- Fields, F#field.setter =:= custom]),
 
 	IsNewFun = ?function(is_new, [?clause([?var('Model')], none, [?access(?var('Model'), Module, '$is_new$')])]),
@@ -104,7 +104,7 @@ build_proplists(Model) ->
 											{[P | Pub], Priv}
 									end, {[], []}, Funs),
 	{Public, Private} = {lists:flatten(Public0), lists:flatten(Private0)},
-	Exports = export_funs(Public),
+	Exports = ?export_funs(Public),
 	{Exports, Public ++ Private}.
 
 to_proplist_function(#model{fields=Fields}) ->
@@ -209,7 +209,7 @@ build_internal_functions(Model) ->
 			field_constructor_function(Model),
 			constructor1_function(Model)
 		   ],
-	Exports = export_funs(Funs),
+	Exports = ?export_funs(Funs),
 	{Exports, Funs}.
 
 changed_fields_function(#model{module=Module, fields=Fields}) ->
@@ -282,7 +282,7 @@ build_validators(#model{module=Module, fields=Fields}) ->
 								   ?apply(tq_transform_utils, valid, [?var('Data')])
 								  ])]),
 	Funs = [ValidatorFun, ValidFun],
-	Exports = export_funs(Funs),
+	Exports = ?export_funs(Funs),
 	{Exports, Funs}.
 
 validator(_Validators, IsRequired, IsWriteOnly) ->
@@ -305,10 +305,6 @@ def_record(Name, Fields) ->
 						   Atom when is_atom(F) -> ?field(Atom);
 						   {Atom, Value} when is_atom(Atom) -> ?field(Atom, ?abstract(Value))
 					   end || F <- Fields]).
-
-export_funs(Funs) ->
-	?export_all([{erl_syntax:atom_value(erl_syntax:function_name(F)),
-				  erl_syntax:function_arity(F)} || F <- Funs]).
 
 acc_if(true, Val, Acc) -> [Val | Acc];
 acc_if(false, _, Acc) -> Acc.
