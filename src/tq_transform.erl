@@ -156,28 +156,40 @@ model_options(Opts, #state{plugins=Plugins}=State) ->
 	end.
 
 try_field_option(Option, Data, Fields) ->
-	try_field_option(Option, Data, Fields, []).
-try_field_option(Option, _Data, [], _) ->
-	{error, "Unknown field option " ++ atom_to_list(Option)};
-try_field_option(Option, Data, [{P, F, S} | Rest], Acc) ->
+	try_field_option(Option, Data, Fields, [], false).
+
+try_field_option(Option, _Data, [], Acc, IsOptionKnown) ->
+	case IsOptionKnown of
+		true ->
+			{ok, lists:reverse(Acc)};
+		_ ->
+			{error, "Unknown field option " ++ atom_to_list(Option)}
+	end;
+try_field_option(Option, Data, [{P, F, S} | Rest], Acc, IsOptionKnown) ->
 	case P:field_option(Option, Data, F) of
 		{ok, F2} ->
-			{ok, lists:reverse(Acc) ++ [{P, F2, S} | Rest]};
+			try_field_option(Option, Data, Rest, [{P, F2, S} | Acc], true);
 		false ->
-			try_field_option(Option, Data, Rest, [{P, F, S} | Acc]);
+			try_field_option(Option, Data, Rest, [{P, F, S} | Acc], IsOptionKnown);
 		{error, _} = Err -> Err
 	end.
 
 try_model_option(Option, Data, Models) ->
-	try_model_option(Option, Data, Models, []).
-try_model_option(Option, _Data, [], _) ->
-	{error, "Unknown model option " ++ atom_to_list(Option)};
-try_model_option(Option, Data, [{P, M} | Rest], Acc) ->
+	try_model_option(Option, Data, Models, [], false).
+
+try_model_option(Option, _Data, [], Acc, IsOptionKnown) ->
+	case IsOptionKnown of
+		true ->
+			{ok, lists:reverse(Acc)};
+		false ->
+			{error, "Unknown model option " ++ atom_to_list(Option)}
+	end;
+try_model_option(Option, Data, [{P, M} | Rest], Acc, IsOptionKnown) ->
 	case P:model_option(Option, Data, M) of
 		{ok, M2} ->
-			{ok, lists:reverse(Acc) ++ [{P, M2} | Rest]};
+			try_model_option(Option, Data, Rest, [{P, M2} | Acc], true);
 		false ->
-			try_model_option(Option, Data, Rest, [{P, M} | Acc]);
+			try_model_option(Option, Data, Rest, [{P, M} | Acc], IsOptionKnown);
 		{error, _} = Err -> Err
 	end.
 
