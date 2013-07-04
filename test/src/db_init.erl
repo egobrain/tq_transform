@@ -1,4 +1,5 @@
 -module(db_init).
+
 -compile({parse_transform, tq_transform}).
 
 %% Test

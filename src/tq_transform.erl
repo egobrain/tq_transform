@@ -26,36 +26,42 @@
 
 -define(DBG(F, D), io:format("~p:~p "++F++"~n", [?FILE, ?LINE | D])).
 
-start() ->
-	case application:start(tq_transform) of
-		ok -> ok;
-		{error, {already_started, tq_transform}} -> ok;
-		{error, _Reason} = Err -> Err
+get_plugins(Opts) ->
+	DefaultPlugins = [tq_record_transform],
+	TqOpts = lists:flatten([O || {d, tq_transform_opts, O} <- Opts]),
+	case lists:keyfind(plugins, 1, TqOpts) of
+		{plugins, Plugins} ->
+			Plugins;
+		_ ->
+			DefaultPlugins
 	end.
 
-
-parse_transform(Ast, _Options)->
+parse_transform(Ast, Options)->
 	try
-		ok = start(),
-		State = #state{},
-		%% ?DBG("~n~p~n=======~n", [Ast]),
-		%% ?DBG("~n~s~n=======~n", [pretty_print(Ast)]),
-		case error_map_foldl(fun transform_node/2, State, Ast) of
-			{error, {Ast2, _State2}} ->
-				lists:flatten(Ast2);
-			{ok, {Ast2, State2}} ->
-				{ModuleBlock, InfoBlock, FunctionsBlock} = split_ast(Ast2),
-				Ast3 = case normalize_models(State2) of
-						   {ok, State3} ->
-							   {IBlock, FBlock} = build_models(State3),
-							   revert(lists:flatten([ModuleBlock, IBlock, InfoBlock, FBlock, FunctionsBlock]));
-						   {error, Reasons} ->
-							   Ast2 ++ [global_error_ast(1, R) || R <- Reasons]
-					   end,
-				Ast3 = lists:flatten(lists:filter(fun(Node)-> Node =/= nil end, Ast3)),
+		Plugins = get_plugins(Options),
+		case Plugins =:= [] of
+			true ->
+				Ast;
+			false ->
+				State = #state{plugins=Plugins},
+				%% ?DBG("~n~p~n=======~n", [Ast]),
+				%% ?DBG("~n~s~n=======~n", [pretty_print(Ast)]),
+				case error_map_foldl(fun transform_node/2, State, Ast) of
+					{error, {Ast2, _State2}} ->
+						lists:flatten(Ast2);
+					{ok, {Ast2, State2}} ->
+						{ModuleBlock, InfoBlock, FunctionsBlock} = split_ast(Ast2),
+						Ast3 = case normalize_models(State2) of
+								   {ok, State3} ->
+									   {IBlock, FBlock} = build_models(State3),
+									   revert(lists:flatten([ModuleBlock, IBlock, InfoBlock, FBlock, FunctionsBlock]));
+								   {error, Reasons} ->
+									   Ast2 ++ [global_error_ast(1, R) || R <- Reasons]
+							   end,
+						lists:flatten(lists:filter(fun(Node)-> Node =/= nil end, Ast3))
+				end
 				%% ?DBG("~n~p~n<<<<~n", [Ast3]),
 				%% ?DBG("~n~s~n>>>>~n", [pretty_print(Ast3)]),
-				Ast3
 		end
 	catch T:E ->
 			Reason = io_lib:format("~p:~p | ~p ~n", [T, E, erlang:get_stacktrace()]),
@@ -98,8 +104,7 @@ transform_node(Node={attribute, Line, model, Opts}, State) ->
 			{ok, {Node2, State}}
 	end;
 
-transform_node(Node={attribute, _Line, module, Module}, State) ->
-	{ok, Plugins} = application:get_env(tq_transform, plugins),
+transform_node(Node={attribute, _Line, module, Module}, #state{plugins=Plugins}=State) ->
 	Plugins2 = [{P, P:create_model(Module)} || P <- Plugins],
 	State2 = State#state{plugins = Plugins2},
 	{ok, {Node, State2}};

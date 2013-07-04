@@ -7,6 +7,6 @@
                   kernel,
                   stdlib
                  ]},
-  {mod, { tq_transform_app, []}},
-  {env, [{plugins, [tq_record_transform]}]}
+  {mod, {tq_transform_app, []}},
+  {env, []}
  ]}.
