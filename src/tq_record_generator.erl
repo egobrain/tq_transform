@@ -253,12 +253,19 @@ constructor1_function(#model{init_fun=InitFun, module=Module}) ->
 								  ]
 									  )])])]).
 
-field_constructor_function(#model{fields=Fields}) ->
+field_constructor_function(#model{fields=Fields, module=Module}) ->
 	DefaultClasuse = ?clause([?var('Fun')], [?nif_is_function(?var('Fun'))], [?var('Fun')]),
+	SetterAst = fun(F) -> ?apply(?prefix_set(F#field.name), [?var('Val'), ?var('Model')]) end,
 	?function(field_constructor,
 			  [?clause([?atom(F#field.name)], none,
 					   [?func([?clause([?var('Val'), ?var('Model')], none,
-									   [?apply(?prefix_set(F#field.name), [?var('Val'), ?var('Model')])])])]) ||
+									   case F#field.stores_in_record of
+										   true ->
+											   [?match(?var('F'),SetterAst(F)),
+												?record(?var('F'), Module, [?field(?changed_suffix(F#field.name), ?atom(false))])];
+										   false ->
+											   [SetterAst(F)]
+									   end)])]) ||
 				  F <- Fields,
 				  F#field.setter =/= false
 			  ] ++ [DefaultClasuse]).

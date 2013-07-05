@@ -26,4 +26,10 @@ constructor_test_() ->
 	Tests = [w, rw, sw, srsw, rsw, srw],
 	[fun() ->  constructor([F]) end || F <- Tests].
 
+constructor_changed_fields_test() ->
+	Opts = [w, rw, sw, srsw, rsw, srw],
+	Constructor = constructor(Opts),
+	Model = Constructor(Opts),
+	?assertEqual(Model:get_changed_fields(), []).
+
 -endif.
