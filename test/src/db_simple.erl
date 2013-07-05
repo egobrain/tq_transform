@@ -1,5 +1,5 @@
 -module(db_simple).
--compile({parse_transform, tq_transform}).
+-compile({parse_transform, tq_record_transform}).
 
 %% Test
 -field({id,

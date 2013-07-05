@@ -1,5 +1,6 @@
 -module(db_access).
--compile({parse_transform, tq_transform}).
+
+-compile({parse_transform, tq_record_transform}).
 
 %% Test
 -field({r,	[{type, integer}, {mode, r}]}).

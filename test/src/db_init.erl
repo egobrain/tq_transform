@@ -1,6 +1,6 @@
 -module(db_init).
 
--compile({parse_transform, tq_transform}).
+-compile({parse_transform, tq_record_transform}).
 
 %% Test
 -field({counter,

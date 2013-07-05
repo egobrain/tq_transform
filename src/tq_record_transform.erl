@@ -13,6 +13,8 @@
 
 -include("include/records.hrl").
 
+-export([parse_transform/2]).
+
 -export([create_model/1,
 		 model_option/3,
 		 normalize_model/1,
@@ -25,6 +27,9 @@
 
 		 meta_clauses/1
 		]).
+
+parse_transform(Ast, Options) ->
+	tq_transform:parse_transform(Ast, Options, [?MODULE]).
 
 %% Model.
 

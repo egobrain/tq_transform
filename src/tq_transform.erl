@@ -14,7 +14,7 @@
 
 -module(tq_transform).
 
--export([parse_transform/2,
+-export([parse_transform/3,
 		 pretty_print/1]).
 
 -include("include/ast_helpers.hrl").
@@ -26,43 +26,29 @@
 
 -define(DBG(F, D), io:format("~p:~p "++F++"~n", [?FILE, ?LINE | D])).
 
-get_plugins(Opts) ->
-	DefaultPlugins = [tq_record_transform],
-	TqOpts = lists:flatten([O || {d, tq_transform_opts, O} <- Opts]),
-	case lists:keyfind(plugins, 1, TqOpts) of
-		{plugins, Plugins} ->
-			Plugins;
-		_ ->
-			DefaultPlugins
-	end.
-
-parse_transform(Ast, Options)->
+parse_transform(Ast, _Options, [])->
+	Ast;
+parse_transform(Ast, _Options, Plugins) ->
 	try
-		Plugins = get_plugins(Options),
-		case Plugins =:= [] of
-			true ->
-				Ast;
-			false ->
-				State = #state{plugins=Plugins},
-				%% ?DBG("~n~p~n=======~n", [Ast]),
-				%% ?DBG("~n~s~n=======~n", [pretty_print(Ast)]),
-				case error_map_foldl(fun transform_node/2, State, Ast) of
-					{error, {Ast2, _State2}} ->
-						lists:flatten(Ast2);
-					{ok, {Ast2, State2}} ->
-						{ModuleBlock, InfoBlock, FunctionsBlock} = split_ast(Ast2),
-						Ast3 = case normalize_models(State2) of
-								   {ok, State3} ->
-									   {IBlock, FBlock} = build_models(State3),
-									   revert(lists:flatten([ModuleBlock, IBlock, InfoBlock, FBlock, FunctionsBlock]));
-								   {error, Reasons} ->
-									   Ast2 ++ [global_error_ast(1, R) || R <- Reasons]
-							   end,
-						lists:flatten(lists:filter(fun(Node)-> Node =/= nil end, Ast3))
-				end
-				%% ?DBG("~n~p~n<<<<~n", [Ast3]),
-				%% ?DBG("~n~s~n>>>>~n", [pretty_print(Ast3)]),
+		State = #state{plugins=Plugins},
+		%% ?DBG("~n~p~n=======~n", [Ast]),
+		%% ?DBG("~n~s~n=======~n", [pretty_print(Ast)]),
+		case error_map_foldl(fun transform_node/2, State, Ast) of
+			{error, {Ast2, _State2}} ->
+				lists:flatten(Ast2);
+			{ok, {Ast2, State2}} ->
+				{ModuleBlock, InfoBlock, FunctionsBlock} = split_ast(Ast2),
+				Ast3 = case normalize_models(State2) of
+						   {ok, State3} ->
+							   {IBlock, FBlock} = build_models(State3),
+							   revert(lists:flatten([ModuleBlock, IBlock, InfoBlock, FBlock, FunctionsBlock]));
+						   {error, Reasons} ->
+							   Ast2 ++ [global_error_ast(1, R) || R <- Reasons]
+					   end,
+				lists:flatten(lists:filter(fun(Node)-> Node =/= nil end, Ast3))
 		end
+		%% ?DBG("~n~p~n<<<<~n", [Ast3]),
+		%% ?DBG("~n~s~n>>>>~n", [pretty_print(Ast3)]),
 	catch T:E ->
 			Reason = io_lib:format("~p:~p | ~p ~n", [T, E, erlang:get_stacktrace()]),
 			[global_error_ast(1, Reason) | Ast]
