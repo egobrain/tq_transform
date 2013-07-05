@@ -236,9 +236,12 @@ meta_functions(#state{plugins=Plugins}) ->
 		[] ->
 			{[], []};
 		_ ->
-			MetaFun = ?function('$meta', MetaClauses),
-			Export = ?export_fun(MetaFun),
-			{[Export], [MetaFun]}
+			MetaFun1 = ?function('$meta', MetaClauses),
+			MetaFun2 = ?function('$meta', [?clause([?var('Arg'), ?underscore], none,
+												   [?apply('$meta', [?var('Arg')])])]),
+			MetaFuns = [MetaFun1, MetaFun2],
+			Exports = ?export_funs(MetaFuns),
+			{[Exports], MetaFuns}
 	end.
 
 %% Internal helpers.
