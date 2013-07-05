@@ -64,12 +64,12 @@ build_main_record(#model{module=Module, fields=Fields}) ->
 build_getter_and_setters(#model{module=Module, fields=Fields}) ->
 	NewFun = ?function(new, [?clause([], none, [?record(Module, [])])]),
 	NewExport = ?export(new, 0),
-	GetterFields = [F || F <- Fields, F#field.getter],
+	GetterFields = [F || F <- Fields, F#field.getter =:= true],
 	GetterFuns = [getter(Module, F) || F <- GetterFields],
 	GetterExports = ?export_funs(GetterFuns),
 	CustomGettersExports = ?export_all([{F#field.name, 1} || F <- Fields, F#field.getter =:= custom]),
 
-	SetterFields = [F || F <- Fields, F#field.setter],
+	SetterFields = [F || F <- Fields, F#field.setter =:= true],
 	SetterFuns = [setter(Module, F) || F <- SetterFields],
 	SetterExports = ?export_funs(SetterFuns),
 	CustomSettersExports = ?export_all([{?prefix_set(F#field.name), 2} || F <- Fields, F#field.setter =:= custom]),
@@ -260,7 +260,7 @@ field_constructor_function(#model{fields=Fields}) ->
 					   [?func([?clause([?var('Val'), ?var('Model')], none,
 									   [?apply(?prefix_set(F#field.name), [?var('Val'), ?var('Model')])])])]) ||
 				  F <- Fields,
-				  F#field.setter
+				  F#field.setter =/= false
 			  ] ++ [DefaultClasuse]).
 
 
@@ -269,7 +269,7 @@ build_validators(#model{module=Module, fields=Fields}) ->
 							 [?clause([?atom(F#field.name)], none,
 									  [validator([],
 												 F#field.is_required,
-												 is_write_only(F))]) || F <- Fields]),
+												 is_write_only(F))]) || F <- Fields, F#field.setter]),
 	ValidFun = ?function(valid,
 						 [?clause([?var('Model')], none,
 								  [?match(?var('Data'),

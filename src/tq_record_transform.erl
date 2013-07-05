@@ -86,6 +86,8 @@ field_option(_Option, _Val, _Field) ->
 
 normalize_field(Field) ->
 	Rules = [
+			 fun access_mode_getter_rule/1,
+			 fun access_mode_setter_rule/1,
 			 fun get_set_record_rule/1,
 			 fun type_constructor_rule/1
 			],
@@ -124,6 +126,16 @@ type_constructor_rule(#field{type_constructor=undefined, type=Type}=Field) ->
 			{error, Reason}
 	end;
 type_constructor_rule(Field) ->
+	{ok, Field}.
+
+access_mode_getter_rule(Field=#field{mode=#access_mode{sr=false}}) ->
+	{ok, Field#field{getter=false}};
+access_mode_getter_rule(Field) ->
+	{ok, Field}.
+
+access_mode_setter_rule(Field=#field{mode=#access_mode{sw=false}}) ->
+	{ok, Field#field{setter=false}};
+access_mode_setter_rule(Field) ->
 	{ok, Field}.
 
 %% Internal helpers.
