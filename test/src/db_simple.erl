@@ -10,7 +10,7 @@
 		[
 		 required,
 		 {type, binary},
-		 record, init, get, set,
+		 record, get, set,
 		 {default, <<"Default name">>},
 		 {mode, rw}
 		]}).

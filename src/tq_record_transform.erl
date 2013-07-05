@@ -60,9 +60,6 @@ field_option(required, Value, Field) ->
 field_option(default, DefaultValue, Field) ->
 	Field2 = Field#field{default_value=DefaultValue},
 	{ok, Field2};
-field_option(init, Init, Field) ->
-	Field2 = Field#field{init = Init},
-	{ok, Field2};
 field_option(mode, Mode, Field) ->
 	Field2 = Field#field{mode = mode_to_acl(Mode)},
 	{ok, Field2};
