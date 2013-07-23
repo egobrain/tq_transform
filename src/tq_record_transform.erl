@@ -29,7 +29,12 @@
 		]).
 
 parse_transform(Ast, Options) ->
-	tq_transform:parse_transform(Ast, Options, [?MODULE]).
+	try
+		tq_transform:parse_transform(Ast, Options, [?MODULE])
+	catch T:E ->
+			Reason = io_lib:format("~p:~p | ~p ~n", [T, E, erlang:get_stacktrace()]),
+			[{error, {1, erl_parse, Reason}} | Ast]
+	end.
 
 %% Model.
 
@@ -38,6 +43,9 @@ create_model(Module) ->
 
 model_option(init, InitFun, Model) ->
 	Model2 = Model#model{init_fun=InitFun},
+	{ok, Model2};
+model_option(validators, Validators, Model) ->
+	Model2 = Model#model{validators=Validators},
 	{ok, Model2};
 model_option(_Option, _Val, _Model) ->
 	false.

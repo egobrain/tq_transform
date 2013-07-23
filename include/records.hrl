@@ -25,7 +25,8 @@
 -record(model, {
 		  module :: atom(),
 		  fields = [] :: [#field{}],
-		  init_fun :: atom() | {atom(), atom()}
+		  init_fun :: atom() | {atom(), atom()},
+		  validators = [] :: atom() | {atom(), atom()} | {atom(), list()} | {atom(), atom(), list()}
 		 }).
 
 -type field_type() :: {atom(),atom()} | integer | non_neg_integer | binary.

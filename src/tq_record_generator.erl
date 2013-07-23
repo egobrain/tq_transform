@@ -283,12 +283,23 @@ field_constructor_function(#model{fields=Fields, module=Module}) ->
 			  ] ++ [DefaultClasuse]).
 
 
-build_validators(#model{module=Module, fields=Fields}) ->
+build_validators(#model{module=Module, fields=Fields, validators=Validators}) ->
 	ValidatorFun = ?function(validator,
 							 [?clause([?atom(F#field.name)], none,
 									  [validator(F#field.validators,
 												 F#field.is_required,
 												 is_write_only(F))]) || F <- Fields, F#field.setter]),
+	AppyUtilsValid = ?apply(tq_transform_utils, valid, [?var('Data')]),
+	ValidModelAst = case Validators of
+						[] ->
+							AppyUtilsValid;
+						_ ->
+							?cases(AppyUtilsValid,
+								   [?clause([?atom(ok)], none,
+											[fold_validators(Validators, ?var('Model'))]),
+									?clause([?error(?var('Reason'))], none,
+											[?error(?var('Reason'))])])
+					end,
 	ValidFun = ?function(valid,
 						 [?clause([?var('Model')], none,
 								  [?match(?var('Data'),
@@ -298,7 +309,7 @@ build_validators(#model{module=Module, fields=Fields}) ->
 													 ?access(?var('Model'), Module, F#field.name)])
 												 || F <- Fields,
 													F#field.stores_in_record])),
-								   ?apply(tq_transform_utils, valid, [?var('Data')])
+								   ValidModelAst
 								  ])]),
 	Funs = [ValidatorFun, ValidFun],
 	Exports = ?export_funs(Funs),
