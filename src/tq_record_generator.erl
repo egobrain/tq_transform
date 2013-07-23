@@ -308,9 +308,10 @@ validator(_Validators, IsRequired, IsWriteOnly) ->
 	WO_clause = ?clause([?atom('$write_only_stumb$')], none, [?atom(ok)]),
 	Req_clause = ?clause([?atom(undefined)], none, [?error(?atom(required))]),
 	Main_clause = ?clause([?underscore], none, [?atom(ok)]),
-	Clauses = acc_if(IsWriteOnly, WO_clause,
-					 acc_if(IsRequired, Req_clause,
-							[Main_clause])),
+	ClausesOpts = [{IsWriteOnly, WO_clause},
+				   {IsRequired, Req_clause},
+				   {true, Main_clause}],
+	Clauses = [Val || {true, Val} <- ClausesOpts],
 	?func(Clauses).
 
 %% Internal helpers.
@@ -324,9 +325,6 @@ def_record(Name, Fields) ->
 						   Atom when is_atom(F) -> ?field(Atom);
 						   {Atom, Value} when is_atom(Atom) -> ?field(Atom, ?abstract(Value))
 					   end || F <- Fields]).
-
-acc_if(true, Val, Acc) -> [Val | Acc];
-acc_if(false, _, Acc) -> Acc.
 
 atom_to_binary(Atom) ->
 	list_to_binary(atom_to_list(Atom)).
