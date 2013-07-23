@@ -108,7 +108,6 @@ build_proplists(Model) ->
 	{Exports, Public ++ Private}.
 
 to_proplist_function(#model{fields=Fields}) ->
-	DefaultOpts = ?abstract([unsafe]),
 	Fun_ = fun(AccessModeOpt) ->
 				   ?list([?tuple([?atom(F#field.name), ?apply(F#field.name, [?var('Model')])]) ||
 							 F <- Fields,
@@ -118,7 +117,7 @@ to_proplist_function(#model{fields=Fields}) ->
 		   end,
 	Fun1 = ?function(to_proplist,
 					 [?clause([?var('Model')], none,
-							  [?apply(to_proplist, [DefaultOpts, ?var('Model')])])]),
+							  [?apply(to_proplist, [?abstract([]), ?var('Model')])])]),
 	Fun2 = ?function(to_proplist,
 					 [?clause([?var('Opts'), ?var('Model')], none,
 							  [?cases(?apply(lists, member, [?atom(unsafe), ?var('Opts')]),
@@ -134,7 +133,9 @@ from_proplist_functions(#model{fields=Fields}) ->
 					 [?clause([?var('Proplist')], none,
 							  [?apply(from_proplist, [?var('Proplist'), DefaultOpts, ?apply(new, [])])])]),
 	Fun2 = ?function(from_proplist,
-					 [?clause([?var('Proplist'), ?var('Model')], none,
+					 [?clause([?var('Proplist'), ?var('Opts')], [?apply(is_list,[?var('Opts')])],
+							  [?apply(from_proplist, [?var('Proplist'), ?var('Opts'), ?apply(new, [])])]),
+					  ?clause([?var('Proplist'), ?var('Model')], none,
 							  [?apply(from_proplist, [?var('Proplist'), DefaultOpts, ?var('Model')])])]),
 	Fun3 = ?function(from_proplist,
 					 [?clause([?var('Proplist'), ?var('Opts'), ?var('Model')], none,
@@ -171,7 +172,9 @@ from_bin_proplist_function(#model{fields=Fields}) ->
 					 [?clause([?var('BinProplist')], none,
 							  [?apply(from_bin_proplist, [?var('BinProplist'), DefaultOpts, ?apply(new, [])])])]),
 	Fun2 = ?function(from_bin_proplist,
-					 [?clause([?var('BinProplist'), ?var('Model')], none,
+					 [?clause([?var('BinProplist'), ?var('Opts')], [?apply(is_list,[?var('Opts')])],
+							  [?apply(from_proplist, [?var('BinProplist'), ?var('Opts'), ?apply(new, [])])]),
+					  ?clause([?var('BinProplist'), ?var('Model')], none,
 							  [?apply(from_bin_proplist, [?var('BinProplist'), DefaultOpts, ?var('Model')])])]),
 	Fun3 = ?function(from_bin_proplist,
 					 [?clause([?var('BinProplist'), ?var('Opts'), ?var('Model')], none,

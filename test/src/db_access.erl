@@ -110,7 +110,7 @@ to_proplist_test() ->
 			 {rsw_default, 15},
 			 {srw_default, 16}],
 	{ok, Model} = from_proplist(WOpts),
-	Proplist = to_proplist(Model),
+	Proplist = to_proplist([unsafe], Model),
 	?assertEqual(lists:keysort(1, ROpts), lists:keysort(1, Proplist)).
 
 -endif.
