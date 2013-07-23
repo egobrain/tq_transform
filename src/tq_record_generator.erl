@@ -108,7 +108,7 @@ build_proplists(Model) ->
 	{Exports, Public ++ Private}.
 
 to_proplist_function(#model{fields=Fields}) ->
-	DefaultOpts = ?abstract([safe]),
+	DefaultOpts = ?abstract([unsafe]),
 	Fun_ = fun(AccessModeOpt) ->
 				   ?list([?tuple([?atom(F#field.name), ?apply(F#field.name, [?var('Model')])]) ||
 							 F <- Fields,
@@ -121,7 +121,7 @@ to_proplist_function(#model{fields=Fields}) ->
 							  [?apply(to_proplist, [DefaultOpts, ?var('Model')])])]),
 	Fun2 = ?function(to_proplist,
 					 [?clause([?var('Opts'), ?var('Model')], none,
-							  [?cases(?apply(lists, member, [?atom(safe), ?var('Opts')]),
+							  [?cases(?apply(lists, member, [?atom(unsafe), ?var('Opts')]),
 									  [?clause([?atom(true)], none,
 											   [Fun_(#access_mode.sr)]),
 									   ?clause([?atom(false)], none,
@@ -129,7 +129,7 @@ to_proplist_function(#model{fields=Fields}) ->
 	[Fun1, Fun2].
 
 from_proplist_functions(#model{fields=Fields}) ->
-	DefaultOpts = ?abstract([safe]),
+	DefaultOpts = ?abstract([unsafe]),
 	Fun1 = ?function(from_proplist,
 					 [?clause([?var('Proplist')], none,
 							  [?apply(from_proplist, [?var('Proplist'), DefaultOpts, ?apply(new, [])])])]),
@@ -138,11 +138,11 @@ from_proplist_functions(#model{fields=Fields}) ->
 							  [?apply(from_proplist, [?var('Proplist'), DefaultOpts, ?var('Model')])])]),
 	Fun3 = ?function(from_proplist,
 					 [?clause([?var('Proplist'), ?var('Opts'), ?var('Model')], none,
-							  [?match(?var('Fun'), ?cases(?apply(lists, member, [?atom(safe), ?var('Opts')]),
+							  [?match(?var('Fun'), ?cases(?apply(lists, member, [?atom(unsafe), ?var('Opts')]),
 														  [?clause([?atom(true)], none,
-																   [?func(from_proplist_safe_, 3)]),
+																   [?func(from_proplist_unsafe_, 3)]),
 														   ?clause([?atom(false)], none,
-																   [?func(from_proplist_unsafe_, 3)])])),
+																   [?func(from_proplist_safe_, 3)])])),
 							   ?match(?var('Fun2'), ?func([?clause([?var('E'), ?var('M')], none,
 																  [?apply_(?var('Fun'), [?var('E'), ?var('M'), ?var('Opts')])])])),
 							   ?apply(tq_transform_utils, error_writer_foldl, [?var('Fun2'), ?var('Model'), ?var('Proplist')])])]),
@@ -161,9 +161,9 @@ from_proplist_functions(#model{fields=Fields}) ->
 								 F#field.setter =/= undefined,
 								 element(AccessModeOpt, F#field.mode)] ++ DefaultClasuse)
 		   end,
-	FunSafe_ = Fun_(safe_, #access_mode.sw),
-	FunUnsafe_ = Fun_(unsafe_, #access_mode.w),
-	{[Fun1, Fun2, Fun3], [FunSafe_, FunUnsafe_]}.
+	FunUnsafe_ = Fun_(unsafe_, #access_mode.sw),
+	FunSafe_ = Fun_(safe_, #access_mode.w),
+	{[Fun1, Fun2, Fun3], [FunUnsafe_, FunSafe_]}.
 
 from_bin_proplist_function(#model{fields=Fields}) ->
 	DefaultOpts = ?abstract([]),
@@ -175,11 +175,11 @@ from_bin_proplist_function(#model{fields=Fields}) ->
 							  [?apply(from_bin_proplist, [?var('BinProplist'), DefaultOpts, ?var('Model')])])]),
 	Fun3 = ?function(from_bin_proplist,
 					 [?clause([?var('BinProplist'), ?var('Opts'), ?var('Model')], none,
-							  [?match(?var('Fun'), ?cases(?apply(lists, member, [?atom(safe), ?var('Opts')]),
+							  [?match(?var('Fun'), ?cases(?apply(lists, member, [?atom(unsafe), ?var('Opts')]),
 														  [?clause([?atom(true)], none,
-																   [?func(from_bin_proplist_safe_, 3)]),
+																   [?func(from_bin_proplist_unsafe_, 3)]),
 														   ?clause([?atom(false)], none,
-																   [?func(from_bin_proplist_unsafe_, 3)])])),
+																   [?func(from_bin_proplist_safe_, 3)])])),
 							   ?match(?var('Fun2'), ?func([?clause([?var('E'), ?var('M')], none,
 																   [?apply_(?var('Fun'), [?var('E'), ?var('M'), ?var('Opts')])])])),
 							   ?apply(tq_transform_utils, error_writer_foldl, [?var('Fun2'), ?var('Model'), ?var('BinProplist')])])]),
@@ -212,9 +212,9 @@ from_bin_proplist_function(#model{fields=Fields}) ->
 								 F#field.setter =/= undefined,
 								 element(AccessModeOpt, F#field.mode)] ++ DefaultClasuse)
 		   end,
-	FunSafe_ = Fun_(safe_, #access_mode.sw),
-	FunUnsafe_ = Fun_(unsafe_, #access_mode.w),
-	{[Fun1, Fun2, Fun3], [FunSafe_, FunUnsafe_]}.
+	FunUnsafe_ = Fun_(unsafe_, #access_mode.sw),
+	FunSafe_ = Fun_(safe_, #access_mode.w),
+	{[Fun1, Fun2, Fun3], [FunUnsafe_, FunSafe_]}.
 
 build_internal_functions(Model) ->
 	Funs = [changed_fields_function(Model),
