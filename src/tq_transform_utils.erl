@@ -77,12 +77,17 @@ binary_to_float(Bin) when is_binary(Bin) ->
 	end.
 
 valid(List) ->
-	error_writer_foldl(fun({Field, Validator, Value}, State) ->
+	Res = error_writer_foldl(fun({Field, Validator, Value}, State) ->
 							   case Validator(Value) of
 								   ok -> {ok, State};
-								   {error, Reason} -> {error, {Reason, Field}}
+								   {error, Reason} -> {error, {Field, Reason}}
 							   end
-					   end, ok, List).
+					   end, ok, List),
+	case Res of
+		{ok, ok} -> ok;
+		{error, _Reason} = Err ->
+			Err
+	end.
 
 -ifdef(TEST).
 -include_lib("eunit/include/eunit.hrl").

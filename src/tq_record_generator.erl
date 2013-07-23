@@ -286,7 +286,7 @@ field_constructor_function(#model{fields=Fields, module=Module}) ->
 build_validators(#model{module=Module, fields=Fields}) ->
 	ValidatorFun = ?function(validator,
 							 [?clause([?atom(F#field.name)], none,
-									  [validator([],
+									  [validator(F#field.validators,
 												 F#field.is_required,
 												 is_write_only(F))]) || F <- Fields, F#field.setter]),
 	ValidFun = ?function(valid,
@@ -304,17 +304,43 @@ build_validators(#model{module=Module, fields=Fields}) ->
 	Exports = ?export_funs(Funs),
 	{Exports, Funs}.
 
-validator(_Validators, IsRequired, IsWriteOnly) ->
+validator(Validators, IsRequired, IsWriteOnly) ->
 	WO_clause = ?clause([?atom('$write_only_stumb$')], none, [?atom(ok)]),
 	Req_clause = ?clause([?atom(undefined)], none, [?error(?atom(required))]),
-	Main_clause = ?clause([?underscore], none, [?atom(ok)]),
+	Main_clause = case Validators of
+					  [] ->
+						  ?clause([?underscore], none, [?atom(ok)]);
+					  _ ->
+						  Var = ?var('Val'),
+						  ?clause([Var], none, [fold_validators(Validators, Var)])
+				  end,
 	ClausesOpts = [{IsWriteOnly, WO_clause},
 				   {IsRequired, Req_clause},
 				   {true, Main_clause}],
 	Clauses = [Val || {true, Val} <- ClausesOpts],
 	?func(Clauses).
 
+fold_validators([Fun], Var) ->
+	function_call(Fun, [Var]);
+fold_validators([Fun|Rest], Var) ->
+	?cases(function_call(Fun, [Var]),
+		   [?clause([?atom(ok)], none,
+					[fold_validators(Rest, Var)]),
+			?clause([?error(?var('Reason'))], none,
+					[?error(?var('Reason'))])]).
+
 %% Internal helpers.
+function_call({Mod, Fun, FunArgs}, Args) ->
+	FunArgs2 = [erl_syntax:abstract(A) || A <- FunArgs],
+	?apply(Mod, Fun, FunArgs2++Args);
+function_call({Fun, FunArgs}, Args) when is_list(FunArgs) ->
+	FunArgs2 = [erl_syntax:abstract(A) || A <- FunArgs],
+	?apply(Fun, FunArgs2++Args);
+function_call({Mod, Fun}, Args) ->
+	?apply(Mod, Fun, Args);
+function_call(Fun, Args) ->
+	?apply(Fun, Args).
+
 
 is_write_only(Field) ->
 	AccessMode = Field#field.mode,

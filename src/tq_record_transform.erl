@@ -78,6 +78,9 @@ field_option(set, Setter, Field) ->
 field_option(record, StoresInRecord, Field) ->
 	Field2 = Field#field{stores_in_record = StoresInRecord},
 	{ok, Field2};
+field_option(validators, Validators, Field) ->
+	Field2 = Field#field{validators = Validators},
+	{ok, Field2};
 field_option(_Option, _Val, _Field) ->
 	false.
 
