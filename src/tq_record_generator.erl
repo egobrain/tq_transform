@@ -173,7 +173,7 @@ from_bin_proplist_function(#model{fields=Fields}) ->
 							  [?apply(from_bin_proplist, [?var('BinProplist'), DefaultOpts, ?apply(new, [])])])]),
 	Fun2 = ?function(from_bin_proplist,
 					 [?clause([?var('BinProplist'), ?var('Opts')], [?apply(is_list,[?var('Opts')])],
-							  [?apply(from_proplist, [?var('BinProplist'), ?var('Opts'), ?apply(new, [])])]),
+							  [?apply(from_bin_proplist, [?var('BinProplist'), ?var('Opts'), ?apply(new, [])])]),
 					  ?clause([?var('BinProplist'), ?var('Model')], none,
 							  [?apply(from_bin_proplist, [?var('BinProplist'), DefaultOpts, ?var('Model')])])]),
 	Fun3 = ?function(from_bin_proplist,
