@@ -149,8 +149,9 @@ access_mode_setter_rule(Field) ->
 %% Internal helpers.
 
 type_constructor(binary) -> {ok, none};
-type_constructor(integer) -> {ok, {tq_transform_utils, binary_to_integer}};
-type_constructor(float) -> {ok, {tq_transform_utils, binary_to_float}};
+type_constructor(non_neg_integer) -> {ok, {tq_transform_utils, to_integer}};
+type_constructor(integer) -> {ok, {tq_transform_utils, to_integer}};
+type_constructor(float) -> {ok, {tq_transform_utils, to_float}};
 type_constructor(_) -> {error, undefined}.
 
 mode_to_acl(r)    -> #access_mode{r=true,  sr=true,  w=false, sw=false};

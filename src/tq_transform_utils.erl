@@ -20,8 +20,8 @@
 
 -export([valid/1]).
 
--export([binary_to_integer/1,
-		 binary_to_float/1]).
+-export([to_integer/1,
+		 to_float/1]).
 
 -spec error_writer_foldl(Fun, State, List) -> {ok, NewState} | {error, Reasons} when
 	  List :: [Elem],
@@ -64,16 +64,20 @@ error_writer_map(Fun, List) when is_list(List) ->
 		{error, _} = Err -> Err
 	end.
 
-binary_to_integer(Bin) when is_binary(Bin) ->
+to_integer(Int) when is_integer(Int) ->
+	{ok, Int};
+to_integer(Bin) when is_binary(Bin) ->
 	case string:to_integer(binary_to_list(Bin)) of
 		{Res, []} -> {ok, Res};
 		_ -> {error, wrong_format}
 	end.
 
-binary_to_float(Bin) when is_binary(Bin) ->
+to_float(Float) when is_float(Float) ->
+	Float;
+to_float(Bin) when is_binary(Bin) ->
 	case string:to_float(binary_to_list(Bin)) of
 		{Res, []} -> {ok, Res};
-		_ -> {error, wrong_format}
+		_ -> to_integer({error, wrong_format})
 	end.
 
 valid(List) ->
