@@ -44,8 +44,8 @@ create_model(Module) ->
 model_option(init, InitFun, Model) ->
 	Model2 = Model#model{init_fun=InitFun},
 	{ok, Model2};
-model_option(validators, Validators, Model) ->
-	Model2 = Model#model{validators=Validators},
+model_option(validators, NewValidators, #model{validators=Validators}=Model) ->
+	Model2 = Model#model{validators = Validators ++ NewValidators},
 	{ok, Model2};
 model_option(_Option, _Val, _Model) ->
 	false.
@@ -86,8 +86,8 @@ field_option(set, Setter, Field) ->
 field_option(record, StoresInRecord, Field) ->
 	Field2 = Field#field{stores_in_record = StoresInRecord},
 	{ok, Field2};
-field_option(validators, Validators, Field) ->
-	Field2 = Field#field{validators = Validators},
+field_option(validators, NewValidators, #field{validators=Validators}=Field) ->
+	Field2 = Field#field{validators = Validators ++ NewValidators},
 	{ok, Field2};
 field_option(_Option, _Val, _Field) ->
 	false.
@@ -97,7 +97,8 @@ normalize_field(Field) ->
 			 fun access_mode_getter_rule/1,
 			 fun access_mode_setter_rule/1,
 			 fun get_set_record_rule/1,
-			 fun type_constructor_rule/1
+			 fun type_constructor_rule/1,
+			 fun default_validators_rule/1
 			],
 	tq_transform_utils:error_writer_foldl(fun(R, F) -> R(F) end, Field, Rules).
 
@@ -136,6 +137,18 @@ type_constructor_rule(#field{type_constructor=undefined, type=Type}=Field) ->
 type_constructor_rule(Field) ->
 	{ok, Field}.
 
+default_validators_rule(#field{type=non_neg_integer, validators=Validators}=Field) ->
+	NonNegValidator = {tq_transform_utils, more_or_eq, [0]},
+	Field2 = Field#field{validators=[NonNegValidator|Validators]},
+	{ok, Field2};
+default_validators_rule(#field{type=non_empty_binary, validators=Validators}=Field) ->
+	NonNegValidator = {tq_transform_utils, non_empty_binary},
+	Field2 = Field#field{validators=[NonNegValidator|Validators]},
+	{ok, Field2};
+default_validators_rule(Field) ->
+	{ok, Field}.
+
+
 access_mode_getter_rule(Field=#field{mode=#access_mode{sr=false}}) ->
 	{ok, Field#field{getter=false}};
 access_mode_getter_rule(Field) ->
@@ -149,6 +162,7 @@ access_mode_setter_rule(Field) ->
 %% Internal helpers.
 
 type_constructor(binary) -> {ok, none};
+type_constructor(non_empty_binary) -> {ok, none};
 type_constructor(non_neg_integer) -> {ok, {tq_transform_utils, to_integer}};
 type_constructor(integer) -> {ok, {tq_transform_utils, to_integer}};
 type_constructor(float) -> {ok, {tq_transform_utils, to_float}};

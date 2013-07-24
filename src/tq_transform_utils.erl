@@ -23,6 +23,12 @@
 -export([to_integer/1,
 		 to_float/1]).
 
+-export([more/2,
+		 more_or_eq/2,
+		 less/2,
+		 less_or_eq/2,
+		 non_empty_binary/1]).
+
 -spec error_writer_foldl(Fun, State, List) -> {ok, NewState} | {error, Reasons} when
 	  List :: [Elem],
 	  Fun :: fun((Elem, State) -> {ok, NewState} | {error, Reason}),
@@ -64,6 +70,25 @@ error_writer_map(Fun, List) when is_list(List) ->
 		{error, _} = Err -> Err
 	end.
 
+-spec valid(ListToValid) -> ok | {error, Reasons} when
+	  ListToValid :: [{Field, Validator, Value}],
+	  Validator :: fun((Value) -> ok | {error, Reason}),
+	  Reasons :: [{Field, Reason}].
+valid(List) ->
+	Res = error_writer_foldl(fun({Field, Validator, Value}, State) ->
+							   case Validator(Value) of
+								   ok -> {ok, State};
+								   {error, Reason} -> {error, {Field, Reason}}
+							   end
+					   end, ok, List),
+	case Res of
+		{ok, ok} -> ok;
+		{error, _Reason} = Err ->
+			Err
+	end.
+
+%% Converters
+
 to_integer(Int) when is_integer(Int) ->
 	{ok, Int};
 to_integer(Bin) when is_binary(Bin) ->
@@ -80,18 +105,23 @@ to_float(Bin) when is_binary(Bin) ->
 		_ -> to_integer({error, wrong_format})
 	end.
 
-valid(List) ->
-	Res = error_writer_foldl(fun({Field, Validator, Value}, State) ->
-							   case Validator(Value) of
-								   ok -> {ok, State};
-								   {error, Reason} -> {error, {Field, Reason}}
-							   end
-					   end, ok, List),
-	case Res of
-		{ok, ok} -> ok;
-		{error, _Reason} = Err ->
-			Err
-	end.
+%% Default validators
+
+more(A, Val) when Val > A -> ok;
+more(A, _Val) -> {error, {less_then, A}}.
+
+more_or_eq(A, Val) when Val >= A -> ok;
+more_or_eq(A, _Val) -> {error, {less_then, A}}.
+
+less(A, Val) when Val < A -> ok;
+less(A, _Val) -> {error, {more_then, A}}.
+
+less_or_eq(A, Val) when Val =< A -> ok;
+less_or_eq(A, _Val) -> {error, {more_then, A}}.
+
+non_empty_binary(<<"">>) -> {error, empty};
+non_empty_binary(_Val) -> ok.
+
 
 -ifdef(TEST).
 -include_lib("eunit/include/eunit.hrl").

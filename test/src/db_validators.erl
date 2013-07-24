@@ -10,11 +10,7 @@
 -field({non_neg_integer,
 		[
 		 {type, non_neg_integer},
-		 {type_constructor, any_type_constructor},
-		 {validators,
-		  [
-		   non_neg_integer_validator
-		  ]}
+		 {type_constructor, any_type_constructor}
 		]}).
 
 -field({more_then_10,
@@ -23,7 +19,6 @@
 		 {type_constructor, any_type_constructor},
 		 {validators,
 		  [
-		   non_neg_integer_validator,
 		   {more_then, [10]}
 		  ]}
 		]}).
@@ -34,7 +29,6 @@
 		 {type_constructor, any_type_constructor},
 		 {validators,
 		  [
-		   non_neg_integer_validator,
 		   {more_then, [10]},
 		   {?MODULE, more_then, [100]}
 		  ]}
@@ -42,12 +36,19 @@
 
 -field({required,
 		[required,
-		 {type, integer}
+		 {type, integer},
+		 {default, 100}
 		]}).
 
 -field({model_val,
 		[
 		 {type, integer}
+		]}).
+
+-field({string,
+		[required,
+		 {type, non_empty_binary},
+		 {default, <<"string">>}
 		]}).
 
 -model([{validators,
@@ -90,32 +91,30 @@ fail_on(A, Model) ->
 -ifdef(TEST).
 -include_lib("eunit/include/eunit.hrl").
 
--define(ReqModel, element(2, from_proplist([{required, 10}]))).
-
 non_neg_integer_test_() ->
-	Tests = [{-1, {error, [{non_neg_integer, negative}]}},
+	Tests = [{-1, {error, [{non_neg_integer, {less_then, 0}}]}},
 			 {0, ok},
 			 {1, ok}
 			],
 	[fun() ->
-			 {ok, Model} = from_proplist([{non_neg_integer, D}], ?ReqModel),
+			 {ok, Model} = from_proplist([{non_neg_integer, D}]),
 			 ?assertEqual(Model:valid(), R)
 	 end || {D, R} <- Tests].
 
 more_then_10_test_() ->
-	Tests = [{-1, {error, [{more_then_10, negative}]}},
+	Tests = [{-1, {error, [{more_then_10, {less_then, 0}}]}},
 			 {0, {error, [{more_then_10, {less_then, 10}}]}},
 			 {1, {error, [{more_then_10, {less_then, 10}}]}},
 			 {10, {error, [{more_then_10, {less_then, 10}}]}},
 			 {100, ok}
 			],
 	[fun() ->
-			 {ok, Model} = from_proplist([{more_then_10, D}], ?ReqModel),
+			 {ok, Model} = from_proplist([{more_then_10, D}]),
 			 ?assertEqual(Model:valid(), R)
 	 end || {D, R} <- Tests].
 
 more_then_100_test_() ->
-	Tests = [{-1, {error, [{more_then_100, negative}]}},
+	Tests = [{-1, {error, [{more_then_100, {less_then, 0}}]}},
 			 {0, {error, [{more_then_100, {less_then, 10}}]}},
 			 {1, {error, [{more_then_100, {less_then, 10}}]}},
 			 {10, {error, [{more_then_100, {less_then, 10}}]}},
@@ -123,17 +122,25 @@ more_then_100_test_() ->
 			 {1000, ok}
 			],
 	[fun() ->
-			 {ok, Model} = from_proplist([{more_then_100, D}], ?ReqModel),
+			 {ok, Model} = from_proplist([{more_then_100, D}]),
 			 ?assertEqual(Model:valid(), R)
 	 end || {D, R} <- Tests].
 
 required_test_() ->
-	Tests = [{new(), {error, [{required, required}]}},
-			 {?ReqModel, ok}],
+	Tests = [{undefined, {error, [{required, required}]}},
+			 {100, ok}],
 	[fun() ->
+			 {ok, Model} = from_proplist([{required, D}]),
 			 ?assertEqual(Model:valid(), R)
-	 end || {Model, R} <- Tests].
+	 end || {D, R} <- Tests].
 
+empty_test_() ->
+	Tests = [{<<"">>, {error, [{string, empty}]}},
+			 {<<"test">>, ok}],
+	[fun() ->
+			 {ok, Model} = from_proplist([{string, D}]),
+			 ?assertEqual(Model:valid(), R)
+	 end || {D, R} <- Tests].
 
 model_test_() ->
 	Tests = [{1, {error, 1}},
@@ -142,7 +149,7 @@ model_test_() ->
 			 {4, {error, 4}},
 			 {5, ok}],
 	[fun() ->
-			 {ok, Model} = from_proplist([{model_val, D}], ?ReqModel),
+			 {ok, Model} = from_proplist([{model_val, D}]),
 			 ?assertEqual(Model:valid(), R)
 	 end || {D, R} <- Tests].
 
