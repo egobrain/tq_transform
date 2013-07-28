@@ -192,10 +192,10 @@ from_bin_proplist_function(#model{fields=Fields}) ->
 											   [?ok(?var('Model'))]),
 									   ?clause([?atom(false)], none,
 											   [?error(?atom(unknown), ?var('Field'))])])])],
-	SetterClause = fun(F, Var) -> ?ok(?apply(?prefix_set(F#field.name), [?var(Var), ?var('Model')])) end,
+	SetterClause = fun(F, Var) -> ?ok(?apply(?prefix_set(F#field.name), [Var, ?var('Model')])) end,
 	Cases = fun(F, A) -> ?cases(A,
 							   [?clause([?ok(?var('Val'))], none,
-										[SetterClause(F, 'Val')]),
+										[SetterClause(F, ?var('Val'))]),
 								?clause([?error(?var('Reason'))], none,
 										[?error(?tuple([?var('Reason'), ?atom(F#field.name)]))])])
 		   end,
@@ -205,11 +205,9 @@ from_bin_proplist_function(#model{fields=Fields}) ->
 								 [?tuple([?abstract(atom_to_binary(F#field.name)), ?var('Bin')]), ?var('Model'), ?underscore], none,
 								 [case F#field.type_constructor of
 									  none ->
-										  SetterClause(F, 'Bin');
-									  {Mod, Fun} ->
-										  Cases(F, ?apply(Mod, Fun, [?var('Bin')]));
+										  SetterClause(F, ?var('Bin'));
 									  Fun ->
-										  Cases(F, ?apply(Fun, [?var('Bin')]))
+										  Cases(F, function_call(Fun, [?var('Bin')]))
 								  end])
 							 || F <- Fields,
 								 F#field.setter =/= undefined,
@@ -249,8 +247,7 @@ constructor1_function(#model{init_fun=InitFun, module=Module}) ->
 	SetIsNotNew = ?record(?var('Model'), Module, [?field('$is_new$', ?atom(false))]),
 	FinalForm = case InitFun of
 					undefined -> SetIsNotNew;
-					{Mod, Fun} -> ?apply(Mod, Fun, [SetIsNotNew]);
-					Fun -> ?apply(Fun, [SetIsNotNew])
+					Fun -> function_call(Fun, [SetIsNotNew])
 				end,
 	?function(constructor,
 			  [?clause([?var('Fields')], none,
