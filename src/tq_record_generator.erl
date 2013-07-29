@@ -35,7 +35,8 @@ build_model(Model) ->
 				fun build_getter_and_setters/1,
 				fun build_proplists/1,
 				fun build_internal_functions/1,
-				fun build_validators/1
+				fun build_validators/1,
+				fun build_is_changed/1
 			   ],
 	lists:foldl(fun(F, {IBlock, FBlock}) ->
 						{IB, FB} = F(Model),
@@ -340,6 +341,14 @@ fold_validators([Fun|Rest], Var) ->
 			?clause([?error(?var('Reason'))], none,
 					[?error(?var('Reason'))])]).
 
+build_is_changed(#model{module=Module, fields=Fields}) ->
+	Fun = ?function(is_changed,
+					[?clause([?atom(F#field.name), ?var('Model')], none,
+							 [?access(?var('Model'), Module, ?changed_suffix(F#field.name))])
+					 || F <- Fields, F#field.stores_in_record]),
+	Export = ?export_fun(Fun),
+	{[Export], [Fun]}.
+
 %% Internal helpers.
 function_call({Mod, Fun, FunArgs}, Args) ->
 	FunArgs2 = [erl_syntax:abstract(A) || A <- FunArgs],
@@ -351,7 +360,6 @@ function_call({Mod, Fun}, Args) ->
 	?apply(Mod, Fun, Args);
 function_call(Fun, Args) ->
 	?apply(Fun, Args).
-
 
 is_write_only(Field) ->
 	AccessMode = Field#field.mode,

@@ -30,5 +30,11 @@ init_test_() ->
 	[fun() -> ?assertEqual(C(3), (constructor([]))([])) end,
 	 fun() -> ?assertEqual(C(15), (constructor([counter]))([5])) end].
 
+changed_test() ->
+	Model = new(),
+	Model2 = Model:set_counter(15),
+	?assertEqual(Model2:is_changed(counter), true),
+	?assertEqual(Model2:counter(), 15).
+
 -endif.
 
