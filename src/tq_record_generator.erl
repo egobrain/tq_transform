@@ -153,7 +153,7 @@ from_proplist_functions(#model{fields=Fields}) ->
 													   [?clause([?atom(true)], none,
 																[?ok(?var('Model'))]),
 														?clause([?atom(false)], none,
-																[?error(?atom(unknown), ?var('Field'))])])])],
+																[?error(?var('Field'), ?atom(unknown))])])])],
 	Fun_ = fun(Suffix, AccessModeOpt) ->
 				   ?function(?atom_join(from_proplist, Suffix),
 							 [?clause(
@@ -192,13 +192,13 @@ from_bin_proplist_function(#model{fields=Fields}) ->
 									  [?clause([?atom(true)], none,
 											   [?ok(?var('Model'))]),
 									   ?clause([?atom(false)], none,
-											   [?error(?atom(unknown), ?var('Field'))])])])],
+											   [?error(?var('Field'), ?atom(unknown))])])])],
 	SetterClause = fun(F, Var) -> ?ok(?apply(?prefix_set(F#field.name), [Var, ?var('Model')])) end,
 	Cases = fun(F, A) -> ?cases(A,
 							   [?clause([?ok(?var('Val'))], none,
 										[SetterClause(F, ?var('Val'))]),
 								?clause([?error(?var('Reason'))], none,
-										[?error(?tuple([?var('Reason'), ?atom(F#field.name)]))])])
+										[?error(?tuple([?atom(F#field.name), ?var('Reason')]))])])
 		   end,
 	Fun_ = fun(Suffix, AccessModeOpt) ->
 				   ?function(?atom_join(from_bin_proplist, Suffix),

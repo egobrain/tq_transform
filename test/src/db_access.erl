@@ -39,16 +39,16 @@ write_only_stumb_test_() ->
 from_proplist_test_() ->
 	Data = [{Opt, 1} || Opt <- ?Opts],
 	[{"unsafe", fun() ->
-					  ?assertEqual({error, [{unknown, r},
-											{unknown, sr}]},
+					  ?assertEqual({error, [{r, unknown},
+											{sr, unknown}]},
 								   from_proplist(Data, [unsafe], new()))
 			  end},
 	 {"safe", fun() ->
-						?assertEqual({error, [{unknown, r},
-											 {unknown, sr},
-											 {unknown, sw},
-											 {unknown, srsw},
-											 {unknown, rsw}]},
+						?assertEqual({error, [{r, unknown},
+											  {sr, unknown},
+											  {sw, unknown},
+											  {srsw, unknown},
+											  {rsw, unknown}]},
 									 from_proplist(Data, [], new()))
 				end},
 	 {"ignore_unknown", fun() ->
@@ -59,16 +59,16 @@ from_proplist_test_() ->
 from_bin_proplist_test_() ->
 	Data = [{list_to_binary(atom_to_list(Opt)), <<"1">>} || Opt <- ?Opts],
 	[{"unsafe", fun() ->
-					  ?assertEqual({error, [{unknown, <<"r">>},
-										   {unknown, <<"sr">>}]},
+					  ?assertEqual({error, [{<<"r">>, unknown},
+										    {<<"sr">>, unknown}]},
 								   from_bin_proplist(Data, [unsafe], new()))
 			  end},
 	 {"safe", fun() ->
-						?assertEqual({error, [{unknown, <<"r">>},
-											 {unknown, <<"sr">>},
-											 {unknown, <<"sw">>},
-											 {unknown, <<"srsw">>},
-											 {unknown, <<"rsw">>}]},
+						?assertEqual({error, [{<<"r">>, unknown},
+											  {<<"sr">>, unknown},
+											  {<<"sw">>, unknown},
+											  {<<"srsw">>, unknown},
+											  {<<"rsw">>, unknown}]},
 									 from_bin_proplist(Data, [], new()))
 				end},
 	 {"ignore_unknown", fun() ->
