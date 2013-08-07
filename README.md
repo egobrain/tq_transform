@@ -101,7 +101,7 @@ Generates model from proplist with atom keys.
 
 ```Erlang
 -spec from_proplist(Proplist, Opts, Model) -> {ok, [{atom(), any()}, ...]} | {error, Reasons} when
-  Proplist :: [{atom(), any(), ...}],
+  Proplist :: [{atom(), any()}, ...],
   Opts :: [Option],
   Option :: unsafe | ignore_unknown,
   Reasons :: [{field(), Reason}],
@@ -120,30 +120,77 @@ from_proplist(Proplist, Opts, Model) ->
 from_bin_proplist/[1,2,3]
 ---
 
+```Erlang
+-spec from_bin_proplist(Proplist, Opts, Model) -> {ok, [{atom(), any()}, ...]} | {error, Reasons} when
+  Proplist :: [{binary(), binary()}, ...],
+  Opts :: [Option],
+  Option :: unsafe | ignore_unknown,
+  Reasons :: [{field(), Reason}],
+  Reason :: unknown.
+
+from_bin_proplist(Proplist) -> 
+  ... .
+from_bin_proplist(Proplist, Opts) -> 
+  ... .
+from_bin_proplist(Proplist, Model) -> 
+  ... .
+from_bin_proplist(Proplist, Opts, Model) -> 
+  ... .
+```
+
 [ToDo] Description
+
+field_from_binary/2
+---
+```Erlang
+-spec field_from_binary(FieldName, Binary) -> {ok, FieldVal} | {error, Reason}.
+```
+
+Convert binary to field using type_constructor and valid result value with field validators.
 
 constructor/1
 ----
 
+```Erlang 
+-spec constructor([FieldC]) -> fun(([FieldValue]) -> Model) when
+  FieldC :: FieldName || fun((FieldValue, Model) -> Model).
+```
+
 [ToDo] Description
 
-valid/1
+valid
 ----
+
+```Erlang 
+-spec valid(Model) -> ok | {error, Reasons}.
+```
 
 [ToDo] Description
 
 get_changed_fields/1
 ---
 
+```Erlang 
+-spec get_changed_fields(Model) -> [{FieldName, FieldValue}, ...].
+```
+
 [ToDo] Description
 
 is_new/1
 ---
 
+```Erlang 
+-spec is_new(Model) -> true | false.
+```
+
 [ToDo] Description
 
 is_changed/2
 ---
+
+```Erlang 
+-spec is_changed(FieldName, Model) -> true | false.
+```
 
 [ToDo] Description
 
@@ -166,7 +213,7 @@ user.erl
   [required,
    {type, integer},
    {mode, rw},
-   {validators, [{more_than, [18]}]}
+   {validators, [{more_then, [18]}]}
   ]}).
   
 -field({password, 
@@ -174,9 +221,9 @@ user.erl
    {mode, srw}
   ]}).
   
-more_than(A, Val) when A > Val -> 
-  {error, {less_than, A}}.
-more_than(A, _Val) ->
+more_then(A, Val) when A > Val -> 
+  {error, {less_then, A}}.
+more_then(A, _Val) ->
   ok.
 
 ```
@@ -189,7 +236,7 @@ Usage:
 {error, [{age, required}]}
 4> User2 = User:set_age(12).
 5> User2:valid().
-{error, [{age, {less_than, 18}}]}
+{error, [{age, {less_then, 18}}]}
 6> User3 = User2:set_age(20).
 7> User3:valid().
 ok

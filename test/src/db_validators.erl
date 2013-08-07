@@ -9,14 +9,12 @@
 
 -field({non_neg_integer,
 		[
-		 {type, non_neg_integer},
-		 {type_constructor, any_type_constructor}
+		 {type, non_neg_integer}
 		]}).
 
 -field({more_then_10,
 		[
 		 {type, non_neg_integer},
-		 {type_constructor, any_type_constructor},
 		 {validators,
 		  [
 		   {more_then, [10]}
@@ -26,7 +24,6 @@
 -field({more_then_100,
 		[
 		 {type, non_neg_integer},
-		 {type_constructor, any_type_constructor},
 		 {validators,
 		  [
 		   {more_then, [10]},
@@ -59,13 +56,6 @@
 		  {?MODULE, fail_on, [4]}
 		 ]
 		}]).
-
-any_type_constructor(A) -> A.	
-
-non_neg_integer_validator(Val) when Val >= 0 ->
-	ok;
-non_neg_integer_validator(_) ->
-	{error, negative}.
 
 more_then(A, Val) ->
 	case Val > A of
@@ -141,6 +131,15 @@ empty_test_() ->
 			 {ok, Model} = from_proplist([{string, D}]),
 			 ?assertEqual(Model:valid(), R)
 	 end || {D, R} <- Tests].
+
+field_from_binary_test_() ->
+	Tests = [
+			 {<<"">>, more_then_10, {error, wrong_format}},
+			 {<<"a">>, more_then_10, {error, wrong_format}},
+			 {<<"-11">>, more_then_10, {error, {less_then, 0}}},
+			 {<<"1">>, more_then_10, {error, {less_then, 10}}}
+			],
+	[fun() -> R = field_from_binary(F, D) end || {D, F, R} <- Tests].
 
 model_test_() ->
 	Tests = [{1, {error, 1}},

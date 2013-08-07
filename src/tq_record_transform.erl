@@ -163,9 +163,13 @@ access_mode_setter_rule(Field) ->
 
 type_constructor(binary) -> {ok, none};
 type_constructor(non_empty_binary) -> {ok, none};
-type_constructor(non_neg_integer) -> {ok, {tq_transform_utils, to_integer}};
-type_constructor(integer) -> {ok, {tq_transform_utils, to_integer}};
-type_constructor(float) -> {ok, {tq_transform_utils, to_float}};
+type_constructor(non_neg_integer) -> {ok, {tq_transform_utils, bin_to_integer}};
+type_constructor(non_neg_float) -> {ok, {tq_transform_utils, bin_to_float}};
+type_constructor(integer) -> {ok, {tq_transform_utils, bin_to_integer}};
+type_constructor(float) -> {ok, {tq_transform_utils, bin_to_float}};
+type_constructor(date) -> {ok, {tq_transform_utils, bin_to_date}};
+type_constructor(time) -> {ok, {tq_transform_utils, bin_to_time}};
+type_constructor(datetime) -> {ok, {tq_transform_utils, bin_to_datetime}};
 type_constructor(_) -> {error, undefined}.
 
 mode_to_acl(r)    -> #access_mode{r=true,  sr=true,  w=false, sw=false};

@@ -20,8 +20,12 @@
 
 -export([valid/1]).
 
--export([to_integer/1,
-		 to_float/1]).
+-export([bin_to_integer/1,
+		 bin_to_float/1,
+		 bin_to_date/1, bin_to_date/2,
+		 bin_to_time/1, bin_to_time/2,
+		 bin_to_datetime/1, bin_to_datetime/2
+		]).
 
 -export([more/2,
 		 more_or_eq/2,
@@ -89,20 +93,96 @@ valid(List) ->
 
 %% Converters
 
-to_integer(Int) when is_integer(Int) ->
+bin_to_integer(Int) when is_integer(Int) ->
 	{ok, Int};
-to_integer(Bin) when is_binary(Bin) ->
-	case string:to_integer(binary_to_list(Bin)) of
-		{Res, []} -> {ok, Res};
+bin_to_integer(Bin) when is_binary(Bin) ->
+	case catch binary_to_integer(Bin) of
+		Int when is_integer(Int) -> {ok, Int};
 		_ -> {error, wrong_format}
 	end.
 
-to_float(Float) when is_float(Float) ->
+bin_to_float(Float) when is_float(Float) ->
 	Float;
-to_float(Bin) when is_binary(Bin) ->
-	case string:to_float(binary_to_list(Bin)) of
-		{Res, []} -> {ok, Res};
-		_ -> to_integer({error, wrong_format})
+bin_to_float(Bin) when is_binary(Bin) ->
+	case catch binary_to_float(Bin) of
+		Float when is_float(Float) -> {ok, Float};
+		_ ->
+			case bin_to_integer(Bin) of
+				{ok, Int} ->
+					{ok, Int * 1.0}; % Cast to float
+				Err ->
+					Err
+			end
+	end.
+
+bin_to_date(Bin) ->
+	Re = "(?<y>\\d{4})-(?<m>\\d{1,2})-(?<d>\\d{1,2})",
+	bin_to_date(Re, Bin).
+bin_to_date(Re, Bin) when is_binary(Bin) ->
+	case re:run(Bin, Re, [{capture, [y, m, d], binary}]) of
+		{match, List} ->
+			Date = list_to_tuple([binary_to_integer(E) || E <- List]),
+			case calendar:valid_date(Date) of
+				false ->
+					{error, invalid_date};
+				true ->
+					{ok, Date}
+			end;
+		_ ->
+			{error, wrong_format}
+	end.
+
+bin_to_time(Bin) ->
+	Re = "(?<hh>\\d{1,2}):(?<mm>\\d{1,2}):(?<ss>\\d{1,2})",
+	bin_to_time(Re, Bin).
+bin_to_time(Re, Bin) when is_binary(Bin) ->
+	case re:run(Bin, Re, [{capture, [hh, mm, ss], binary}]) of
+		{match, List} ->
+			Time = list_to_tuple([binary_to_integer(E) || E <- List]),
+			case valid_time(Time) of
+				false ->
+					{error, invalid_time};
+				true ->
+					{ok, Time}
+			end;
+		_ ->
+			{error, wrong_format}
+	end.
+
+bin_to_datetime(Bin) ->
+	Re = "(?<y>\\d{4})-(?<m>\\d{1,2})-(?<d>\\d{1,2}) (?<hh>\\d{1,2}):(?<mm>\\d{1,2}):(?<ss>\\d{1,2})",
+	bin_to_datetime(Re, Bin).
+
+bin_to_datetime(Re, Bin) ->
+	case re:run(Bin, Re, [{capture, [y, m, d, hh, mm, ss], binary}]) of
+		{match, List} ->
+			[Y, M, D, Hh, Mm, Ss] = [binary_to_integer(E) || E <- List],
+			Date = {Y, M, D},
+			Time = {Hh, Mm, Ss},
+			case calendar:valid_date(Date) of
+				true ->
+					case valid_time(Time) of
+						false ->
+							{error, invalid_time};
+						true ->
+							{ok, {Date, Time}}
+					end;
+				false ->
+					{error, invalid_date}
+			end;
+		_ ->
+			{error, wrong_format}
+	end.
+
+valid_time({Hh, Mm, Ss}) ->
+	case Hh < 0 orelse Hh >= 24 orelse
+		Mm < 0 orelse Mm >= 60 orelse
+		Ss < 0 orelse Ss >= 60
+	of
+		true ->
+			false;
+		false ->
+			true
 	end.
 
 %% Default validators
@@ -155,5 +235,78 @@ error_writer_map_test_() ->
 			],
 	F = fun(D, R) -> R = error_writer_map(Sum, D) end,
 	[fun() -> F(From, To) end || {From, To} <- Tests].
+
+valid_time_test_() ->
+	Tests = [
+			 {{0,0,0}, true},
+			 {{23,59,59}, true},
+			 {{24,0,0}, false},
+			 {{0,60,0}, false},
+			 {{0,0,60}, false},
+			 {{-1, 0, 0}, false},
+			 {{0, -1, 0}, false},
+			 {{0, 0, -1}, false}
+			],
+	[fun() -> To = valid_time(From) end || {From, To} <- Tests].
+
+bin_to_integer_test_() ->
+	Tests = [
+			 {<<"1">>, {ok, 1}},
+			 {<<"-1">>, {ok, -1}},
+			 {<<"0">>, {ok, 0}},
+			 {<<"123">>, {ok, 123}},
+			 {<<"a123">>, {error, wrong_format}}
+			],
+	[fun() -> To = bin_to_integer(From) end || {From, To} <- Tests].
+
+
+bin_to_float_test_() ->
+	Tests = [
+			 {<<"1">>, {ok, 1.0}},
+			 {<<"-1">>, {ok, -1.0}},
+			 {<<"0">>, {ok, 0.0}},
+			 {<<"123">>, {ok, 123.0}},
+			 {<<"1.2">>, {ok, 1.2}},
+			 {<<"-1.2">>, {ok, -1.2}},
+			 {<<"0.1">>, {ok, 0.1}},
+			 {<<"123.45">>, {ok, 123.45}},
+			 {<<"a123.456">>, {error, wrong_format}}
+			],
+	[fun() -> To = bin_to_float(From) end || {From, To} <- Tests].
+
+bin_to_date_test_() ->
+	Tests = [
+			 {<<"2001-1-1">>, {ok, {2001, 1, 1}}},
+			 {<<"2999-12-31">>, {ok, {2999, 12, 31}}},
+			 {<<"2999-12-31">>, {ok, {2999, 12, 31}}},
+			 {<<"2001-13-01">>, {error, invalid_date}},
+			 {<<"01-13-01">>, {error, wrong_format}},
+			 {<<"2001/13/01">>, {error, wrong_format}}
+			],
+	[fun() -> To = bin_to_date(From) end || {From, To} <- Tests].
+
+
+bin_to_time_test_() ->
+	Tests = [
+			 {<<"0:0:0">>, {ok, {0,0,0}}},
+			 {<<"00:00:00">>, {ok, {0,0,0}}},
+			 {<<"01:02:03">>, {ok, {1,2,3}}},
+			 {<<"24:0:0">>, {error, invalid_time}},
+			 {<<"0::0:0">>, {error, wrong_format}}
+			],
+	[fun() -> To = bin_to_time(From) end || {From, To} <- Tests].
+
+bin_to_datetime_test_() ->
+	Tests = [
+			 {<<"2001-01-01 0:0:0">>, {ok, {{2001, 01, 01}, {0,0,0}}}},
+			 {<<"2999-12-31 00:00:00">>, {ok, {{2999, 12, 31}, {0,0,0}}}},
+			 {<<"2999-12-31 01:02:03">>, {ok, {{2999, 12, 31}, {1,2,3}}}},
+			 {<<"2001-13-01 0:0:0">>, {error, invalid_date}},
+			 {<<"2001-12-01 24:0:0">>, {error, invalid_time}},
+			 {<<"01-13-01 0:0:0">>, {error, wrong_format}},
+			 {<<"2001/12/01 0:0:0">>, {error, wrong_format}},
+			 {<<"2001-12-1  0:0:0">>, {error, wrong_format}}
+			],
+	[fun() -> To = bin_to_datetime(From) end || {From, To} <- Tests].
 
 -endif.

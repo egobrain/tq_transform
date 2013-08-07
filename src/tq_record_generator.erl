@@ -221,10 +221,13 @@ from_bin_proplist_function(#model{fields=Fields}) ->
 build_internal_functions(Model) ->
 	Funs = [changed_fields_function(Model),
 			field_constructor_function(Model),
-			constructor1_function(Model)
+			constructor1_function(Model),
+			field_from_binary(Model)
 		   ],
 	Exports = ?export_funs(Funs),
 	{Exports, Funs}.
+
+
 
 changed_fields_function(#model{module=Module, fields=Fields}) ->
 	AllowedFields = [F#field.name || F <- Fields,
@@ -282,6 +285,30 @@ field_constructor_function(#model{fields=Fields, module=Module}) ->
 				  F <- Fields,
 				  F#field.setter =/= false
 			  ] ++ [DefaultClasuse]).
+
+field_from_binary(#model{fields=Fields}) ->
+	Valid = fun(F, Var) ->
+					case F#field.validators =:= [] of
+						true ->
+							?ok(Var);
+						false ->
+							?cases(?apply_(?apply(validator, [?atom(F#field.name)]), [Var]),
+								   [?clause([?atom('ok')], none,
+											[?ok(Var)]),
+									?clause([?var('Err')], none,
+											[?var('Err')])])
+					end
+			end,
+	?function(field_from_binary,
+			  [?clause([?atom(F#field.name), ?var('Bin')], none,
+					   [case F#field.type_constructor of
+							none -> Valid(F, ?var('Bin'));
+							Fun -> ?cases(function_call(Fun, [?var('Bin')]),
+										  [?clause([?ok(?var('Val'))], none,
+												   [Valid(F, ?var('Val'))]),
+										   ?clause([?var('Err')], none,
+												   [?var('Err')])])
+						end]) || F <- Fields]).
 
 
 build_validators(#model{module=Module, fields=Fields, validators=Validators}) ->
