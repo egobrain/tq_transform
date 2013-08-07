@@ -150,22 +150,41 @@ bin_to_time(Re, Bin) when is_binary(Bin) ->
 	end.
 
 bin_to_datetime(Bin) ->
-	Re = "(?<y>\\d{4})-(?<m>\\d{1,2})-(?<d>\\d{1,2}) (?<hh>\\d{1,2}):(?<mm>\\d{1,2}):(?<ss>\\d{1,2})",
+	Re = "(?<y>\\d{4})-(?<m>\\d{1,2})-(?<d>\\d{1,2})[Tt](?<hh>\\d{1,2}):(?<mm>\\d{1,2}):(?<ss>\\d{1,2})(?<ms>\.\\d{1,}){0,1}(?<offset>[Zz]|[+-]\\d{2}:\\d{2})",
 	bin_to_datetime(Re, Bin).
 
 bin_to_datetime(Re, Bin) ->
-	case re:run(Bin, Re, [{capture, [y, m, d, hh, mm, ss], binary}]) of
-		{match, List} ->
-			[Y, M, D, Hh, Mm, Ss] = [binary_to_integer(E) || E <- List],
-			Date = {Y, M, D},
-			Time = {Hh, Mm, Ss},
+	case re:run(Bin, Re, [{capture, [y, m, d, hh, mm, ss, ms, offset], binary}]) of
+		{match, [Y, M, D, Hh, Mm, Ss, _Ms, Offset]} ->
+			TimeDiff = case Offset of
+						_ when Offset =:= <<"z">>; Offset =:= <<"Z">> ->
+							0;
+						<<>> ->
+							0;
+						<<Sign, OffsetH:2/binary, ":", OffsetM:2/binary>> ->
+							SecOffset = binary_to_integer(OffsetH)*60*60+binary_to_integer(OffsetM)*60,
+							case Sign of
+								$+ -> -SecOffset;
+								$- -> SecOffset
+							end
+					end,
+			Date = {binary_to_integer(Y),
+					binary_to_integer(M),
+					binary_to_integer(D)},
+			
+			Time = {binary_to_integer(Hh),
+					binary_to_integer(Mm),
+					binary_to_integer(Ss)},
+			
 			case calendar:valid_date(Date) of
 				true ->
 					case valid_time(Time) of
 						false ->
 							{error, invalid_time};
 						true ->
-							{ok, {Date, Time}}
+							DateTime0 = calendar:datetime_to_gregorian_seconds({Date, Time}) + TimeDiff,
+							DateTime = calendar:gregorian_seconds_to_datetime(DateTime0),
+							{ok, DateTime}
 					end;
 				false ->
 					{error, invalid_date}
@@ -298,11 +317,15 @@ bin_to_time_test_() ->
 
 bin_to_datetime_test_() ->
 	Tests = [
-			 {<<"2001-01-01 0:0:0">>, {ok, {{2001, 01, 01}, {0,0,0}}}},
-			 {<<"2999-12-31 00:00:00">>, {ok, {{2999, 12, 31}, {0,0,0}}}},
-			 {<<"2999-12-31 01:02:03">>, {ok, {{2999, 12, 31}, {1,2,3}}}},
-			 {<<"2001-13-01 0:0:0">>, {error, invalid_date}},
-			 {<<"2001-12-01 24:0:0">>, {error, invalid_time}},
+			 {<<"2001-01-01T00:00:00z">>, {ok, {{2001, 01, 01}, {0, 0, 0}}}},
+			 {<<"2001-01-01T18:50:00-04:00">>, {ok, {{2001, 01, 01}, {22, 50, 0}}}},
+			 {<<"2001-12-31T22:50:00-04:00">>, {ok, {{2002, 01, 01}, {2, 50, 0}}}},
+			 {<<"2001-01-01T22:50:00+04:00">>, {ok, {{2001, 01, 01}, {18, 50, 0}}}},
+			 {<<"2002-01-01T2:50:00+04:00">>, {ok, {{2001, 12, 31}, {22, 50, 0}}}},
+			 {<<"2999-12-31t00:00:00.001z">>, {ok, {{2999, 12, 31}, {0, 0, 0}}}},
+			 {<<"2999-12-31T01:02:03z">>, {ok, {{2999, 12, 31}, {1, 2, 3}}}},
+			 {<<"2001-13-01T00:00:00Z">>, {error, invalid_date}},
+			 {<<"2001-12-01T24:00:00Z">>, {error, invalid_time}},
 			 {<<"01-13-01 0:0:0">>, {error, wrong_format}},
 			 {<<"2001/12/01 0:0:0">>, {error, wrong_format}},
 			 {<<"2001-12-1  0:0:0">>, {error, wrong_format}}
