@@ -22,6 +22,7 @@
 
 -export([bin_to_integer/1,
 		 bin_to_float/1,
+		 bin_to_boolean/1,
 		 bin_to_date/1, bin_to_date/2,
 		 bin_to_time/1, bin_to_time/2,
 		 bin_to_datetime/1, bin_to_datetime/2
@@ -114,6 +115,23 @@ bin_to_float(Bin) when is_binary(Bin) ->
 					Err
 			end
 	end.
+
+bin_to_boolean(<<T,R,U,E>>) when
+	  (T =:= $t orelse T =:= $T) andalso
+	  (R =:= $r orelse R =:= $R) andalso
+	  (U =:= $u orelse U =:= $U) andalso
+	  (E =:= $e orelse E =:= $E) ->
+	{ok, true};
+bin_to_boolean(<<F,A,L,S,E>>) when
+	  (F =:= $f orelse F =:= $F) andalso
+	  (A =:= $a orelse A =:= $A) andalso
+	  (L =:= $l orelse L =:= $L) andalso
+	  (S =:= $s orelse S =:= $S) andalso
+	  (E =:= $e orelse E =:= $E) ->
+	{ok, false};
+bin_to_boolean(_) ->
+	{error, wrong_format}.
+
 
 bin_to_date(Bin) ->
 	Re = "(?<y>\\d{4})-(?<m>\\d{1,2})-(?<d>\\d{1,2})",
@@ -292,6 +310,17 @@ bin_to_float_test_() ->
 			 {<<"a123.456">>, {error, wrong_format}}
 			],
 	[fun() -> To = bin_to_float(From) end || {From, To} <- Tests].
+
+bin_to_boolean_test_() ->
+	TrueData = [<<T,R,U,E>> || T <- [$t, $T], R <- [$r, $R], U <- [$u, $U], E <- [$e, $E]],
+	FalseData = [<<F,A,L,S,E>> || F <- [$f, $F], A <- [$a, $A], L <- [$l, $L], S <- [$s, $S], E <- [$e, $E]],
+	EData = [<<" true">>, <<"false ">>, <<"wrong data">>],
+	Tests =
+		[{T, {ok, true}} || T <- TrueData] ++
+		[{F, {ok, false}} || F <- FalseData] ++
+		[{E, {error, wrong_format}} || E <- EData],
+	[fun() -> R = bin_to_boolean(D) end || {D, R} <- Tests].
+
 
 bin_to_date_test_() ->
 	Tests = [

@@ -167,6 +167,7 @@ type_constructor(non_neg_integer) -> {ok, {tq_transform_utils, bin_to_integer}};
 type_constructor(non_neg_float) -> {ok, {tq_transform_utils, bin_to_float}};
 type_constructor(integer) -> {ok, {tq_transform_utils, bin_to_integer}};
 type_constructor(float) -> {ok, {tq_transform_utils, bin_to_float}};
+type_constructor(boolean) -> {ok, {tq_transform_utils, bin_to_boolean}};
 type_constructor(date) -> {ok, {tq_transform_utils, bin_to_date}};
 type_constructor(time) -> {ok, {tq_transform_utils, bin_to_time}};
 type_constructor(datetime) -> {ok, {tq_transform_utils, bin_to_datetime}};
