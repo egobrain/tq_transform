@@ -15,6 +15,7 @@
 -module(tq_transform).
 
 -export([parse_transform/3,
+		 print_module/1,
 		 pretty_print/1]).
 
 -include("include/ast_helpers.hrl").
@@ -288,6 +289,16 @@ pretty_print(Forms0) ->
 	[io_lib:fwrite("~s~n",
 				   [lists:flatten([erl_pp:form(Fm) ||
 									  Fm <- Forms])])].
+
+print_module(Module) ->
+	BeamFileName = code:which(Module),
+	case beam_lib:chunks(BeamFileName, [abstract_code]) of
+		{ok, {_, [{abstract_code, {raw_abstract_v1,Forms}}]}} ->
+			Code = pretty_print(Forms),
+			io:format("~s~n", [Code]);
+		Error ->
+			Error
+	end.
 
 %% Tests.
 
