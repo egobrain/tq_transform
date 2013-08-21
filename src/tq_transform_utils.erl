@@ -20,6 +20,14 @@
 
 -export([valid/1]).
 
+-export([to_integer/1,
+		 to_float/1,
+		 to_boolean/1,
+		 to_date/1,
+		 to_time/1,
+		 to_datetime/1
+		]).
+
 -export([bin_to_integer/1,
 		 bin_to_float/1,
 		 bin_to_boolean/1,
@@ -94,17 +102,29 @@ valid(List) ->
 
 %% Converters
 
-bin_to_integer(Int) when is_integer(Int) ->
+to_integer(Int) when is_integer(Int) ->
 	{ok, Int};
-bin_to_integer(Bin) when is_binary(Bin) ->
+to_integer(Bin) ->
+	bin_to_integer(Bin);
+to_integer(_) ->
+	{error, wrong_format}.
+
+bin_to_integer(Bin) ->
 	case catch binary_to_integer(Bin) of
 		Int when is_integer(Int) -> {ok, Int};
 		_ -> {error, wrong_format}
 	end.
 
-bin_to_float(Float) when is_float(Float) ->
-	Float;
-bin_to_float(Bin) when is_binary(Bin) ->
+to_float(Int) when is_integer(Int) ->
+	{ok, Int*1.0};
+to_float(Float) when is_float(Float) ->
+	{ok, Float};
+to_float(Bin) when is_binary(Bin) ->
+	bin_to_integer(Bin);
+to_float(_) ->
+	{error, wrong_format}.
+
+bin_to_float(Bin) ->
 	case catch binary_to_float(Bin) of
 		Float when is_float(Float) -> {ok, Float};
 		_ ->
@@ -115,6 +135,13 @@ bin_to_float(Bin) when is_binary(Bin) ->
 					Err
 			end
 	end.
+
+to_boolean(Bool) when is_boolean(Bool) ->
+	{ok, Bool};
+to_boolean(Bin) when is_binary(Bin) ->
+	bin_to_boolean(Bin);
+to_boolean(_) ->
+	{error, wrong_format}.
 
 bin_to_boolean(<<T,R,U,E>>) when
 	  (T =:= $t orelse T =:= $T) andalso
@@ -132,6 +159,17 @@ bin_to_boolean(<<F,A,L,S,E>>) when
 bin_to_boolean(_) ->
 	{error, wrong_format}.
 
+to_date({Y, M, D} = Date) when is_integer(Y), is_integer(M), is_integer(D) ->
+	case calendar:valid_date(Date) of
+		false ->
+			{error, invalid_date};
+		true ->
+			{ok, Date}
+	end;
+to_date(Bin) when is_binary(Bin) ->
+	bin_to_date(Bin);
+to_date(_) ->
+	{error, wrong_format}.
 
 bin_to_date(Bin) ->
 	Re = "(?<y>\\d{4})-(?<m>\\d{1,2})-(?<d>\\d{1,2})",
@@ -150,6 +188,18 @@ bin_to_date(Re, Bin) when is_binary(Bin) ->
 			{error, wrong_format}
 	end.
 
+to_time({Hh, Mm, Ss}=Time) when is_integer(Hh), is_integer(Mm), is_integer(Ss) ->
+	case valid_time(Time) of
+		false ->
+			{error, invalid_time};
+		true ->
+			{ok, Time}
+	end;
+to_time(Bin) when is_binary(Bin) ->
+	bin_to_date(Bin);
+to_time(_) ->
+	{error, wrong_format}.
+
 bin_to_time(Bin) ->
 	Re = "(?<hh>\\d{1,2}):(?<mm>\\d{1,2}):(?<ss>\\d{1,2})",
 	bin_to_time(Re, Bin).
@@ -167,10 +217,28 @@ bin_to_time(Re, Bin) when is_binary(Bin) ->
 			{error, wrong_format}
 	end.
 
+to_datetime({{Y, M, D}=Date, {Hh, Mm, Ss}=Time}=DateTime) when
+	  is_integer(Y), is_integer(M), is_integer(D),
+	  is_integer(Hh), is_integer(Mm), is_integer(Ss) ->
+	case calendar:valid_date(Date) of
+		true ->
+			case valid_time(Time) of
+				false ->
+					{error, invalid_time};
+				true ->
+					{ok, DateTime}
+			end;
+		false ->
+			{error, invalid_date}
+	end;
+to_datetime(Bin) when is_binary(Bin) ->
+	bin_to_datetime(Bin);
+to_datetime(_) ->
+	{error, wrong_format}.
+
 bin_to_datetime(Bin) ->
 	Re = "(?<y>\\d{4})-(?<m>\\d{1,2})-(?<d>\\d{1,2})[Tt](?<hh>\\d{1,2}):(?<mm>\\d{1,2}):(?<ss>\\d{1,2})(?<ms>\.\\d{1,}){0,1}(?<offset>[Zz]|[+-]\\d{2}:\\d{2})",
 	bin_to_datetime(Re, Bin).
-
 bin_to_datetime(Re, Bin) ->
 	case re:run(Bin, Re, [{capture, [y, m, d, hh, mm, ss, ms, offset], binary}]) of
 		{match, [Y, M, D, Hh, Mm, Ss, _Ms, Offset]} ->
