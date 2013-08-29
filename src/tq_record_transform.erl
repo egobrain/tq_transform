@@ -107,7 +107,8 @@ set_field(Field, #model{fields=Fields} = Model) ->
 
 %% Meta.
 
-meta_clauses(_Model) -> [].
+meta_clauses(Model) ->
+	tq_record_generator:meta_clauses(Model).
 
 %% Rules.
 

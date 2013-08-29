@@ -17,7 +17,9 @@
 -include("include/records.hrl").
 -include("include/ast_helpers.hrl").
 
--export([build_model/1]).
+-export([build_model/1,
+		 meta_clauses/1
+		]).
 
 -define(atom_join(A, B), list_to_atom(atom_to_list(A) ++ "_" ++ atom_to_list(B))).
 -define(prefix_set(A), ?atom_join(set, A)).
@@ -42,6 +44,17 @@ build_model(Model) ->
 						{IB, FB} = F(Model),
 						{[IB | IBlock], [FB | FBlock]}
 				end, {[], []}, Builders).
+
+meta_clauses(#model{module=Module, fields=Fields}) ->
+	RecordIndexClause =
+		?clause([?tuple([?atom(record_index), ?var('Field')])], none,
+				 [?cases(?var('Field'),
+						 [?clause([?atom(F#field.name)], none,
+								  [?record_index(Module, F#field.name)])
+						  || F <- Fields, F#field.stores_in_record]
+						)
+				 ]),
+	[RecordIndexClause].
 
 build_main_record(#model{module=Module, fields=Fields}) ->
 	FieldsInRecord = [F || F <- Fields, F#field.stores_in_record],

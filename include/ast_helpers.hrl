@@ -26,6 +26,7 @@
 -define(func(Name,Arity),erl_syntax:implicit_fun(?atom(Name),?int(Arity))).
 -define(func(Clauses),erl_syntax:fun_expr(Clauses)).
 -define(access(Value,Record,Field),erl_syntax:record_access(Value,?atom(Record),?atom(Field))).
+-define(record_index(Record,Field),erl_syntax:record_index_expr(?atom(Record),?atom(Field))).
 -define(infix(A,B,C),erl_syntax:infix_expr(A,erl_syntax:operator(B),C)).
 -define(eq(A,B),?infix(A,'==',B)).
 -define(eeq(A,B),?infix(A,'=:=',B)).
