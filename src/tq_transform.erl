@@ -191,7 +191,7 @@ normalize_option({Name, Value}) when is_atom(Name) ->
 normalize_option(Name) when is_atom(Name) ->
 	{ok, {Name, true}};
 normalize_option(Val) ->
-	{error, {"Wrong option spec", Val}}.
+	{error, io_lib:format("Wrong option spec: ~p", [Val])}.
 
 %% Field rules.
 
