@@ -104,7 +104,7 @@ valid(List) ->
 
 to_integer(Int) when is_integer(Int) ->
 	{ok, Int};
-to_integer(Bin) ->
+to_integer(Bin) when is_binary(Bin)  ->
 	bin_to_integer(Bin);
 to_integer(_) ->
 	{error, wrong_format}.
@@ -257,11 +257,11 @@ bin_to_datetime(Re, Bin) ->
 			Date = {binary_to_integer(Y),
 					binary_to_integer(M),
 					binary_to_integer(D)},
-			
+
 			Time = {binary_to_integer(Hh),
 					binary_to_integer(Mm),
 					binary_to_integer(Ss)},
-			
+
 			case calendar:valid_date(Date) of
 				true ->
 					case valid_time(Time) of
