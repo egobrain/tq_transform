@@ -29,6 +29,8 @@
          meta_clauses/1
         ]).
 
+-export([g/3]).
+
 parse_transform(Ast, Options) ->
     try
         tq_transform:parse_transform(Ast, Options, [?MODULE])
@@ -36,6 +38,17 @@ parse_transform(Ast, Options) ->
             Reason = io_lib:format("~p:~p | ~p ~n", [T, E, erlang:get_stacktrace()]),
             [{error, {1, erl_parse, Reason}} | Ast]
     end.
+
+%% API.
+
+g(field, Field, Model) ->
+    case lists:keyfind(Field, #record_field.name, Model#record_model.fields) of
+        {_, PluginState} ->
+            {ok, PluginState};
+        false ->
+            {error, undefined}
+    end.
+
 
 %% Model.
 
