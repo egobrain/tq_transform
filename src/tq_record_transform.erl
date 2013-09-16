@@ -16,151 +16,151 @@
 -export([parse_transform/2]).
 
 -export([create_model/1,
-		 model_option/3,
-		 normalize_model/1,
-		 build_model/1,
+         model_option/3,
+         normalize_model/1,
+         build_model/1,
 
-		 create_field/1,
-		 field_option/3,
-		 normalize_field/1,
-		 set_field/2,
+         create_field/1,
+         field_option/3,
+         normalize_field/1,
+         set_field/2,
 
-		 meta_clauses/1
-		]).
+         meta_clauses/1
+        ]).
 
 parse_transform(Ast, Options) ->
-	try
-		tq_transform:parse_transform(Ast, Options, [?MODULE])
-	catch T:E ->
-			Reason = io_lib:format("~p:~p | ~p ~n", [T, E, erlang:get_stacktrace()]),
-			[{error, {1, erl_parse, Reason}} | Ast]
-	end.
+    try
+        tq_transform:parse_transform(Ast, Options, [?MODULE])
+    catch T:E ->
+            Reason = io_lib:format("~p:~p | ~p ~n", [T, E, erlang:get_stacktrace()]),
+            [{error, {1, erl_parse, Reason}} | Ast]
+    end.
 
 %% Model.
 
 create_model(Module) ->
-	#model{module=Module}.
+    #model{module=Module}.
 
 model_option(init, InitFuns,  Model) ->
-	Model2 = Model#model{init_funs = to_list(InitFuns)},
-	{ok, Model2};
+    Model2 = Model#model{init_funs = to_list(InitFuns)},
+    {ok, Model2};
 model_option(validators, NewValidators, #model{validators=Validators}=Model) ->
-	Model2 = Model#model{validators = Validators ++ NewValidators},
-	{ok, Model2};
+    Model2 = Model#model{validators = Validators ++ NewValidators},
+    {ok, Model2};
 model_option(_Option, _Val, _Model) ->
-	false.
+    false.
 
 normalize_model(Model) ->
-	{ok, Model}.
+    {ok, Model}.
 
 build_model(Model) ->
-	{Exports, Funs} = tq_record_generator:build_model(Model),
-	{lists:reverse(Exports), lists:reverse(Funs)}.
+    {Exports, Funs} = tq_record_generator:build_model(Model),
+    {lists:reverse(Exports), lists:reverse(Funs)}.
 
 %% Fields.
 
 create_field(Name) ->
-	#field{name=Name}.
+    #field{name=Name}.
 
 field_option(required, Value, Field) ->
-	Field2 = Field#field{is_required = Value},
-	{ok, Field2};
+    Field2 = Field#field{is_required = Value},
+    {ok, Field2};
 field_option(default, DefaultValue, Field) ->
-	Field2 = Field#field{default_value=DefaultValue},
-	{ok, Field2};
+    Field2 = Field#field{default_value=DefaultValue},
+    {ok, Field2};
 field_option(mode, Mode, Field) ->
-	Field2 = Field#field{mode = mode_to_acl(Mode)},
-	{ok, Field2};
+    Field2 = Field#field{mode = mode_to_acl(Mode)},
+    {ok, Field2};
 field_option(type, Type, Field) ->
-	Field2 = Field#field{type = Type},
-	{ok, Field2};
+    Field2 = Field#field{type = Type},
+    {ok, Field2};
 field_option(type_constructor, TypeConstructor, Field) ->
-	Field2 = Field#field{type_constructor = TypeConstructor},
-	{ok, Field2};
+    Field2 = Field#field{type_constructor = TypeConstructor},
+    {ok, Field2};
 field_option(get, Getter, Field) ->
-	Field2 = Field#field{getter = Getter},
-	{ok, Field2};
+    Field2 = Field#field{getter = Getter},
+    {ok, Field2};
 field_option(set, Setter, Field) ->
-	Field2 = Field#field{setter = Setter},
-	{ok, Field2};
+    Field2 = Field#field{setter = Setter},
+    {ok, Field2};
 field_option(record, StoresInRecord, Field) ->
-	Field2 = Field#field{stores_in_record = StoresInRecord},
-	{ok, Field2};
+    Field2 = Field#field{stores_in_record = StoresInRecord},
+    {ok, Field2};
 field_option(validators, NewValidators, #field{validators=Validators}=Field) ->
-	Field2 = Field#field{validators = Validators ++ NewValidators},
-	{ok, Field2};
+    Field2 = Field#field{validators = Validators ++ NewValidators},
+    {ok, Field2};
 field_option(init, InitFuns, Field) ->
-	Field2 = Field#field{init_funs = to_list(InitFuns)},
-	{ok, Field2};
+    Field2 = Field#field{init_funs = to_list(InitFuns)},
+    {ok, Field2};
 field_option(_Option, _Val, _Field) ->
-	false.
+    false.
 
 normalize_field(Field) ->
-	Rules = [
-			 fun access_mode_getter_rule/1,
-			 fun access_mode_setter_rule/1,
-			 fun get_set_record_rule/1,
-			 fun type_constructor_rule/1,
-			 fun default_validators_rule/1
-			],
-	tq_transform_utils:error_writer_foldl(fun(R, F) -> R(F) end, Field, Rules).
+    Rules = [
+             fun access_mode_getter_rule/1,
+             fun access_mode_setter_rule/1,
+             fun get_set_record_rule/1,
+             fun type_constructor_rule/1,
+             fun default_validators_rule/1
+            ],
+    tq_transform_utils:error_writer_foldl(fun(R, F) -> R(F) end, Field, Rules).
 
 set_field(Field, #model{fields=Fields} = Model) ->
-	Model#model{fields=[Field | Fields]}.
+    Model#model{fields=[Field | Fields]}.
 
 %% Meta.
 
 meta_clauses(Model) ->
-	tq_record_generator:meta_clauses(Model).
+    tq_record_generator:meta_clauses(Model).
 
 %% Rules.
 
 get_set_record_rule(Field=#field{stores_in_record=false, getter=Getter, setter=Setter}) ->
-	case {Getter, Setter} of
-		{true, true} ->
-			{error, "Storing in record required for default getter and setter"};
-		{true, _} ->
-			{error, "Storing in record required for default getter"};
-		{_, true} ->
-			{error, "Storing in record required for default setter"};
-		{_, _} ->
-			{ok, Field}
-	end;
+    case {Getter, Setter} of
+        {true, true} ->
+            {error, "Storing in record required for default getter and setter"};
+        {true, _} ->
+            {error, "Storing in record required for default getter"};
+        {_, true} ->
+            {error, "Storing in record required for default setter"};
+        {_, _} ->
+            {ok, Field}
+    end;
 get_set_record_rule(Field) ->
-	{ok, Field#field{stores_in_record=true}}.
+    {ok, Field#field{stores_in_record=true}}.
 
 type_constructor_rule(#field{type_constructor=undefined, type=Type}=Field) ->
-	case type_constructor(Type) of
-		{ok, TypeConstructor} ->
-			Field2 = Field#field{type_constructor=TypeConstructor},
-			{ok, Field2};
-		{error, undefined} ->
-			Reason = lists:flatten(io_lib:format("type_constructor required for type: ~p", [Type])),
-			{error, Reason}
-	end;
+    case type_constructor(Type) of
+        {ok, TypeConstructor} ->
+            Field2 = Field#field{type_constructor=TypeConstructor},
+            {ok, Field2};
+        {error, undefined} ->
+            Reason = lists:flatten(io_lib:format("type_constructor required for type: ~p", [Type])),
+            {error, Reason}
+    end;
 type_constructor_rule(Field) ->
-	{ok, Field}.
+    {ok, Field}.
 
 default_validators_rule(#field{type=non_neg_integer, validators=Validators}=Field) ->
-	NonNegValidator = {tq_transform_utils, more_or_eq, [0]},
-	Field2 = Field#field{validators=[NonNegValidator|Validators]},
-	{ok, Field2};
+    NonNegValidator = {tq_transform_utils, more_or_eq, [0]},
+    Field2 = Field#field{validators=[NonNegValidator|Validators]},
+    {ok, Field2};
 default_validators_rule(#field{type=non_empty_binary, validators=Validators}=Field) ->
-	NonNegValidator = {tq_transform_utils, non_empty_binary},
-	Field2 = Field#field{validators=[NonNegValidator|Validators]},
-	{ok, Field2};
+    NonNegValidator = {tq_transform_utils, non_empty_binary},
+    Field2 = Field#field{validators=[NonNegValidator|Validators]},
+    {ok, Field2};
 default_validators_rule(Field) ->
-	{ok, Field}.
+    {ok, Field}.
 
 access_mode_getter_rule(Field=#field{mode=#access_mode{sr=false}}) ->
-	{ok, Field#field{getter=false}};
+    {ok, Field#field{getter=false}};
 access_mode_getter_rule(Field) ->
-	{ok, Field}.
+    {ok, Field}.
 
 access_mode_setter_rule(Field=#field{mode=#access_mode{sw=false}}) ->
-	{ok, Field#field{setter=false}};
+    {ok, Field#field{setter=false}};
 access_mode_setter_rule(Field) ->
-	{ok, Field}.
+    {ok, Field}.
 
 %% Internal helpers.
 
@@ -186,36 +186,36 @@ mode_to_acl(rsw)  -> #access_mode{r=true,  sr=true,  w=false, sw=true};
 mode_to_acl(srw)  -> #access_mode{r=false, sr=true,  w=true,  sw=true}.
 
 to_list(A) when is_list(A) ->
-	A;
+    A;
 to_list(A) ->
-	[A].
+    [A].
 
 -ifdef(TEST).
 -include_lib("eunit/include/eunit.hrl").
 
 get_set_record_rule_test_() ->
-	C = fun({Stored, Getter, Setter}) -> #field{stores_in_record=Stored, getter=Getter, setter=Setter} end,
-	Default = fun(undefined) -> true;
-				 (V) -> V
-			  end,
-	Values = [true, false, custom],
-	Tests1 = [{C({St, G, S}), {ok, C({Default(St), Default(G), Default(S)})}} || St <- [undefined, true], G <- Values, S <- Values],
+    C = fun({Stored, Getter, Setter}) -> #field{stores_in_record=Stored, getter=Getter, setter=Setter} end,
+    Default = fun(undefined) -> true;
+                 (V) -> V
+              end,
+    Values = [true, false, custom],
+    Tests1 = [{C({St, G, S}), {ok, C({Default(St), Default(G), Default(S)})}} || St <- [undefined, true], G <- Values, S <- Values],
 
-	%% Test case when stores_in_record manually set to false.
-	Tests2 = [{C({false, G, S}), case {Default(G), Default(S)} of
-								  {true, true} ->
-									  {error, "Storing in record required for default getter and setter"};
-								  {true, _} ->
-									  {error, "Storing in record required for default getter"};
-								  {_, true} ->
-									  {error, "Storing in record required for default setter"};
-								  {G1, S1} ->
-									  {ok, C({false, G1, S1})}
-								 end} || G <- Values, S <- Values],
-	Tests = Tests1 ++ Tests2,
-	F = fun(From, To) ->
-				?assertEqual(To, get_set_record_rule(From))
-		end,
-	[fun() -> F(From, To) end || {From, To} <- Tests].
+    %% Test case when stores_in_record manually set to false.
+    Tests2 = [{C({false, G, S}), case {Default(G), Default(S)} of
+                                     {true, true} ->
+                                         {error, "Storing in record required for default getter and setter"};
+                                     {true, _} ->
+                                         {error, "Storing in record required for default getter"};
+                                     {_, true} ->
+                                         {error, "Storing in record required for default setter"};
+                                     {G1, S1} ->
+                                         {ok, C({false, G1, S1})}
+                                 end} || G <- Values, S <- Values],
+    Tests = Tests1 ++ Tests2,
+    F = fun(From, To) ->
+                ?assertEqual(To, get_set_record_rule(From))
+        end,
+    [fun() -> F(From, To) end || {From, To} <- Tests].
 
 -endif.

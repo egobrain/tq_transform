@@ -16,15 +16,15 @@
 
 -callback create_model(Name :: atom()) -> {ok, Model :: any()} | false.
 -callback model_option(Option, Value, Model) -> {ok, Model} | {error, Reason} | false when
-	  Option :: atom(),
-	  Value :: any(),
-	  Reason :: any().
+      Option :: atom(),
+      Value :: any(),
+      Reason :: any().
 
 -callback create_field(Name :: atom()) -> {ok, Field :: any()} | false.
 -callback field_option(Option, Value, Field) -> {ok, Field} | {error, Reason} | false when
-	  Option :: atom(),
-	  Value :: any(),
-	  Reason :: any().
+      Option :: atom(),
+      Value :: any(),
+      Reason :: any().
 -callback normalize_field(Field) -> {ok, Field} | {error, Reason :: any()}.
 -callback set_field(Field :: any(), Model) -> {ok, Model}.
 
