@@ -260,12 +260,9 @@ changed_fields_function(#model{module=Module, fields=Fields}) ->
 									?var('Changed')]
 								  )])]).
 
-constructor1_function(#model{init_fun=InitFun, module=Module}) ->
+constructor1_function(#model{init_funs=InitFuns, module=Module}) ->
 	SetIsNotNew = ?record(?var('Model'), Module, [?field('$is_new$', ?atom(false))]),
-	FinalForm = case InitFun of
-					undefined -> SetIsNotNew;
-					Fun -> function_call(Fun, [SetIsNotNew])
-				end,
+	FinalForm = apply_init_hooks(InitFuns, SetIsNotNew),
 	?function(constructor,
 			  [?clause([?var('Fields')], none,
 					   [?match(?var('Constructors'),
@@ -413,3 +410,10 @@ def_record(Name, Fields) ->
 
 atom_to_binary(Atom) ->
 	list_to_binary(atom_to_list(Atom)).
+
+apply_init_hooks([], Var) ->
+	Var;
+apply_init_hooks([Fun], Var) ->
+	function_call(Fun, [Var]);
+apply_init_hooks([Fun|Rest], Var) ->
+	apply_init_hooks(Rest, function_call(Fun, [Var])).

@@ -13,7 +13,7 @@
 		  mode = #access_mode{} :: #access_mode{}, % From 'r | w | rw | sr | sw | srsw | rsw | srw'
 		  getter = true :: true | false, % create getter
 		  setter = true :: true | false, % create setter
-		  
+
 		  stores_in_record = true :: boolean(), % Set to true if field value stores in state record
 		  type = any :: field_type(), % Record type. Usefull for dializer
 		  type_constructor :: atom() | {atom(), atom()},
@@ -25,7 +25,7 @@
 -record(model, {
 		  module :: atom(),
 		  fields = [] :: [#field{}],
-		  init_fun :: atom() | {atom(), atom()},
+		  init_funs = [] :: atom() | {atom(), atom()} | {atom(), list()} | {atom(), atom(), list()},
 		  validators = [] :: atom() | {atom(), atom()} | {atom(), list()} | {atom(), atom(), list()}
 		 }).
 

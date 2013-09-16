@@ -12,11 +12,14 @@
 		]}).
 
 -model([
-		{init, init}
+		{init, init1},
+		{init, init2}
 	   ]).
 
-init(Model) ->
+init1(Model) ->
 	Model:set_counter(Model:counter()*3).
+init2(Model) ->
+	Model:set_counter(Model:counter()*10).
 
 
 -ifdef(TEST).
@@ -27,8 +30,8 @@ init_test_() ->
 				{ok, Model} = from_proplist([{counter, V}]),
 				Model#?MODULE{'$is_new$'=false}
 		end,
-	[fun() -> ?assertEqual(C(3), (constructor([]))([])) end,
-	 fun() -> ?assertEqual(C(15), (constructor([counter]))([5])) end].
+	[fun() -> ?assertEqual(C(30), (constructor([]))([])) end,
+	 fun() -> ?assertEqual(C(150), (constructor([counter]))([5])) end].
 
 changed_test() ->
 	Model = new(),
@@ -37,4 +40,3 @@ changed_test() ->
 	?assertEqual(Model2:counter(), 15).
 
 -endif.
-

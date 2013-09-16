@@ -41,8 +41,8 @@ parse_transform(Ast, Options) ->
 create_model(Module) ->
 	#model{module=Module}.
 
-model_option(init, InitFun, Model) ->
-	Model2 = Model#model{init_fun=InitFun},
+model_option(init, InitFun, #model{init_funs=InitFuns} = Model) ->
+	Model2 = Model#model{init_funs=[InitFun|InitFuns]},
 	{ok, Model2};
 model_option(validators, NewValidators, #model{validators=Validators}=Model) ->
 	Model2 = Model#model{validators = Validators ++ NewValidators},
@@ -51,7 +51,14 @@ model_option(_Option, _Val, _Model) ->
 	false.
 
 normalize_model(Model) ->
-	{ok, Model}.
+	Rules = [
+			 fun revert_model_init_funs/1
+			],
+	tq_transform_utils:error_writer_foldl(fun(R, M) -> R(M) end, Model, Rules).
+
+revert_model_init_funs(#model{init_funs=InitFuns} = Model) ->
+	Model2 = Model#model{init_funs=lists:reverse(InitFuns)},
+	{ok, Model2}.
 
 build_model(Model) ->
 	{Exports, Funs} = tq_record_generator:build_model(Model),
@@ -148,7 +155,6 @@ default_validators_rule(#field{type=non_empty_binary, validators=Validators}=Fie
 	{ok, Field2};
 default_validators_rule(Field) ->
 	{ok, Field}.
-
 
 access_mode_getter_rule(Field=#field{mode=#access_mode{sr=false}}) ->
 	{ok, Field#field{getter=false}};
