@@ -41,8 +41,8 @@ parse_transform(Ast, Options) ->
 create_model(Module) ->
 	#model{module=Module}.
 
-model_option(init, InitFun, #model{init_funs=InitFuns} = Model) ->
-	Model2 = Model#model{init_funs=[InitFun|InitFuns]},
+model_option(init, InitFuns,  Model) ->
+	Model2 = Model#model{init_funs = to_list(InitFuns)},
 	{ok, Model2};
 model_option(validators, NewValidators, #model{validators=Validators}=Model) ->
 	Model2 = Model#model{validators = Validators ++ NewValidators},
@@ -51,14 +51,7 @@ model_option(_Option, _Val, _Model) ->
 	false.
 
 normalize_model(Model) ->
-	Rules = [
-			 fun revert_model_init_funs/1
-			],
-	tq_transform_utils:error_writer_foldl(fun(R, M) -> R(M) end, Model, Rules).
-
-revert_model_init_funs(#model{init_funs=InitFuns} = Model) ->
-	Model2 = Model#model{init_funs=lists:reverse(InitFuns)},
-	{ok, Model2}.
+	{ok, Model}.
 
 build_model(Model) ->
 	{Exports, Funs} = tq_record_generator:build_model(Model),
@@ -96,8 +89,8 @@ field_option(record, StoresInRecord, Field) ->
 field_option(validators, NewValidators, #field{validators=Validators}=Field) ->
 	Field2 = Field#field{validators = Validators ++ NewValidators},
 	{ok, Field2};
-field_option(init, InitFun, #field{init_funs=InitFuns} = Field) ->
-	Field2 = Field#field{init_funs=[InitFun|InitFuns]},
+field_option(init, InitFuns, Field) ->
+	Field2 = Field#field{init_funs = to_list(InitFuns)},
 	{ok, Field2};
 field_option(_Option, _Val, _Field) ->
 	false.
@@ -108,8 +101,7 @@ normalize_field(Field) ->
 			 fun access_mode_setter_rule/1,
 			 fun get_set_record_rule/1,
 			 fun type_constructor_rule/1,
-			 fun default_validators_rule/1,
-			 fun revert_field_init_funs/1
+			 fun default_validators_rule/1
 			],
 	tq_transform_utils:error_writer_foldl(fun(R, F) -> R(F) end, Field, Rules).
 
@@ -160,10 +152,6 @@ default_validators_rule(#field{type=non_empty_binary, validators=Validators}=Fie
 default_validators_rule(Field) ->
 	{ok, Field}.
 
-revert_field_init_funs(#field{init_funs=InitFuns} = Field) ->
-	Field2 = Field#field{init_funs=lists:reverse(InitFuns)},
-	{ok, Field2}.
-
 access_mode_getter_rule(Field=#field{mode=#access_mode{sr=false}}) ->
 	{ok, Field#field{getter=false}};
 access_mode_getter_rule(Field) ->
@@ -196,6 +184,11 @@ mode_to_acl(sw)   -> #access_mode{r=false, sr=false, w=false, sw=true};
 mode_to_acl(srsw) -> #access_mode{r=false, sr=true,  w=false, sw=true};
 mode_to_acl(rsw)  -> #access_mode{r=true,  sr=true,  w=false, sw=true};
 mode_to_acl(srw)  -> #access_mode{r=false, sr=true,  w=true,  sw=true}.
+
+to_list(A) when is_list(A) ->
+	A;
+to_list(A) ->
+	[A].
 
 -ifdef(TEST).
 -include_lib("eunit/include/eunit.hrl").

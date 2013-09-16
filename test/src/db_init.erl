@@ -17,13 +17,13 @@
 		{type, integer},
 		record, get, set,
 		{default, 1},
-		{init, field_init1},
-		{init, field_init2}
+		{init, [field_init1,
+				field_init2]}
 	   ]}).
 
 -model([
-		{init, init1},
-		{init, init2}
+		{init, [init1,
+				init2]}
 	   ]).
 
 init1(Model) ->
