@@ -5,7 +5,7 @@
 		  sw = true :: boolean()
 		 }).
 
--record(field,{
+-record(record_field,{
 		  name :: binary(), % Field name which will be used to access property
 
 		  is_required = false :: boolean(),
@@ -23,9 +23,9 @@
 		  validators = [] :: atom() | {atom(), atom()} | {atom(), list()} | {atom(), atom(), list()}
 		 }).
 
--record(model, {
+-record(record_model, {
 		  module :: atom(),
-		  fields = [] :: [#field{}],
+		  fields = [] :: [#record_field{}],
 		  init_funs = [] :: atom() | {atom(), atom()} | {atom(), list()} | {atom(), atom(), list()},
 		  validators = [] :: atom() | {atom(), atom()} | {atom(), list()} | {atom(), atom(), list()}
 		 }).

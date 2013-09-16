@@ -14,7 +14,7 @@
 
 -module(tq_record_generator).
 
--include("include/records.hrl").
+-include("include/record_model.hrl").
 -include("include/ast_helpers.hrl").
 
 -export([build_model/1,
@@ -28,7 +28,7 @@
 %% Build result ast.
 
 -spec build_model(Model) -> {InfoAst, FunctionsAst} when
-      Model :: #model{},
+      Model :: #record_model{},
       InfoAst :: erl_syntax:syntaxTree(),
       FunctionsAst :: erl_syntax:syntaxTree().
 build_model(Model) ->
@@ -45,29 +45,29 @@ build_model(Model) ->
                         {[IB | IBlock], [FB | FBlock]}
                 end, {[], []}, Builders).
 
-meta_clauses(#model{module=Module, fields=Fields}) ->
+meta_clauses(#record_model{module=Module, fields=Fields}) ->
     RecordIndexClause =
         ?clause([?tuple([?atom(record_index), ?var('Field')])], none,
                 [?cases(?var('Field'),
-                        [?clause([?atom(F#field.name)], none,
-                                 [?record_index(Module, F#field.name)])
-                         || F <- Fields, F#field.stores_in_record]
+                        [?clause([?atom(F#record_field.name)], none,
+                                 [?record_index(Module, F#record_field.name)])
+                         || F <- Fields, F#record_field.stores_in_record]
                        )
                 ]),
     [RecordIndexClause].
 
-build_main_record(#model{module=Module, fields=Fields}) ->
-    FieldsInRecord = [F || F <- Fields, F#field.stores_in_record],
-    RecordFieldNames = [case F#field.default_value of
+build_main_record(#record_model{module=Module, fields=Fields}) ->
+    FieldsInRecord = [F || F <- Fields, F#record_field.stores_in_record],
+    RecordFieldNames = [case F#record_field.default_value of
                             undefined ->
                                 case is_write_only(F) of
-                                    true -> {F#field.name, '$write_only_stumb$'};
-                                    false -> F#field.name
+                                    true -> {F#record_field.name, '$write_only_stumb$'};
+                                    false -> F#record_field.name
                                 end;
-                            Val -> {F#field.name, Val}
-                        end || F <- Fields, F#field.stores_in_record],
-    DbFieldNames =  [{?changed_suffix(F#field.name),
-                      F#field.default_value =/= undefined}
+                            Val -> {F#record_field.name, Val}
+                        end || F <- Fields, F#record_field.stores_in_record],
+    DbFieldNames =  [{?changed_suffix(F#record_field.name),
+                      F#record_field.default_value =/= undefined}
                      || F <- FieldsInRecord],
     RecordFields = lists:flatten([{'$is_new$', true},
                                   RecordFieldNames,
@@ -75,18 +75,18 @@ build_main_record(#model{module=Module, fields=Fields}) ->
     Attribute = def_record(Module, RecordFields),
     {[Attribute], []}.
 
-build_getter_and_setters(#model{module=Module, fields=Fields}) ->
+build_getter_and_setters(#record_model{module=Module, fields=Fields}) ->
     NewFun = ?function(new, [?clause([], none, [?record(Module, [])])]),
     NewExport = ?export(new, 0),
-    GetterFields = [F || F <- Fields, F#field.getter =:= true],
+    GetterFields = [F || F <- Fields, F#record_field.getter =:= true],
     GetterFuns = [getter(Module, F) || F <- GetterFields],
     GetterExports = ?export_funs(GetterFuns),
-    CustomGettersExports = ?export_all([{F#field.name, 1} || F <- Fields, F#field.getter =:= custom]),
+    CustomGettersExports = ?export_all([{F#record_field.name, 1} || F <- Fields, F#record_field.getter =:= custom]),
 
-    SetterFields = [F || F <- Fields, F#field.setter =:= true],
+    SetterFields = [F || F <- Fields, F#record_field.setter =:= true],
     SetterFuns = [setter(Module, F) || F <- SetterFields],
     SetterExports = ?export_funs(SetterFuns),
-    CustomSettersExports = ?export_all([{?prefix_set(F#field.name), 2} || F <- Fields, F#field.setter =:= custom]),
+    CustomSettersExports = ?export_all([{?prefix_set(F#record_field.name), 2} || F <- Fields, F#record_field.setter =:= custom]),
 
     IsNewFun = ?function(is_new, [?clause([?var('Model')], none, [?access(?var('Model'), Module, '$is_new$')])]),
     IsNewExport = ?export(is_new, 1),
@@ -94,9 +94,9 @@ build_getter_and_setters(#model{module=Module, fields=Fields}) ->
     Exports = [NewExport, GetterExports, CustomGettersExports, SetterExports, CustomSettersExports, IsNewExport],
     {Exports, Funs}.
 
-getter(Module, #field{name=Name}) ->
+getter(Module, #record_field{name=Name}) ->
     ?function(Name, [?clause([?var('Model')], none, [?access(?var('Model'), Module, Name)])]).
-setter(Module, #field{name=Name}) ->
+setter(Module, #record_field{name=Name}) ->
     ?function(?prefix_set(Name),
               [?clause([?var('Val'), ?var('Model')], none,
                        [?cases(?eeq(?var('Val'), ?access(?var('Model'), Module, Name)),
@@ -121,12 +121,12 @@ build_proplists(Model) ->
     Exports = ?export_funs(Public),
     {Exports, Public ++ Private}.
 
-to_proplist_function(#model{fields=Fields}) ->
+to_proplist_function(#record_model{fields=Fields}) ->
     Fun_ = fun(AccessModeOpt) ->
-                   ?list([?tuple([?atom(F#field.name), ?apply(F#field.name, [?var('Model')])]) ||
+                   ?list([?tuple([?atom(F#record_field.name), ?apply(F#record_field.name, [?var('Model')])]) ||
                              F <- Fields,
-                             element(AccessModeOpt, F#field.mode),
-                             F#field.getter =/= false
+                             element(AccessModeOpt, F#record_field.mode),
+                             F#record_field.getter =/= false
                          ])
            end,
     Fun1 = ?function(to_proplist,
@@ -141,7 +141,7 @@ to_proplist_function(#model{fields=Fields}) ->
                                                [Fun_(#access_mode.r)])])])]),
     [Fun1, Fun2].
 
-from_proplist_functions(#model{fields=Fields}) ->
+from_proplist_functions(#record_model{fields=Fields}) ->
     DefaultOpts = ?abstract([unsafe]),
     Fun1 = ?function(from_proplist,
                      [?clause([?var('Proplist')], none,
@@ -170,17 +170,17 @@ from_proplist_functions(#model{fields=Fields}) ->
     Fun_ = fun(Suffix, AccessModeOpt) ->
                    ?function(?atom_join(from_proplist, Suffix),
                              [?clause(
-                                 [?tuple([?atom(F#field.name), ?var('Val')]), ?var('Model'), ?underscore], none,
-                                 [?ok(?apply(?prefix_set(F#field.name), [?var('Val'), ?var('Model')]))])
+                                 [?tuple([?atom(F#record_field.name), ?var('Val')]), ?var('Model'), ?underscore], none,
+                                 [?ok(?apply(?prefix_set(F#record_field.name), [?var('Val'), ?var('Model')]))])
                               || F <- Fields,
-                                 F#field.setter =/= undefined,
-                                 element(AccessModeOpt, F#field.mode)] ++ DefaultClasuse)
+                                 F#record_field.setter =/= undefined,
+                                 element(AccessModeOpt, F#record_field.mode)] ++ DefaultClasuse)
            end,
     FunUnsafe_ = Fun_(unsafe_, #access_mode.sw),
     FunSafe_ = Fun_(safe_, #access_mode.w),
     {[Fun1, Fun2, Fun3], [FunUnsafe_, FunSafe_]}.
 
-from_bin_proplist_function(#model{fields=Fields}) ->
+from_bin_proplist_function(#record_model{fields=Fields}) ->
     DefaultOpts = ?abstract([]),
     Fun1 = ?function(from_bin_proplist,
                      [?clause([?var('BinProplist')], none,
@@ -206,26 +206,26 @@ from_bin_proplist_function(#model{fields=Fields}) ->
                                                [?ok(?var('Model'))]),
                                        ?clause([?atom(false)], none,
                                                [?error(?var('Field'), ?atom(unknown))])])])],
-    SetterClause = fun(F, Var) -> ?ok(?apply(?prefix_set(F#field.name), [Var, ?var('Model')])) end,
+    SetterClause = fun(F, Var) -> ?ok(?apply(?prefix_set(F#record_field.name), [Var, ?var('Model')])) end,
     Cases = fun(F, A) -> ?cases(A,
                                 [?clause([?ok(?var('Val'))], none,
                                          [SetterClause(F, ?var('Val'))]),
                                  ?clause([?error(?var('Reason'))], none,
-                                         [?error(?tuple([?atom(F#field.name), ?var('Reason')]))])])
+                                         [?error(?tuple([?atom(F#record_field.name), ?var('Reason')]))])])
             end,
     Fun_ = fun(Suffix, AccessModeOpt) ->
                    ?function(?atom_join(from_bin_proplist, Suffix),
                              [?clause(
-                                 [?tuple([?abstract(atom_to_binary(F#field.name)), ?var('Bin')]), ?var('Model'), ?underscore], none,
-                                 [case F#field.type_constructor of
+                                 [?tuple([?abstract(atom_to_binary(F#record_field.name)), ?var('Bin')]), ?var('Model'), ?underscore], none,
+                                 [case F#record_field.type_constructor of
                                       none ->
                                           SetterClause(F, ?var('Bin'));
                                       Fun ->
                                           Cases(F, function_call(Fun, [?var('Bin')]))
                                   end])
                               || F <- Fields,
-                                 F#field.setter =/= undefined,
-                                 element(AccessModeOpt, F#field.mode)] ++ DefaultClasuse)
+                                 F#record_field.setter =/= undefined,
+                                 element(AccessModeOpt, F#record_field.mode)] ++ DefaultClasuse)
            end,
     FunUnsafe_ = Fun_(unsafe_, #access_mode.sw),
     FunSafe_ = Fun_(safe_, #access_mode.w),
@@ -242,11 +242,11 @@ build_internal_functions(Model) ->
 
 
 
-changed_fields_function(#model{module=Module, fields=Fields}) ->
-    AllowedFields = [F#field.name || F <- Fields,
-                                     F#field.stores_in_record,
-                                     F#field.setter,
-                                     F#field.mode#access_mode.sw],
+changed_fields_function(#record_model{module=Module, fields=Fields}) ->
+    AllowedFields = [F#record_field.name || F <- Fields,
+                                            F#record_field.stores_in_record,
+                                            F#record_field.setter,
+                                            F#record_field.mode#access_mode.sw],
     ListAst = ?list([?tuple([?atom(F),
                              ?access(?var('Model'), Module, F),
                              ?access(?var('Model'), Module, ?changed_suffix(F))
@@ -260,52 +260,52 @@ changed_fields_function(#model{module=Module, fields=Fields}) ->
                                     ?var('Changed')]
                                   )])]).
 
-constructor1_function(#model{init_funs=InitFuns, module=Module}) ->
+constructor1_function(#record_model{init_funs=InitFuns, module=Module}) ->
     SetIsNotNew = ?record(?var('Model'), Module, [?field('$is_new$', ?atom(false))]),
     FinalForm = apply_init_hooks(InitFuns, SetIsNotNew),
-    ?function(constructor,
-              [?clause([?var('Fields')], none,
-                       [?match(?var('Constructors'),
-                               ?list_comp(?apply(field_constructor, [?var('F')]),
-                                          [?generator(?var('F'), ?var('Fields'))])),
-                        ?func([?clause([?var('List')], none,
-                                       [?match(?var('Model'),
-                                               ?apply(lists, foldl,
-                                                      [?func([?clause([?tuple([?var('F'), ?var('A')]), ?var('M')], none,
-                                                                      [?apply_(?var('F'), [?var('A'), ?var('M')])])]),
-                                                       ?apply(new, []),
-                                                       ?apply(lists, zip, [?var('Constructors'), ?var('List')])])),
-                                        FinalForm
-                                       ]
-                                      )])])]).
+                                                         ?function(constructor,
+                                                                   [?clause([?var('Fields')], none,
+                                                                            [?match(?var('Constructors'),
+                                                                                    ?list_comp(?apply(field_constructor, [?var('F')]),
+                                                                                               [?generator(?var('F'), ?var('Fields'))])),
+                                                                             ?func([?clause([?var('List')], none,
+                                                                                            [?match(?var('Model'),
+                                                                                                    ?apply(lists, foldl,
+                                                                                                           [?func([?clause([?tuple([?var('F'), ?var('A')]), ?var('M')], none,
+                                                                                                                           [?apply_(?var('F'), [?var('A'), ?var('M')])])]),
+                                                                                                            ?apply(new, []),
+                                                                                                            ?apply(lists, zip, [?var('Constructors'), ?var('List')])])),
+                                                                                             FinalForm
+                                                                                            ]
+                                                                                           )])])]).
 
-field_constructor_function(#model{fields=Fields, module=Module}) ->
+field_constructor_function(#record_model{fields=Fields, module=Module}) ->
     DefaultClasuse = ?clause([?var('Fun')], [?nif_is_function(?var('Fun'))], [?var('Fun')]),
-    SetterAst = fun(F) -> ?apply(?prefix_set(F#field.name),
-                                 [apply_init_hooks(F#field.init_funs, ?var('Val')),
+    SetterAst = fun(F) -> ?apply(?prefix_set(F#record_field.name),
+                                 [apply_init_hooks(F#record_field.init_funs, ?var('Val')),
                                   ?var('Model')])
                 end,
     ?function(field_constructor,
-              [?clause([?atom(F#field.name)], none,
+              [?clause([?atom(F#record_field.name)], none,
                        [?func([?clause([?var('Val'), ?var('Model')], none,
-                                       case F#field.stores_in_record of
+                                       case F#record_field.stores_in_record of
                                            true ->
                                                [?match(?var('F'),SetterAst(F)),
-                                                ?record(?var('F'), Module, [?field(?changed_suffix(F#field.name), ?atom(false))])];
+                                                ?record(?var('F'), Module, [?field(?changed_suffix(F#record_field.name), ?atom(false))])];
                                            false ->
                                                [SetterAst(F)]
                                        end)])]) ||
                   F <- Fields,
-                  F#field.setter =/= false
+                  F#record_field.setter =/= false
               ] ++ [DefaultClasuse]).
 
-field_from_binary(#model{fields=Fields}) ->
+field_from_binary(#record_model{fields=Fields}) ->
     Valid = fun(F, Var) ->
-                    case F#field.validators =:= [] of
+                    case F#record_field.validators =:= [] of
                         true ->
                             ?ok(Var);
                         false ->
-                            ?cases(?apply_(?apply(validator, [?atom(F#field.name)]), [Var]),
+                            ?cases(?apply_(?apply(validator, [?atom(F#record_field.name)]), [Var]),
                                    [?clause([?atom('ok')], none,
                                             [?ok(Var)]),
                                     ?clause([?var('Err')], none,
@@ -313,8 +313,8 @@ field_from_binary(#model{fields=Fields}) ->
                     end
             end,
     ?function(field_from_binary,
-              [?clause([?atom(F#field.name), ?var('Bin')], none,
-                       [case F#field.type_constructor of
+              [?clause([?atom(F#record_field.name), ?var('Bin')], none,
+                       [case F#record_field.type_constructor of
                             none -> Valid(F, ?var('Bin'));
                             Fun -> ?cases(function_call(Fun, [?var('Bin')]),
                                           [?clause([?ok(?var('Val'))], none,
@@ -324,12 +324,12 @@ field_from_binary(#model{fields=Fields}) ->
                         end]) || F <- Fields]).
 
 
-build_validators(#model{module=Module, fields=Fields, validators=Validators}) ->
+build_validators(#record_model{module=Module, fields=Fields, validators=Validators}) ->
     ValidatorFun = ?function(validator,
-                             [?clause([?atom(F#field.name)], none,
-                                      [validator(F#field.validators,
-                                                 F#field.is_required,
-                                                 is_write_only(F))]) || F <- Fields, F#field.setter]),
+                             [?clause([?atom(F#record_field.name)], none,
+                                      [validator(F#record_field.validators,
+                                                 F#record_field.is_required,
+                                                 is_write_only(F))]) || F <- Fields, F#record_field.setter]),
     AppyUtilsValid = ?apply(tq_transform_utils, valid, [?var('Data')]),
     ValidModelAst = case Validators of
                         [] ->
@@ -345,11 +345,11 @@ build_validators(#model{module=Module, fields=Fields, validators=Validators}) ->
                          [?clause([?var('Model')], none,
                                   [?match(?var('Data'),
                                           ?list([?tuple(
-                                                    [?atom(F#field.name),
-                                                     ?apply(validator, [?atom(F#field.name)]),
-                                                     ?access(?var('Model'), Module, F#field.name)])
+                                                    [?atom(F#record_field.name),
+                                                     ?apply(validator, [?atom(F#record_field.name)]),
+                                                     ?access(?var('Model'), Module, F#record_field.name)])
                                                  || F <- Fields,
-                                                    F#field.stores_in_record])),
+                                                    F#record_field.stores_in_record])),
                                    ValidModelAst
                                   ])]),
     Funs = [ValidatorFun, ValidFun],
@@ -359,18 +359,18 @@ build_validators(#model{module=Module, fields=Fields, validators=Validators}) ->
 validator(Validators, IsRequired, IsWriteOnly) ->
     WO_clause = ?clause([?atom('$write_only_stumb$')], none, [?atom(ok)]),
     Req_clause = ?clause([?atom(undefined)], none, [?error(?atom(required))]),
-    Main_clause = case Validators of
-                      [] ->
-                          ?clause([?underscore], none, [?atom(ok)]);
-                      _ ->
-                          Var = ?var('Val'),
-                          ?clause([Var], none, [fold_validators(Validators, Var)])
-                  end,
-    ClausesOpts = [{IsWriteOnly, WO_clause},
-                   {IsRequired, Req_clause},
-                   {true, Main_clause}],
-    Clauses = [Val || {true, Val} <- ClausesOpts],
-    ?func(Clauses).
+                               Main_clause = case Validators of
+                                                 [] ->
+                                                     ?clause([?underscore], none, [?atom(ok)]);
+                                                 _ ->
+                                                     Var = ?var('Val'),
+                                                     ?clause([Var], none, [fold_validators(Validators, Var)])
+                                             end,
+                               ClausesOpts = [{IsWriteOnly, WO_clause},
+                                              {IsRequired, Req_clause},
+                                              {true, Main_clause}],
+                               Clauses = [Val || {true, Val} <- ClausesOpts],
+                               ?func(Clauses).
 
 fold_validators([Fun], Var) ->
     function_call(Fun, [Var]);
@@ -381,11 +381,11 @@ fold_validators([Fun|Rest], Var) ->
             ?clause([?error(?var('Reason'))], none,
                     [?error(?var('Reason'))])]).
 
-build_is_changed(#model{module=Module, fields=Fields}) ->
+build_is_changed(#record_model{module=Module, fields=Fields}) ->
     Fun = ?function(is_changed,
-                    [?clause([?atom(F#field.name), ?var('Model')], none,
-                             [?access(?var('Model'), Module, ?changed_suffix(F#field.name))])
-                     || F <- Fields, F#field.stores_in_record]),
+                    [?clause([?atom(F#record_field.name), ?var('Model')], none,
+                             [?access(?var('Model'), Module, ?changed_suffix(F#record_field.name))])
+                     || F <- Fields, F#record_field.stores_in_record]),
     Export = ?export_fun(Fun),
     {[Export], [Fun]}.
 
@@ -402,7 +402,7 @@ function_call(Fun, Args) ->
     ?apply(Fun, Args).
 
 is_write_only(Field) ->
-    AccessMode = Field#field.mode,
+    AccessMode = Field#record_field.mode,
     not AccessMode#access_mode.sr.
 
 def_record(Name, Fields) ->

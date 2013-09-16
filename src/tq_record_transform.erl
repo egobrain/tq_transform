@@ -11,7 +11,7 @@
 
 -behavior(tq_transform_plugin).
 
--include("include/records.hrl").
+-include("include/record_model.hrl").
 
 -export([parse_transform/2]).
 
@@ -39,13 +39,13 @@ parse_transform(Ast, Options) ->
 %% Model.
 
 create_model(Module) ->
-    #model{module=Module}.
+    #record_model{module=Module}.
 
 model_option(init, InitFuns,  Model) ->
-    Model2 = Model#model{init_funs = to_list(InitFuns)},
+    Model2 = Model#record_model{init_funs = to_list(InitFuns)},
     {ok, Model2};
-model_option(validators, NewValidators, #model{validators=Validators}=Model) ->
-    Model2 = Model#model{validators = Validators ++ NewValidators},
+model_option(validators, NewValidators, #record_model{validators=Validators}=Model) ->
+    Model2 = Model#record_model{validators = Validators ++ NewValidators},
     {ok, Model2};
 model_option(_Option, _Val, _Model) ->
     false.
@@ -60,37 +60,37 @@ build_model(Model) ->
 %% Fields.
 
 create_field(Name) ->
-    #field{name=Name}.
+    #record_field{name=Name}.
 
 field_option(required, Value, Field) ->
-    Field2 = Field#field{is_required = Value},
+    Field2 = Field#record_field{is_required = Value},
     {ok, Field2};
 field_option(default, DefaultValue, Field) ->
-    Field2 = Field#field{default_value=DefaultValue},
+    Field2 = Field#record_field{default_value=DefaultValue},
     {ok, Field2};
 field_option(mode, Mode, Field) ->
-    Field2 = Field#field{mode = mode_to_acl(Mode)},
+    Field2 = Field#record_field{mode = mode_to_acl(Mode)},
     {ok, Field2};
 field_option(type, Type, Field) ->
-    Field2 = Field#field{type = Type},
+    Field2 = Field#record_field{type = Type},
     {ok, Field2};
 field_option(type_constructor, TypeConstructor, Field) ->
-    Field2 = Field#field{type_constructor = TypeConstructor},
+    Field2 = Field#record_field{type_constructor = TypeConstructor},
     {ok, Field2};
 field_option(get, Getter, Field) ->
-    Field2 = Field#field{getter = Getter},
+    Field2 = Field#record_field{getter = Getter},
     {ok, Field2};
 field_option(set, Setter, Field) ->
-    Field2 = Field#field{setter = Setter},
+    Field2 = Field#record_field{setter = Setter},
     {ok, Field2};
 field_option(record, StoresInRecord, Field) ->
-    Field2 = Field#field{stores_in_record = StoresInRecord},
+    Field2 = Field#record_field{stores_in_record = StoresInRecord},
     {ok, Field2};
-field_option(validators, NewValidators, #field{validators=Validators}=Field) ->
-    Field2 = Field#field{validators = Validators ++ NewValidators},
+field_option(validators, NewValidators, #record_field{validators=Validators}=Field) ->
+    Field2 = Field#record_field{validators = Validators ++ NewValidators},
     {ok, Field2};
 field_option(init, InitFuns, Field) ->
-    Field2 = Field#field{init_funs = to_list(InitFuns)},
+    Field2 = Field#record_field{init_funs = to_list(InitFuns)},
     {ok, Field2};
 field_option(_Option, _Val, _Field) ->
     false.
@@ -105,8 +105,8 @@ normalize_field(Field) ->
             ],
     tq_transform_utils:error_writer_foldl(fun(R, F) -> R(F) end, Field, Rules).
 
-set_field(Field, #model{fields=Fields} = Model) ->
-    Model#model{fields=[Field | Fields]}.
+set_field(Field, #record_model{fields=Fields} = Model) ->
+    Model#record_model{fields=[Field | Fields]}.
 
 %% Meta.
 
@@ -115,7 +115,7 @@ meta_clauses(Model) ->
 
 %% Rules.
 
-get_set_record_rule(Field=#field{stores_in_record=false, getter=Getter, setter=Setter}) ->
+get_set_record_rule(Field=#record_field{stores_in_record=false, getter=Getter, setter=Setter}) ->
     case {Getter, Setter} of
         {true, true} ->
             {error, "Storing in record required for default getter and setter"};
@@ -127,12 +127,12 @@ get_set_record_rule(Field=#field{stores_in_record=false, getter=Getter, setter=S
             {ok, Field}
     end;
 get_set_record_rule(Field) ->
-    {ok, Field#field{stores_in_record=true}}.
+    {ok, Field#record_field{stores_in_record=true}}.
 
-type_constructor_rule(#field{type_constructor=undefined, type=Type}=Field) ->
+type_constructor_rule(#record_field{type_constructor=undefined, type=Type}=Field) ->
     case type_constructor(Type) of
         {ok, TypeConstructor} ->
-            Field2 = Field#field{type_constructor=TypeConstructor},
+            Field2 = Field#record_field{type_constructor=TypeConstructor},
             {ok, Field2};
         {error, undefined} ->
             Reason = lists:flatten(io_lib:format("type_constructor required for type: ~p", [Type])),
@@ -141,24 +141,24 @@ type_constructor_rule(#field{type_constructor=undefined, type=Type}=Field) ->
 type_constructor_rule(Field) ->
     {ok, Field}.
 
-default_validators_rule(#field{type=non_neg_integer, validators=Validators}=Field) ->
+default_validators_rule(#record_field{type=non_neg_integer, validators=Validators}=Field) ->
     NonNegValidator = {tq_transform_utils, more_or_eq, [0]},
-    Field2 = Field#field{validators=[NonNegValidator|Validators]},
+    Field2 = Field#record_field{validators=[NonNegValidator|Validators]},
     {ok, Field2};
-default_validators_rule(#field{type=non_empty_binary, validators=Validators}=Field) ->
+default_validators_rule(#record_field{type=non_empty_binary, validators=Validators}=Field) ->
     NonNegValidator = {tq_transform_utils, non_empty_binary},
-    Field2 = Field#field{validators=[NonNegValidator|Validators]},
+    Field2 = Field#record_field{validators=[NonNegValidator|Validators]},
     {ok, Field2};
 default_validators_rule(Field) ->
     {ok, Field}.
 
-access_mode_getter_rule(Field=#field{mode=#access_mode{sr=false}}) ->
-    {ok, Field#field{getter=false}};
+access_mode_getter_rule(Field=#record_field{mode=#access_mode{sr=false}}) ->
+    {ok, Field#record_field{getter=false}};
 access_mode_getter_rule(Field) ->
     {ok, Field}.
 
-access_mode_setter_rule(Field=#field{mode=#access_mode{sw=false}}) ->
-    {ok, Field#field{setter=false}};
+access_mode_setter_rule(Field=#record_field{mode=#access_mode{sw=false}}) ->
+    {ok, Field#record_field{setter=false}};
 access_mode_setter_rule(Field) ->
     {ok, Field}.
 
@@ -194,7 +194,7 @@ to_list(A) ->
 -include_lib("eunit/include/eunit.hrl").
 
 get_set_record_rule_test_() ->
-    C = fun({Stored, Getter, Setter}) -> #field{stores_in_record=Stored, getter=Getter, setter=Setter} end,
+    C = fun({Stored, Getter, Setter}) -> #record_field{stores_in_record=Stored, getter=Getter, setter=Setter} end,
     Default = fun(undefined) -> true;
                  (V) -> V
               end,
