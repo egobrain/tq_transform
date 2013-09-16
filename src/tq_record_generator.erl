@@ -281,7 +281,10 @@ constructor1_function(#model{init_funs=InitFuns, module=Module}) ->
 
 field_constructor_function(#model{fields=Fields, module=Module}) ->
 	DefaultClasuse = ?clause([?var('Fun')], [?nif_is_function(?var('Fun'))], [?var('Fun')]),
-	SetterAst = fun(F) -> ?apply(?prefix_set(F#field.name), [?var('Val'), ?var('Model')]) end,
+	SetterAst = fun(F) -> ?apply(?prefix_set(F#field.name),
+								 [apply_init_hooks(F#field.init_funs, ?var('Val')),
+								  ?var('Model')])
+				end,
 	?function(field_constructor,
 			  [?clause([?atom(F#field.name)], none,
 					   [?func([?clause([?var('Val'), ?var('Model')], none,

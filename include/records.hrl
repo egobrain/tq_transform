@@ -19,6 +19,7 @@
 		  type_constructor :: atom() | {atom(), atom()},
 		  default_value :: any(),
 
+		  init_funs = [] :: atom() | {atom(), atom()} | {atom(), list()} | {atom(), atom(), list()},
 		  validators = [] :: atom() | {atom(), atom()} | {atom(), list()} | {atom(), atom(), list()}
 		 }).
 

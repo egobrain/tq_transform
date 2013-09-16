@@ -96,6 +96,9 @@ field_option(record, StoresInRecord, Field) ->
 field_option(validators, NewValidators, #field{validators=Validators}=Field) ->
 	Field2 = Field#field{validators = Validators ++ NewValidators},
 	{ok, Field2};
+field_option(init, InitFun, #field{init_funs=InitFuns} = Field) ->
+	Field2 = Field#field{init_funs=[InitFun|InitFuns]},
+	{ok, Field2};
 field_option(_Option, _Val, _Field) ->
 	false.
 
@@ -105,7 +108,8 @@ normalize_field(Field) ->
 			 fun access_mode_setter_rule/1,
 			 fun get_set_record_rule/1,
 			 fun type_constructor_rule/1,
-			 fun default_validators_rule/1
+			 fun default_validators_rule/1,
+			 fun revert_field_init_funs/1
 			],
 	tq_transform_utils:error_writer_foldl(fun(R, F) -> R(F) end, Field, Rules).
 
@@ -155,6 +159,10 @@ default_validators_rule(#field{type=non_empty_binary, validators=Validators}=Fie
 	{ok, Field2};
 default_validators_rule(Field) ->
 	{ok, Field}.
+
+revert_field_init_funs(#field{init_funs=InitFuns} = Field) ->
+	Field2 = Field#field{init_funs=lists:reverse(InitFuns)},
+	{ok, Field2}.
 
 access_mode_getter_rule(Field=#field{mode=#access_mode{sr=false}}) ->
 	{ok, Field#field{getter=false}};
