@@ -14,9 +14,9 @@
 
 -module(tq_transform).
 
--export([parse_transform/3,
-         print_module/1,
-         pretty_print/1]).
+-export([parse_transform/3]).
+
+-export([g/3]).
 
 -include("include/ast_helpers.hrl").
 
@@ -24,6 +24,14 @@
           module,
           plugins
          }).
+
+-record(globals, {
+          plugins
+         }).
+
+-type globals() :: #globals{}.
+
+-export_type([globals/0]).
 
 -define(DBG(F, D), io:format("~p:~p "++F++"~n", [?FILE, ?LINE | D])).
 
@@ -33,27 +41,56 @@ parse_transform(Ast, _Options, Plugins) ->
     try
         State = #state{plugins=Plugins},
         %% ?DBG("~n~p~n=======~n", [Ast]),
-        %% ?DBG("~n~s~n=======~n", [pretty_print(Ast)]),
+        %% ?DBG("~n~s~n=======~n", [tq_transform_utils:pretty_print(Ast)]),
         case error_map_foldl(fun transform_node/2, State, Ast) of
             {error, {Ast2, _State2}} ->
                 lists:flatten(Ast2);
             {ok, {Ast2, State2}} ->
                 {ModuleBlock, InfoBlock, FunctionsBlock} = split_ast(Ast2),
-                Ast3 = case normalize_models(State2) of
-                           {ok, State3} ->
-                               {IBlock, FBlock} = build_models(State3),
-                               revert(lists:flatten([ModuleBlock, IBlock, InfoBlock, FBlock, FunctionsBlock]));
-                           {error, Reasons} ->
-                               Ast2 ++ [global_error_ast(1, R) || R <- Reasons]
-                       end,
-                lists:flatten(lists:filter(fun(Node)-> Node =/= nil end, Ast3))
+                Build = fun(S) ->
+                                {IBlock, FBlock} = build_models(S),
+                                Blocks = [
+                                          ModuleBlock,
+                                          IBlock,
+                                          InfoBlock,
+                                          FBlock,
+                                          FunctionsBlock
+                                         ],
+                                {ok, revert(lists:flatten(Blocks))}
+                        end,
+                Funs = [
+                        fun normalize_models/1,
+                        fun set_globals/1,
+                        Build
+                       ],
+                case tq_transform_utils:error_map_funs(Funs, State2) of
+                    {ok, RAst} ->
+                        lists:flatten(
+                          lists:filter(fun(Node) -> Node =/= nil end, RAst)
+                         );
+                    {error, Reasons} ->
+                        Ast2 ++ [global_error_ast(1, R) || R <- Reasons]
+                end
         end
         %% ?DBG("~n~p~n<<<<~n", [Ast3]),
-        %% ?DBG("~n~s~n>>>>~n", [pretty_print(Ast3)]),
+        %% ?DBG("~n~s~n>>>>~n", [tq_transform_utils:pretty_print(Ast3)]),
     catch T:E ->
-            Reason = io_lib:format("~p:~p | ~p ~n", [T, E, erlang:get_stacktrace()]),
+            Reason = io_lib:format("~p:~p | ~p ~n",
+                                   [T, E, erlang:get_stacktrace()]),
             [global_error_ast(1, Reason) | Ast]
     end.
+
+
+%% Globals
+
+g(plugin, Plugin, Globals) ->
+    case lists:keyfind(Plugin, 1, Globals#globals.plugins) of
+        {_, PluginState} ->
+            {ok, PluginState};
+        false ->
+            {error, undefined}
+    end.
+
 
 error_map_foldl(Fun, State, List) ->
     FoldFun = fun(A, {St, IsError}) ->
@@ -69,12 +106,14 @@ error_map_foldl(Fun, State, List) ->
 
 
 split_ast(Ast) ->
-    {ok, {ModuleBlock, RestBlock}} = ast_split_with(fun({attribute, _, module, _}) -> true;
-                                                       (_) -> false
-                                                    end, Ast, 'after'),
-    {ok, {InfoBlock, FunctionsBlock}} = ast_split_with(fun({function, _, _, _, _}) -> true;
-                                                          (_) -> false
-                                                       end, RestBlock, 'before'),
+    {ok, {ModuleBlock, RestBlock}} = ast_split_with(
+                                       fun({attribute, _, module, _}) -> true;
+                                          (_) -> false
+                                       end, Ast, 'after'),
+    {ok, {InfoBlock, FunctionsBlock}} = ast_split_with(
+                                          fun({function, _, _, _, _}) -> true;
+                                             (_) -> false
+                                          end, RestBlock, 'before'),
     {ModuleBlock, InfoBlock, FunctionsBlock}.
 
 transform_node(Node={attribute, Line, model, Opts}, State) ->
@@ -91,7 +130,8 @@ transform_node(Node={attribute, Line, model, Opts}, State) ->
             {ok, {Node2, State}}
     end;
 
-transform_node(Node={attribute, _Line, module, Module}, #state{plugins=Plugins}=State) ->
+transform_node(Node={attribute, _Line, module, Module},
+               #state{plugins=Plugins}=State) ->
     Plugins2 = [{P, P:create_model(Module)} || P <- Plugins],
     State2 = State#state{plugins = Plugins2},
     {ok, {Node, State2}};
@@ -160,9 +200,11 @@ try_field_option(Option, _Data, [], Acc, IsOptionKnown) ->
 try_field_option(Option, Data, [{P, F, S} | Rest], Acc, IsOptionKnown) ->
     case P:field_option(Option, Data, F) of
         {ok, F2} ->
-            try_field_option(Option, Data, Rest, [{P, F2, S} | Acc], true);
+            try_field_option(Option, Data, Rest, [{P, F2, S} | Acc],
+                             true);
         false ->
-            try_field_option(Option, Data, Rest, [{P, F, S} | Acc], IsOptionKnown);
+            try_field_option(Option, Data, Rest, [{P, F, S} | Acc],
+                             IsOptionKnown);
         {error, _} = Err -> Err
     end.
 
@@ -222,6 +264,26 @@ normalize_models(#state{plugins=Plugins}=State) ->
         {error, _} = Err -> Err
     end.
 
+set_globals(#state{plugins=Plugins}=State) ->
+    Globals = #globals{
+                 plugins = Plugins
+                },
+    SetGlobalsFun =
+        fun({P, M}) ->
+                case P:set_globals(Globals, M) of
+                    {ok, M2} ->
+                        {ok, {P, M2}};
+                    {error, _Reason} = Err ->
+                        Err
+                end
+        end,
+    case tq_transform_utils:error_writer_map(SetGlobalsFun, Plugins) of
+        {ok, Plugins2} ->
+            {ok, State#state{plugins = Plugins2}};
+        {error, _Reasons} = Err  ->
+            Err
+    end.
+
 %% Builder.
 
 build_models(#state{plugins=Plugins}=State) ->
@@ -238,8 +300,9 @@ meta_functions(#state{plugins=Plugins}) ->
             {[], []};
         _ ->
             MetaFun1 = ?function('$meta', MetaClauses),
-            MetaFun2 = ?function('$meta', [?clause([?var('Arg'), ?underscore], none,
-                                                   [?apply('$meta', [?var('Arg')])])]),
+            MetaFun2 = ?function('$meta',
+                                 [?clause([?var('Arg'), ?underscore], none,
+                                          [?apply('$meta', [?var('Arg')])])]),
             MetaFuns = [MetaFun1, MetaFun2],
             Exports = ?export_funs(MetaFuns),
             {[Exports], MetaFuns}
@@ -250,7 +313,7 @@ meta_functions(#state{plugins=Plugins}) ->
 -spec ast_split_with(Fun, List, 'before') -> {List1, List2} when
       Fun :: fun((E) -> boolean()),
       List :: [E], List1 :: [E], List2 :: [E];
-                    (Fun, List, 'after') ->   {List1, List2} | {error, not_found} when
+                    (Fun, List, 'after') -> {List1, List2} | {error, not_found} when
       Fun :: fun((E) -> boolean()),
       List :: [E], List1 :: [E], List2 :: [E].
 ast_split_with(Fun, List, Opt) ->
@@ -283,22 +346,6 @@ global_error_ast(Line, Reason) ->
 
 revert(Tree) ->
     [erl_syntax:revert(T) || T <- lists:flatten(Tree)].
-
-pretty_print(Forms0) ->
-    Forms = epp:restore_typed_record_fields(revert(Forms0)),
-    [io_lib:fwrite("~s~n",
-                   [lists:flatten([erl_pp:form(Fm) ||
-                                      Fm <- Forms])])].
-
-print_module(Module) ->
-    BeamFileName = code:which(Module),
-    case beam_lib:chunks(BeamFileName, [abstract_code]) of
-        {ok, {_, [{abstract_code, {raw_abstract_v1,Forms}}]}} ->
-            Code = pretty_print(Forms),
-            io:format("~s~n", [Code]);
-        Error ->
-            Error
-    end.
 
 %% Tests.
 

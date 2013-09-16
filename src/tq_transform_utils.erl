@@ -15,7 +15,8 @@
 -module(tq_transform_utils).
 
 -export([error_writer_foldl/3,
-         error_writer_map/2
+         error_writer_map/2,
+         error_map_funs/2
         ]).
 
 -export([valid/1]).
@@ -41,6 +42,9 @@
          less/2,
          less_or_eq/2,
          non_empty_binary/1]).
+
+-export([print_module/1,
+         pretty_print/1]).
 
 -spec error_writer_foldl(Fun, State, List) -> {ok, NewState} | {error, Reasons} when
       List :: [Elem],
@@ -81,6 +85,19 @@ error_writer_map(Fun, List) when is_list(List) ->
         {ok, Result} ->
             {ok, lists:reverse(Result)};
         {error, _} = Err -> Err
+    end.
+
+-spec error_map_funs(Funs, State) -> {ok, State} | {error, Reason} when
+      Funs :: [Fun],
+      Fun :: fun((State) -> {ok, State} | {error, Reason}).
+error_map_funs([], State) ->
+    {ok, State};
+error_map_funs([Fun|Rest], State) ->
+    case Fun(State) of
+        {ok, State2} ->
+            error_map_funs(Rest, State2);
+        {error, _Reason} = Err ->
+            Err
     end.
 
 -spec valid(ListToValid) -> ok | {error, Reasons} when
@@ -308,6 +325,28 @@ non_empty_binary(<<"">>) -> {error, empty};
 non_empty_binary(_Val) -> ok.
 
 
+%% Pretty print
+
+pretty_print(Forms0) ->
+    Forms = epp:restore_typed_record_fields(revert(Forms0)),
+    [io_lib:fwrite("~s~n",
+                   [lists:flatten([erl_pp:form(Fm) ||
+                                      Fm <- Forms])])].
+
+revert(Tree) ->
+    [erl_syntax:revert(T) || T <- lists:flatten(Tree)].
+
+print_module(Module) ->
+    BeamFileName = code:which(Module),
+    case beam_lib:chunks(BeamFileName, [abstract_code]) of
+        {ok, {_, [{abstract_code, {raw_abstract_v1,Forms}}]}} ->
+            Code = pretty_print(Forms),
+            io:format("~s~n", [Code]);
+        Error ->
+            Error
+    end.
+
+
 -ifdef(TEST).
 -include_lib("eunit/include/eunit.hrl").
 
@@ -340,6 +379,21 @@ error_writer_map_test_() ->
             ],
     F = fun(D, R) -> R = error_writer_map(Sum, D) end,
     [fun() -> F(From, To) end || {From, To} <- Tests].
+
+error_map_funs_test_() ->
+    Succ = fun(A) -> {ok, A+1} end,
+    Err = fun(A) -> {error, A} end,
+    Tests = [
+             {[], {ok, 0}},
+             {[Succ], {ok, 1}},
+             {[Succ, Succ], {ok, 2}},
+             {[Succ, Succ, Succ], {ok, 3}},
+             {[Err], {error, 0}},
+             {[Err, Succ, Succ], {error, 0}},
+             {[Succ, Err, Succ], {error, 1}},
+             {[Succ, Succ, Err], {error, 2}}
+            ],
+    [fun() -> R = error_map_funs(Funs, 0) end || {Funs, R} <- Tests].
 
 valid_time_test_() ->
     Tests = [

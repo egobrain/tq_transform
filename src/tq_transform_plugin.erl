@@ -32,3 +32,6 @@
 -callback build_model(Model :: any()) -> {Exports :: [erl_syntax:forms()], Funs :: [erl_syntax:forms()]}.
 
 -callback meta_clauses(Model :: any()) -> [Clauses :: erl_syntax:forms()].
+
+
+-callback set_globals(Globals :: tq_transform:globals() , Model) -> Model.

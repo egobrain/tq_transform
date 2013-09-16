@@ -18,6 +18,7 @@
 -export([create_model/1,
          model_option/3,
          normalize_model/1,
+         set_globals/2,
          build_model/1,
 
          create_field/1,
@@ -51,6 +52,9 @@ model_option(_Option, _Val, _Model) ->
     false.
 
 normalize_model(Model) ->
+    {ok, Model}.
+
+set_globals(_Globals, Model) ->
     {ok, Model}.
 
 build_model(Model) ->
