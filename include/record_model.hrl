@@ -19,14 +19,12 @@
 		  type_constructor :: atom() | {atom(), atom()},
 		  default_value :: any(),
 
-		  init_funs = [] :: atom() | {atom(), atom()} | {atom(), list()} | {atom(), atom(), list()},
 		  validators = [] :: atom() | {atom(), atom()} | {atom(), list()} | {atom(), atom(), list()}
 		 }).
 
 -record(record_model, {
 		  module :: atom(),
 		  fields = [] :: [#record_field{}],
-		  init_funs = [] :: atom() | {atom(), atom()} | {atom(), list()} | {atom(), atom(), list()},
 		  validators = [] :: atom() | {atom(), atom()} | {atom(), list()} | {atom(), atom(), list()}
 		 }).
 

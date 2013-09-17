@@ -55,11 +55,7 @@ g(field, Field, Model) ->
 create_model(Module) ->
     #record_model{module=Module}.
 
-model_option(init, NewInitFuns,  #record_model{init_funs=InitFuns}=Model) ->
-    Model2 = Model#record_model{
-               init_funs = append_to_list(InitFuns, NewInitFuns)
-              },
-    {ok, Model2};
+
 model_option(validators, NewValidators, #record_model{validators=Validators}=Model) ->
     Model2 = Model#record_model{validators = Validators ++ NewValidators},
     {ok, Model2};
@@ -107,11 +103,6 @@ field_option(record, StoresInRecord, Field) ->
     {ok, Field2};
 field_option(validators, NewValidators, #record_field{validators=Validators}=Field) ->
     Field2 = Field#record_field{validators = Validators ++ NewValidators},
-    {ok, Field2};
-field_option(init, NewInitFuns, #record_field{init_funs=InitFuns}=Field) ->
-    Field2 = Field#record_field{
-               init_funs = append_to_list(NewInitFuns, InitFuns)
-              },
     {ok, Field2};
 field_option(_Option, _Val, _Field) ->
     false.
@@ -205,11 +196,6 @@ mode_to_acl(sw)   -> #access_mode{r=false, sr=false, w=false, sw=true};
 mode_to_acl(srsw) -> #access_mode{r=false, sr=true,  w=false, sw=true};
 mode_to_acl(rsw)  -> #access_mode{r=true,  sr=true,  w=false, sw=true};
 mode_to_acl(srw)  -> #access_mode{r=false, sr=true,  w=true,  sw=true}.
-
-append_to_list(Data, List) when is_list(Data) ->
-    List ++ Data;
-append_to_list(Data, List) ->
-    List ++ [Data].
 
 -ifdef(TEST).
 -include_lib("eunit/include/eunit.hrl").

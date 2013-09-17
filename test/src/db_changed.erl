@@ -22,10 +22,4 @@ changed_test() ->
     ?assertEqual(Model2:is_changed(counter), true),
     ?assertEqual(Model2:counter(), 15).
 
-changed_fields_test() ->
-    Model = new(),
-    Model2 = Model:set_counter(15),
-    ?assertEqual(Model2:get_changed_fields(), [{counter, 15}]),
-    ?assertEqual(Model2:counter(), 15).
-
 -endif.

@@ -233,8 +233,6 @@ from_bin_proplist_function(#record_model{fields=Fields}) ->
 
 build_internal_functions(Model) ->
     Funs = [changed_fields_function(Model),
-            field_constructor_function(Model),
-            constructor1_function(Model),
             field_from_binary(Model)
            ],
     Exports = ?export_funs(Funs),
@@ -259,45 +257,6 @@ changed_fields_function(#record_model{module=Module, fields=Fields}) ->
                                                ListAst),
                                     ?var('Changed')]
                                   )])]).
-
-constructor1_function(#record_model{init_funs=InitFuns, module=Module}) ->
-    SetIsNotNew = ?record(?var('Model'), Module, [?field('$is_new$', ?atom(false))]),
-    FinalForm = apply_init_hooks(InitFuns, SetIsNotNew),
-                                                         ?function(constructor,
-                                                                   [?clause([?var('Fields')], none,
-                                                                            [?match(?var('Constructors'),
-                                                                                    ?list_comp(?apply(field_constructor, [?var('F')]),
-                                                                                               [?generator(?var('F'), ?var('Fields'))])),
-                                                                             ?func([?clause([?var('List')], none,
-                                                                                            [?match(?var('Model'),
-                                                                                                    ?apply(lists, foldl,
-                                                                                                           [?func([?clause([?tuple([?var('F'), ?var('A')]), ?var('M')], none,
-                                                                                                                           [?apply_(?var('F'), [?var('A'), ?var('M')])])]),
-                                                                                                            ?apply(new, []),
-                                                                                                            ?apply(lists, zip, [?var('Constructors'), ?var('List')])])),
-                                                                                             FinalForm
-                                                                                            ]
-                                                                                           )])])]).
-
-field_constructor_function(#record_model{fields=Fields, module=Module}) ->
-    DefaultClasuse = ?clause([?var('Fun')], [?nif_is_function(?var('Fun'))], [?var('Fun')]),
-    SetterAst = fun(F) -> ?apply(?prefix_set(F#record_field.name),
-                                 [apply_init_hooks(F#record_field.init_funs, ?var('Val')),
-                                  ?var('Model')])
-                end,
-    ?function(field_constructor,
-              [?clause([?atom(F#record_field.name)], none,
-                       [?func([?clause([?var('Val'), ?var('Model')], none,
-                                       case F#record_field.stores_in_record of
-                                           true ->
-                                               [?match(?var('F'),SetterAst(F)),
-                                                ?record(?var('F'), Module, [?field(?changed_suffix(F#record_field.name), ?atom(false))])];
-                                           false ->
-                                               [SetterAst(F)]
-                                       end)])]) ||
-                  F <- Fields,
-                  F#record_field.setter =/= false
-              ] ++ [DefaultClasuse]).
 
 field_from_binary(#record_model{fields=Fields}) ->
     Valid = fun(F, Var) ->
@@ -413,10 +372,3 @@ def_record(Name, Fields) ->
 
 atom_to_binary(Atom) ->
     list_to_binary(atom_to_list(Atom)).
-
-apply_init_hooks([], Var) ->
-    Var;
-apply_init_hooks([Fun], Var) ->
-    function_call(Fun, [Var]);
-apply_init_hooks([Fun|Rest], Var) ->
-    apply_init_hooks(Rest, function_call(Fun, [Var])).
