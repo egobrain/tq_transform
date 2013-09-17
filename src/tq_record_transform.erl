@@ -43,10 +43,10 @@ parse_transform(Ast, Options) ->
 
 g(field, Field, Model) ->
     case lists:keyfind(Field, #record_field.name, Model#record_model.fields) of
-        {_, PluginState} ->
-            {ok, PluginState};
         false ->
-            {error, undefined}
+            {error, undefined};
+        PluginState ->
+            {ok, PluginState}
     end.
 
 
@@ -55,8 +55,10 @@ g(field, Field, Model) ->
 create_model(Module) ->
     #record_model{module=Module}.
 
-model_option(init, InitFuns,  Model) ->
-    Model2 = Model#record_model{init_funs = to_list(InitFuns)},
+model_option(init, NewInitFuns,  #record_model{init_funs=InitFuns}=Model) ->
+    Model2 = Model#record_model{
+               init_funs = append_to_list(InitFuns, NewInitFuns)
+              },
     {ok, Model2};
 model_option(validators, NewValidators, #record_model{validators=Validators}=Model) ->
     Model2 = Model#record_model{validators = Validators ++ NewValidators},
@@ -106,8 +108,10 @@ field_option(record, StoresInRecord, Field) ->
 field_option(validators, NewValidators, #record_field{validators=Validators}=Field) ->
     Field2 = Field#record_field{validators = Validators ++ NewValidators},
     {ok, Field2};
-field_option(init, InitFuns, Field) ->
-    Field2 = Field#record_field{init_funs = to_list(InitFuns)},
+field_option(init, NewInitFuns, #record_field{init_funs=InitFuns}=Field) ->
+    Field2 = Field#record_field{
+               init_funs = append_to_list(NewInitFuns, InitFuns)
+              },
     {ok, Field2};
 field_option(_Option, _Val, _Field) ->
     false.
@@ -202,10 +206,10 @@ mode_to_acl(srsw) -> #access_mode{r=false, sr=true,  w=false, sw=true};
 mode_to_acl(rsw)  -> #access_mode{r=true,  sr=true,  w=false, sw=true};
 mode_to_acl(srw)  -> #access_mode{r=false, sr=true,  w=true,  sw=true}.
 
-to_list(A) when is_list(A) ->
-    A;
-to_list(A) ->
-    [A].
+append_to_list(Data, List) when is_list(Data) ->
+    List ++ Data;
+append_to_list(Data, List) ->
+    List ++ [Data].
 
 -ifdef(TEST).
 -include_lib("eunit/include/eunit.hrl").
