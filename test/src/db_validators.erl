@@ -132,14 +132,14 @@ empty_test_() ->
              ?assertEqual(Model:valid(), R)
      end || {D, R} <- Tests].
 
-field_from_binary_test_() ->
+field_from_ext_test_() ->
     Tests = [
              {<<"">>, more_then_10, {error, wrong_format}},
              {<<"a">>, more_then_10, {error, wrong_format}},
              {<<"-11">>, more_then_10, {error, {less_then, 0}}},
              {<<"1">>, more_then_10, {error, {less_then, 10}}}
             ],
-    [fun() -> R = field_from_binary(F, D) end || {D, F, R} <- Tests].
+    [fun() -> R = field_from_ext(F, D) end || {D, F, R} <- Tests].
 
 model_test_() ->
     Tests = [{1, {error, 1}},

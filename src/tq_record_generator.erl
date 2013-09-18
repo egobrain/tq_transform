@@ -253,7 +253,7 @@ from_ext_proplist_function(#record_model{fields=Fields}) ->
 
 build_internal_functions(Model) ->
     Funs = [changed_fields_function(Model),
-            field_from_binary(Model)
+            field_from_ext(Model)
            ],
     Exports = ?export_funs(Funs),
     {Exports, Funs}.
@@ -278,7 +278,7 @@ changed_fields_function(#record_model{module=Module, fields=Fields}) ->
                                     ?var('Changed')]
                                   )])]).
 
-field_from_binary(#record_model{fields=Fields}) ->
+field_from_ext(#record_model{fields=Fields}) ->
     Valid = fun(F, Var) ->
                     case F#record_field.validators =:= [] of
                         true ->
@@ -291,7 +291,7 @@ field_from_binary(#record_model{fields=Fields}) ->
                                             [?var('Err')])])
                     end
             end,
-    ?function(field_from_binary,
+    ?function(field_from_ext,
               [?clause([?atom(F#record_field.name), ?var('Bin')], none,
                        [case F#record_field.from_ext of
                             none -> Valid(F, ?var('Bin'));

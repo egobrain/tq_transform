@@ -159,13 +159,13 @@ from_ext_proplist(Proplist, Opts, Model) ->
 
 [ToDo] Description
 
-field_from_binary/2
+field_from_ext/2
 ---
 ```Erlang
--spec field_from_binary(FieldName, Binary) -> {ok, FieldVal} | {error, Reason}.
+-spec field_from_ext(FieldName, Val) -> {ok, FieldVal} | {error, Reason}.
 ```
 
-Convert binary to field using type_constructor and valid result value with field validators.
+Convert value to field type using from_ext function and valid result value with field validators.
 
 [ToDo] Description
 
