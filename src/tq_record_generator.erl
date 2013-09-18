@@ -109,9 +109,9 @@ setter(Module, #record_field{name=Name}) ->
 
 build_proplists(Model) ->
     Funs = [to_proplist_function(Model),
-            to_bin_proplist_function(Model),
+            to_ext_proplist_function(Model),
             from_proplist_functions(Model),
-            from_bin_proplist_function(Model)
+            from_ext_proplist_function(Model)
            ],
     {Public0, Private0} = lists:foldl(fun({P, Pr}, {Pub, Priv}) ->
                                               {[P | Pub], [Pr | Priv]};
@@ -128,9 +128,9 @@ to_proplist_function(Model) ->
       Model,
       fun(_F, Ast) -> Ast end).
 
-to_bin_proplist_function(Model) ->
+to_ext_proplist_function(Model) ->
     to_proplist_function_(
-      to_bin_proplist,
+      to_ext_proplist,
       Model,
       fun(#record_field{to_ext=undefined}, Ast) ->
               Ast;
@@ -200,23 +200,23 @@ from_proplist_functions(#record_model{fields=Fields}) ->
     FunSafe_ = Fun_(safe_, #access_mode.w),
     {[Fun1, Fun2, Fun3], [FunUnsafe_, FunSafe_]}.
 
-from_bin_proplist_function(#record_model{fields=Fields}) ->
+from_ext_proplist_function(#record_model{fields=Fields}) ->
     DefaultOpts = ?abstract([]),
-    Fun1 = ?function(from_bin_proplist,
+    Fun1 = ?function(from_ext_proplist,
                      [?clause([?var('BinProplist')], none,
-                              [?apply(from_bin_proplist, [?var('BinProplist'), DefaultOpts, ?apply(new, [])])])]),
-    Fun2 = ?function(from_bin_proplist,
+                              [?apply(from_ext_proplist, [?var('BinProplist'), DefaultOpts, ?apply(new, [])])])]),
+    Fun2 = ?function(from_ext_proplist,
                      [?clause([?var('BinProplist'), ?var('Opts')], [?apply(is_list,[?var('Opts')])],
-                              [?apply(from_bin_proplist, [?var('BinProplist'), ?var('Opts'), ?apply(new, [])])]),
+                              [?apply(from_ext_proplist, [?var('BinProplist'), ?var('Opts'), ?apply(new, [])])]),
                       ?clause([?var('BinProplist'), ?var('Model')], none,
-                              [?apply(from_bin_proplist, [?var('BinProplist'), DefaultOpts, ?var('Model')])])]),
-    Fun3 = ?function(from_bin_proplist,
+                              [?apply(from_ext_proplist, [?var('BinProplist'), DefaultOpts, ?var('Model')])])]),
+    Fun3 = ?function(from_ext_proplist,
                      [?clause([?var('BinProplist'), ?var('Opts'), ?var('Model')], none,
                               [?match(?var('Fun'), ?cases(?apply(lists, member, [?atom(unsafe), ?var('Opts')]),
                                                           [?clause([?atom(true)], none,
-                                                                   [?func(from_bin_proplist_unsafe_, 3)]),
+                                                                   [?func(from_ext_proplist_unsafe_, 3)]),
                                                            ?clause([?atom(false)], none,
-                                                                   [?func(from_bin_proplist_safe_, 3)])])),
+                                                                   [?func(from_ext_proplist_safe_, 3)])])),
                                ?match(?var('Fun2'), ?func([?clause([?var('E'), ?var('M')], none,
                                                                    [?apply_(?var('Fun'), [?var('E'), ?var('M'), ?var('Opts')])])])),
                                ?apply(tq_transform_utils, error_writer_foldl, [?var('Fun2'), ?var('Model'), ?var('BinProplist')])])]),
@@ -234,7 +234,7 @@ from_bin_proplist_function(#record_model{fields=Fields}) ->
                                          [?error(?tuple([?atom(F#record_field.name), ?var('Reason')]))])])
             end,
     Fun_ = fun(Suffix, AccessModeOpt) ->
-                   ?function(?atom_join(from_bin_proplist, Suffix),
+                   ?function(?atom_join(from_ext_proplist, Suffix),
                              [?clause(
                                  [?tuple([?abstract(atom_to_binary(F#record_field.name)), ?var('Bin')]), ?var('Model'), ?underscore], none,
                                  [case F#record_field.from_ext of

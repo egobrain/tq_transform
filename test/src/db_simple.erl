@@ -83,7 +83,7 @@ proplist_test() ->
     {ok, Model} = from_proplist(Proplist),
     Proplist = lists:keysort(1, Model:to_proplist()).
 
-from_bin_proplist_test() ->
+from_ext_proplist_test() ->
     Proplist = lists:keysort(1, [{id, 1},
                                  {name, <<"test">>},
                                  {custom_in_record, 10},
@@ -92,16 +92,16 @@ from_bin_proplist_test() ->
                                     {<<"name">>, <<"test">>},
                                     {<<"custom_in_record">>, <<"10">>},
                                     {<<"custom_not_in_record">>, <<"20">>}]),
-    {ok, Model} = from_bin_proplist(BinProplist),
+    {ok, Model} = from_ext_proplist(BinProplist),
     Proplist = lists:keysort(1, Model:to_proplist()).
 
-to_bin_proplist_test() ->
+to_ext_proplist_test() ->
     Proplist = lists:keysort(1, [{id, 1},
                                  {name, <<"test">>},
                                  {custom_in_record, 10},
                                  {custom_not_in_record, 20}]),
     ExtProplist = [{K, {K, V}} || {K, V} <- Proplist],
     {ok, Model} = from_proplist(Proplist),
-    ?assertEqual(ExtProplist, lists:keysort(1, Model:to_bin_proplist())).
+    ?assertEqual(ExtProplist, lists:keysort(1, Model:to_ext_proplist())).
 
 -endif.

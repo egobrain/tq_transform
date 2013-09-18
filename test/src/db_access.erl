@@ -56,12 +56,12 @@ from_proplist_test_() ->
                         end}
     ].
 
-from_bin_proplist_test_() ->
+from_ext_proplist_test_() ->
     Data = [{list_to_binary(atom_to_list(Opt)), <<"1">>} || Opt <- ?Opts],
     [{"unsafe", fun() ->
                         ?assertEqual({error, [{<<"r">>, unknown},
                                               {<<"sr">>, unknown}]},
-                                     from_bin_proplist(Data, [unsafe], new()))
+                                     from_ext_proplist(Data, [unsafe], new()))
                 end},
      {"safe", fun() ->
                       ?assertEqual({error, [{<<"r">>, unknown},
@@ -69,10 +69,10 @@ from_bin_proplist_test_() ->
                                             {<<"sw">>, unknown},
                                             {<<"srsw">>, unknown},
                                             {<<"rsw">>, unknown}]},
-                                   from_bin_proplist(Data, [], new()))
+                                   from_ext_proplist(Data, [], new()))
               end},
      {"ignore_unknown", fun() ->
-                                {ok, _} = from_bin_proplist(Data, [ignore_unknown], new())
+                                {ok, _} = from_ext_proplist(Data, [ignore_unknown], new())
                         end}
     ].
 
