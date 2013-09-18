@@ -29,7 +29,8 @@ Field name must be valid atom.
 
 Options:
   - **type**
-  - **type_constructor** :: Fun | {Mod, Fun} | {Mod, Fun, Args} | none
+  - **to_ext** :: Fun | {Mod, Fun} | {Mod, Fun, Args}
+  - **from_ext** :: Fun | {Mod, Fun} | {Mod, Fun, Args} | none
   - **mode** :: r | w | rw | sr | sw | srsw | rsw | srw
   - **required** : true | false
   - **default** : any()
@@ -94,6 +95,25 @@ to_proplist(Opts, model) ->
 **Opts** :
   - **unsafe** - put variables which access_mode marked as ```sr``` in result proplist too
 
+to_ext_proplist/[1,2]
+----
+
+Same as to_proplist, but each argument transforms using to_ext field option function.
+
+```Erlang
+-spec to_ext_proplist(Opts, Model) -> [{atom(), any()}, ...] when
+  Opts :: [Option],
+  Option :: unsafe.
+
+to_ext_proplist(Model) ->
+  ... .
+to_ext_proplist(Opts, model) ->
+  ... .
+
+```
+**Opts** :
+  - **unsafe** - put variables which access_mode marked as ```sr``` in result proplist too
+
 from_proplist/[1,2,3]
 ----
 Generates model from proplist with atom keys.
@@ -116,24 +136,24 @@ from_proplist(Proplist, Opts, Model) ->
   ... .
 ```
 
-from_bin_proplist/[1,2,3]
+from_ext_proplist/[1,2,3]
 ---
 
 ```Erlang
--spec from_bin_proplist(Proplist, Opts, Model) -> {ok, [{atom(), any()}, ...]} | {error, Reasons} when
+-spec from_ext_proplist(Proplist, Opts, Model) -> {ok, [{atom(), any()}, ...]} | {error, Reasons} when
   Proplist :: [{binary(), binary()}, ...],
   Opts :: [Option],
   Option :: unsafe | ignore_unknown,
   Reasons :: [{field(), Reason}],
   Reason :: unknown.
 
-from_bin_proplist(Proplist) ->
+from_ext_proplist(Proplist) ->
   ... .
-from_bin_proplist(Proplist, Opts) ->
+from_ext_proplist(Proplist, Opts) ->
   ... .
-from_bin_proplist(Proplist, Model) ->
+from_ext_proplist(Proplist, Model) ->
   ... .
-from_bin_proplist(Proplist, Opts, Model) ->
+from_ext_proplist(Proplist, Opts, Model) ->
   ... .
 ```
 
@@ -222,7 +242,7 @@ more_then(A, _Val) ->
 Usage:
 ```Erlang
 1> Data = [{<<"name">>, <<"User1">>}, {<<"password">>, <<"123456">>}, {<<"unknown_data">>, <<"qwerty">>}].
-2> {ok, User} = user_model:from_bin_proplist(Data, [ignore_unknown]).
+2> {ok, User} = user_model:from_ext_proplist(Data, [ignore_unknown]).
 3> User:valid().
 {error, [{age, required}]}
 4> User2 = User:set_age(12).
