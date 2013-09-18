@@ -217,7 +217,7 @@ from_bin_proplist_function(#record_model{fields=Fields}) ->
                    ?function(?atom_join(from_bin_proplist, Suffix),
                              [?clause(
                                  [?tuple([?abstract(atom_to_binary(F#record_field.name)), ?var('Bin')]), ?var('Model'), ?underscore], none,
-                                 [case F#record_field.type_constructor of
+                                 [case F#record_field.from_ext of
                                       none ->
                                           SetterClause(F, ?var('Bin'));
                                       Fun ->
@@ -273,7 +273,7 @@ field_from_binary(#record_model{fields=Fields}) ->
             end,
     ?function(field_from_binary,
               [?clause([?atom(F#record_field.name), ?var('Bin')], none,
-                       [case F#record_field.type_constructor of
+                       [case F#record_field.from_ext of
                             none -> Valid(F, ?var('Bin'));
                             Fun -> ?cases(function_call(Fun, [?var('Bin')]),
                                           [?clause([?ok(?var('Val'))], none,

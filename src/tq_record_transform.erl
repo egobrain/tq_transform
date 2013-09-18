@@ -89,8 +89,8 @@ field_option(mode, Mode, Field) ->
 field_option(type, Type, Field) ->
     Field2 = Field#record_field{type = Type},
     {ok, Field2};
-field_option(type_constructor, TypeConstructor, Field) ->
-    Field2 = Field#record_field{type_constructor = TypeConstructor},
+field_option(from_ext, FromExtFun, Field) ->
+    Field2 = Field#record_field{from_ext = FromExtFun},
     {ok, Field2};
 field_option(get, Getter, Field) ->
     Field2 = Field#record_field{getter = Getter},
@@ -112,7 +112,7 @@ normalize_field(Field) ->
              fun access_mode_getter_rule/1,
              fun access_mode_setter_rule/1,
              fun get_set_record_rule/1,
-             fun type_constructor_rule/1,
+             fun from_ext_rule/1,
              fun default_validators_rule/1
             ],
     tq_transform_utils:error_writer_foldl(fun(R, F) -> R(F) end, Field, Rules).
@@ -141,16 +141,16 @@ get_set_record_rule(Field=#record_field{stores_in_record=false, getter=Getter, s
 get_set_record_rule(Field) ->
     {ok, Field#record_field{stores_in_record=true}}.
 
-type_constructor_rule(#record_field{type_constructor=undefined, type=Type}=Field) ->
-    case type_constructor(Type) of
-        {ok, TypeConstructor} ->
-            Field2 = Field#record_field{type_constructor=TypeConstructor},
+from_ext_rule(#record_field{from_ext=undefined, type=Type}=Field) ->
+    case from_ext(Type) of
+        {ok, FromExtFun} ->
+            Field2 = Field#record_field{from_ext=FromExtFun},
             {ok, Field2};
         {error, undefined} ->
-            Reason = lists:flatten(io_lib:format("type_constructor required for type: ~p", [Type])),
+            Reason = lists:flatten(io_lib:format("from_ext required for type: ~p", [Type])),
             {error, Reason}
     end;
-type_constructor_rule(Field) ->
+from_ext_rule(Field) ->
     {ok, Field}.
 
 default_validators_rule(#record_field{type=non_neg_integer, validators=Validators}=Field) ->
@@ -176,17 +176,17 @@ access_mode_setter_rule(Field) ->
 
 %% Internal helpers.
 
-type_constructor(binary) -> {ok, none};
-type_constructor(non_empty_binary) -> {ok, none};
-type_constructor(non_neg_integer) -> {ok, {tq_transform_utils, to_integer}};
-type_constructor(non_neg_float) -> {ok, {tq_transform_utils, to_float}};
-type_constructor(integer) -> {ok, {tq_transform_utils, to_integer}};
-type_constructor(float) -> {ok, {tq_transform_utils, to_float}};
-type_constructor(boolean) -> {ok, {tq_transform_utils, to_boolean}};
-type_constructor(date) -> {ok, {tq_transform_utils, to_date}};
-type_constructor(time) -> {ok, {tq_transform_utils, to_time}};
-type_constructor(datetime) -> {ok, {tq_transform_utils, to_datetime}};
-type_constructor(_) -> {error, undefined}.
+from_ext(binary) -> {ok, none};
+from_ext(non_empty_binary) -> {ok, none};
+from_ext(non_neg_integer) -> {ok, {tq_transform_utils, to_integer}};
+from_ext(non_neg_float) -> {ok, {tq_transform_utils, to_float}};
+from_ext(integer) -> {ok, {tq_transform_utils, to_integer}};
+from_ext(float) -> {ok, {tq_transform_utils, to_float}};
+from_ext(boolean) -> {ok, {tq_transform_utils, to_boolean}};
+from_ext(date) -> {ok, {tq_transform_utils, to_date}};
+from_ext(time) -> {ok, {tq_transform_utils, to_time}};
+from_ext(datetime) -> {ok, {tq_transform_utils, to_datetime}};
+from_ext(_) -> {error, undefined}.
 
 mode_to_acl(r)    -> #access_mode{r=true,  sr=true,  w=false, sw=false};
 mode_to_acl(w)    -> #access_mode{r=false, sr=false, w=true,  sw=true};

@@ -16,7 +16,7 @@
 
 		  stores_in_record = true :: boolean(), % Set to true if field value stores in state record
 		  type = any :: field_type(), % Record type. Usefull for dializer
-		  type_constructor :: atom() | {atom(), atom()},
+		  from_ext :: atom() | {atom(), atom()},
 		  default_value :: any(),
 
 		  validators = [] :: atom() | {atom(), atom()} | {atom(), list()} | {atom(), atom(), list()}
