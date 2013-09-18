@@ -5,12 +5,14 @@
 
 -field({id,
         [
-         {type, integer}
+         {type, integer},
+         {to_ext, {tag, [id]}}
         ]}).
 -field({name,
         [
          required,
          {type, binary},
+         {to_ext, {tag, [name]}},
          record, get, set,
          {default, <<"Default name">>},
          {mode, rw}
@@ -19,6 +21,7 @@
 -field({custom_in_record,
         [
          {type, integer},
+         {to_ext, {tag, [custom_in_record]}},
          {record, true},
          {get, custom},
          {set, custom}
@@ -27,10 +30,14 @@
 -field({custom_not_in_record,
         [
          {type, integer},
+         {to_ext, {tag, [custom_not_in_record]}},
          {record, false},
          {get, custom},
          {set, custom}
         ]}).
+
+tag(Tag, Value) ->
+    {Tag, Value}.
 
 set_custom_in_record(V, Model) ->
     Model2 = Model#?MODULE{custom_in_record = V},
@@ -76,7 +83,7 @@ proplist_test() ->
     {ok, Model} = from_proplist(Proplist),
     Proplist = lists:keysort(1, Model:to_proplist()).
 
-bin_proplist_test() ->
+from_bin_proplist_test() ->
     Proplist = lists:keysort(1, [{id, 1},
                                  {name, <<"test">>},
                                  {custom_in_record, 10},
@@ -87,5 +94,14 @@ bin_proplist_test() ->
                                     {<<"custom_not_in_record">>, <<"20">>}]),
     {ok, Model} = from_bin_proplist(BinProplist),
     Proplist = lists:keysort(1, Model:to_proplist()).
+
+to_bin_proplist_test() ->
+    Proplist = lists:keysort(1, [{id, 1},
+                                 {name, <<"test">>},
+                                 {custom_in_record, 10},
+                                 {custom_not_in_record, 20}]),
+    ExtProplist = [{K, {K, V}} || {K, V} <- Proplist],
+    {ok, Model} = from_proplist(Proplist),
+    ?assertEqual(ExtProplist, lists:keysort(1, Model:to_bin_proplist())).
 
 -endif.

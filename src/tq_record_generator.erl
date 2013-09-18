@@ -109,6 +109,7 @@ setter(Module, #record_field{name=Name}) ->
 
 build_proplists(Model) ->
     Funs = [to_proplist_function(Model),
+            to_bin_proplist_function(Model),
             from_proplist_functions(Model),
             from_bin_proplist_function(Model)
            ],
@@ -121,18 +122,37 @@ build_proplists(Model) ->
     Exports = ?export_funs(Public),
     {Exports, Public ++ Private}.
 
-to_proplist_function(#record_model{fields=Fields}) ->
+to_proplist_function(Model) ->
+    to_proplist_function_(
+      to_proplist,
+      Model,
+      fun(_F, Ast) -> Ast end).
+
+to_bin_proplist_function(Model) ->
+    to_proplist_function_(
+      to_bin_proplist,
+      Model,
+      fun(#record_field{to_ext=undefined}, Ast) ->
+              Ast;
+         (#record_field{to_ext=Fun}, Ast) ->
+              function_call(Fun, [Ast])
+      end).
+
+to_proplist_function_(FName, #record_model{fields=Fields}, ArgModifierFun) ->
     Fun_ = fun(AccessModeOpt) ->
-                   ?list([?tuple([?atom(F#record_field.name), ?apply(F#record_field.name, [?var('Model')])]) ||
+                   ?list([?tuple(
+                             [?atom(F#record_field.name),
+                              ArgModifierFun(F, ?apply(F#record_field.name, [?var('Model')]))]
+                            ) ||
                              F <- Fields,
                              element(AccessModeOpt, F#record_field.mode),
                              F#record_field.getter =/= false
                          ])
            end,
-    Fun1 = ?function(to_proplist,
+    Fun1 = ?function(FName,
                      [?clause([?var('Model')], none,
-                              [?apply(to_proplist, [?abstract([]), ?var('Model')])])]),
-    Fun2 = ?function(to_proplist,
+                              [?apply(FName, [?abstract([]), ?var('Model')])])]),
+    Fun2 = ?function(FName,
                      [?clause([?var('Opts'), ?var('Model')], none,
                               [?cases(?apply(lists, member, [?atom(unsafe), ?var('Opts')]),
                                       [?clause([?atom(true)], none,

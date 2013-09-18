@@ -92,6 +92,9 @@ field_option(type, Type, Field) ->
 field_option(from_ext, FromExtFun, Field) ->
     Field2 = Field#record_field{from_ext = FromExtFun},
     {ok, Field2};
+field_option(to_ext, ToExtFun, Field) ->
+    Field2 = Field#record_field{to_ext = ToExtFun},
+    {ok, Field2};
 field_option(get, Getter, Field) ->
     Field2 = Field#record_field{getter = Getter},
     {ok, Field2};
