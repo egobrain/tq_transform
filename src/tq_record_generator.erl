@@ -111,7 +111,9 @@ build_proplists(Model) ->
     Funs = [to_proplist_function(Model),
             to_ext_proplist_function(Model),
             from_proplist_functions(Model),
-            from_ext_proplist_function(Model)
+            from_ext_proplist_function(Model),
+            fields_function(Model),
+            ext_fields_function(Model)
            ],
     {Public0, Private0} = lists:foldl(fun({P, Pr}, {Pub, Priv}) ->
                                               {[P | Pub], [Pr | Priv]};
@@ -132,11 +134,12 @@ to_ext_proplist_function(Model) ->
     to_proplist_function_(
       to_ext_proplist,
       Model,
-      fun(#record_field{to_ext=undefined}, Ast) ->
-              Ast;
-         (#record_field{to_ext=Fun}, Ast) ->
-              function_call(Fun, [Ast])
-      end).
+      fun to_ext_hook/2).
+
+to_ext_hook(#record_field{to_ext=undefined}, Ast) ->
+    Ast;
+to_ext_hook(#record_field{to_ext=Fun}, Ast) ->
+    function_call(Fun, [Ast]).
 
 to_proplist_function_(FName, #record_model{fields=Fields}, ArgModifierFun) ->
     Fun_ = fun(AccessModeOpt) ->
@@ -250,6 +253,87 @@ from_ext_proplist_function(#record_model{fields=Fields}) ->
     FunUnsafe_ = Fun_(unsafe_, #access_mode.sw),
     FunSafe_ = Fun_(safe_, #access_mode.w),
     {[Fun1, Fun2, Fun3], [FunUnsafe_, FunSafe_]}.
+
+fields_function(Model) ->
+    fields_function_(
+      fields, [unsafe],
+      Model,
+      fun(_F, Ast) -> Ast end).
+
+ext_fields_function(Model) ->
+    fields_function_(
+      ext_fields, [],
+      Model,
+      fun to_ext_hook/2).
+
+fields_function_(FName, DefaultOpts, #record_model{fields=Fields}, ArgModifierFun) ->
+    SafeFName = ?atom_join(FName, safe),
+    SafeBinaryKeyFName = ?atom_join(SafeFName, binary_key),
+    UnsafeFName = ?atom_join(FName, unsafe),
+    UnsafeBinaryKeyFName = ?atom_join(UnsafeFName, binary_key),
+    Fun2 = ?function(FName,
+                     [?clause([?var('Fields'), ?var('Model')], none,
+                              [?apply(FName, [?var('Fields'), ?abstract(DefaultOpts), ?var('Model')])])]),
+    Fun3 =
+        ?function(FName,
+                  [?clause([?var('Fields'), ?var('Opts'), ?var('Model')], none,
+                           [?match(?var('IsUnsafe'), ?apply(lists, member, [?atom(unsafe), ?var('Opts')])),
+                            ?match(?var('KeyIsBinary'), ?apply(lists, member, [?atom(binary_key), ?var('Opts')])),
+                            ?match(?var('Fun'),
+                                   ?cases(?tuple([?var('IsUnsafe'), ?var('KeyIsBinary')]),
+                                          [?clause([?tuple([?atom(true), ?atom(true)])], none,
+                                                   [?func(UnsafeBinaryKeyFName, 2)]),
+                                           ?clause([?tuple([?atom(true), ?atom(false)])], none,
+                                                   [?func(UnsafeFName, 2)]),
+                                           ?clause([?tuple([?atom(false), ?atom(true)])], none,
+                                                   [?func(SafeBinaryKeyFName, 2)]),
+                                           ?clause([?tuple([?atom(false), ?atom(false)])], none,
+                                                   [?func(SafeFName, 2)])])),
+                            ?match(?var('Fun2'), ?func([?clause([?var('F')], none,
+                                                                [?apply_(?var('Fun'), [?var('F'), ?var('Model')])])])),
+                            ?apply(tq_transform_utils, error_writer_map,
+                                   [?var('Fun2'), ?var('Fields')])])]),
+    Ok = fun(#record_field{name=FieldName} = F, KeyFun) ->
+                 ?clause([KeyFun(FieldName), ?var('Model')], none,
+                         [?ok(?tuple([?atom(FieldName), ArgModifierFun(F, ?apply(FieldName, [?var('Model')]))]))])
+         end,
+    Err = fun(FieldNameAst, Reason) ->
+                  ?clause([FieldNameAst, ?var('_Model')], none,
+                          [?error(?tuple([FieldNameAst, ?atom(Reason)]))])
+          end,
+    AccessField = fun(#record_field{name=FieldName, mode=Mode} = F, Safe, KeyFun) ->
+                          case Safe of
+                              safe ->
+                                  case Mode of
+                                      #access_mode{r=true} ->
+                                          Ok(F, KeyFun);
+                                      #access_mode{w=true} ->
+                                          Err(KeyFun(FieldName), forbidden);
+                                      _ ->
+                                          Err(KeyFun(FieldName), unknown)
+                                  end;
+                              unsafe ->
+                                  case Mode of
+                                      #access_mode{sr=true} ->
+                                          Ok(F, KeyFun);
+                                      _ ->
+                                          Err(KeyFun(FieldName), forbidden)
+                                  end
+                          end
+                  end,
+    AtomFun = fun(A) -> ?atom(A) end,
+    BinaryFun = fun(A) -> ?abstract(list_to_binary(atom_to_list(A))) end,
+    FieldsFun_ = fun(Name, Safe, KeyFun) ->
+                         ?function(Name,
+                                   [AccessField(F, Safe, KeyFun) || F <- Fields]
+                                   ++ [Err(?var('Field'), unknown)]
+                                  )
+                 end,
+    FunSafe_ = FieldsFun_(SafeFName, safe, AtomFun),
+    FunSafeBinaryKey_ = FieldsFun_(SafeBinaryKeyFName, safe, BinaryFun),
+    FunUnsafe_ = FieldsFun_(UnsafeFName, unsafe, AtomFun),
+    FunUnsafeBinaryKey_ = FieldsFun_(UnsafeBinaryKeyFName, unsafe, BinaryFun),
+    {[Fun2, Fun3], [FunSafe_, FunSafeBinaryKey_, FunUnsafe_, FunUnsafeBinaryKey_]}.
 
 build_internal_functions(Model) ->
     Funs = [changed_fields_function(Model),

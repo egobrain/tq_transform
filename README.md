@@ -114,6 +114,52 @@ to_ext_proplist(Opts, model) ->
 **Opts** :
   - **unsafe** - put variables which access_mode marked as ```sr``` in result proplist too
 
+fields/[2,3]
+----
+Same as to_proplist, but you need to specify fields, and function verifies field existanse and access mode.
+
+```Erlang
+-spec fields(Fields, Opts, Model) -> {ok, Proplist} | {error, Reasons} when
+  Fields :: [Field],
+  Field :: atom(),
+  Proplist :: [{atom(), any()}, ...],
+  Opts :: [Option],
+  Option :: unsafe | binary_key,
+  Reasons :: [{field(), Reason}],
+  Reason :: unknown | forbidden.
+
+fields(Fields, Model) ->
+  ... .
+fields(Fields, Opts, Model) ->
+  ... .
+```
+**Opts**:
+  - **unsafe** - put variables which access_mode marked as ```sr``` in result proplist too
+  - **binary_key** - Fields are represented as binaries.
+
+ext_fields/[2,3]
+----
+Same as to_ext_proplist, but you need to specify fields, and function verifies field existanse and access mode.
+
+```Erlang
+-spec ext_fields(Fields, Opts, Model) -> {ok, Proplist} | {error, Reasons} when
+  Fields :: [Field],
+  Field :: atom(),
+  Proplist :: [{atom(), any()}, ...],
+  Opts :: [Option],
+  Option :: unsafe | binary_key,
+  Reasons :: [{field(), Reason}],
+  Reason :: unknown | forbidden.
+
+ext_fields(Fields, Model) ->
+  ... .
+ext_fields(Fields, Opts, Model) ->
+  ... .
+```
+**Opts**:
+  - **unsafe** - put variables which access_mode marked as ```sr``` in result proplist too
+  - **binary_key** - Fields are represented as binaries.
+
 from_proplist/[1,2,3]
 ----
 Generates model from proplist with atom keys.

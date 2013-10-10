@@ -76,7 +76,7 @@ from_ext_proplist_test_() ->
                         end}
     ].
 
-to_proplist_test() ->
+test_model() ->
     WOpts = [%% {r, 1},
              {w, 2},
              {rw, 3},
@@ -93,24 +93,84 @@ to_proplist_test() ->
              {srsw_default, 14},
              {rsw_default, 15},
              {srw_default, 16}],
-    ROpts = [{r, undefined}, %% mustn't by no set by proplist
+    from_proplist(WOpts).
+
+to_proplist_test() ->
+    {ok, Model} = test_model(),
+    ROpts = [{r, undefined}, %% field is read only
              %% {w, 2},
              {rw, 3},
-             {sr, undefined}, %% mustn't by no set by proplist
+             {sr, undefined}, %% field is read only
              %% {sw, 5},
              {srsw, 6},
              {rsw, 7},
              {srw, 8},
-             {r_default, 100}, %% mustn't by no set by proplist
+             {r_default, 100}, %% field is read only
              %% {w_default, 10},
              {rw_default, 11},
-             {sr_default, 400}, %% mustn't by no set by proplist
+             {sr_default, 400}, %% field is read only
              %% {sw_default, 13},
              {srsw_default, 14},
              {rsw_default, 15},
              {srw_default, 16}],
-    {ok, Model} = from_proplist(WOpts),
+
     Proplist = to_proplist([unsafe], Model),
     ?assertEqual(lists:keysort(1, ROpts), lists:keysort(1, Proplist)).
+
+fields_tests() ->
+    [
+     {[r], {ok, [{r, undefined}]}, [safe]},
+     {[r], {ok, [{r, undefined}]}, [unsafe]},
+     {[w], {error, [{w, forbidden}]}, [safe]},
+     {[w], {error, [{w, forbidden}]}, [unsafe]},
+     {[rw], {ok, [{rw, 3}]}, [safe]},
+     {[rw], {ok, [{rw, 3}]}, [unsafe]},
+     {[sr], {error, [{sr, unknown}]}, [safe]},
+     {[sr], {ok, [{sr, undefined}]}, [unsafe]},
+     {[sw], {error, [{sw, unknown}]}, [safe]},
+     {[sw], {error, [{sw, forbidden}]}, [unsafe]},
+     {[srsw], {error, [{srsw, unknown}]}, [safe]},
+     {[srsw], {ok, [{srsw, 6}]}, [unsafe]},
+     {[rsw], {ok, [{rsw, 7}]}, [safe]},
+     {[rsw], {ok, [{rsw, 7}]}, [unsafe]},
+     {[srw], {error, [{srw, forbidden}]}, [safe]},
+     {[srw], {ok, [{srw, 8}]}, [unsafe]},
+     {[unknown_field], {error, [{unknown_field, unknown}]}, [safe]},
+     {[unknown_field], {error, [{unknown_field, unknown}]}, [unsafe]},
+
+     {[r, rw], {ok, [{r, undefined}, {rw, 3}]}, [safe]},
+     {[r, rw], {ok, [{r, undefined}, {rw, 3}]}, [unsafe]},
+     {[r, srw], {error, [{srw, forbidden}]}, [safe]},
+     {[r, srw], {ok, [{r, undefined}, {srw, 8}]}, [unsafe]}
+    ].
+
+binary_fields_tests() ->
+    [{[list_to_binary(atom_to_list(F)) || F <- Fields],
+      case R of
+          {error, Reasons} ->
+              {error, [{list_to_binary(atom_to_list(F)), E} || {F, E} <- Reasons]};
+          _ ->
+              R
+      end,
+      Opts ++ [binary_key]}
+     || {Fields, R, Opts} <- fields_tests()].
+
+test_fields_function(Tests, Fun) ->
+    {ok, Model} = test_model(),
+    [fun() ->
+             ?assertEqual(R, Fun(F, Opts, Model))
+     end || {F, R, Opts} <- Tests].
+
+fields_test_() ->
+    test_fields_function(fields_tests(), fun fields/3).
+
+ext_fields_test_() ->
+    test_fields_function(fields_tests(), fun ext_fields/3).
+
+binary_fields_test_() ->
+    test_fields_function(binary_fields_tests(), fun fields/3).
+
+ext_binary_fields_test_() ->
+    test_fields_function(binary_fields_tests(), fun ext_fields/3).
 
 -endif.
