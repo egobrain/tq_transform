@@ -75,6 +75,8 @@ error_writer_foldl(Fun, InitState, Opts) ->
 error_writer_map(Fun, List) when is_list(List) ->
     MapFun = fun(Item, Acc) ->
                      case Fun(Item) of
+                         ok ->
+                             {ok, Acc};
                          {ok, Res} ->
                              {ok, [Res | Acc]};
                          {error, Reason} ->

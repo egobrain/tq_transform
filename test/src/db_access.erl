@@ -138,6 +138,9 @@ fields_tests() ->
      {[unknown_field], {error, [{unknown_field, unknown}]}, [safe]},
      {[unknown_field], {error, [{unknown_field, unknown}]}, [unsafe]},
 
+     {[unknown_field], {ok, []}, [safe, ignore_unknown]},
+     {[unknown_field], {ok, []}, [unsafe, ignore_unknown]},
+
      {[r, rw], {ok, [{r, undefined}, {rw, 3}]}, [safe]},
      {[r, rw], {ok, [{r, undefined}, {rw, 3}]}, [unsafe]},
      {[r, srw], {error, [{srw, forbidden}]}, [safe]},

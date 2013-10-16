@@ -282,23 +282,23 @@ fields_function_(FName, DefaultOpts, #record_model{fields=Fields}, ArgModifierFu
                             ?match(?var('Fun'),
                                    ?cases(?tuple([?var('IsUnsafe'), ?var('KeyIsBinary')]),
                                           [?clause([?tuple([?atom(true), ?atom(true)])], none,
-                                                   [?func(UnsafeBinaryKeyFName, 2)]),
+                                                   [?func(UnsafeBinaryKeyFName, 3)]),
                                            ?clause([?tuple([?atom(true), ?atom(false)])], none,
-                                                   [?func(UnsafeFName, 2)]),
+                                                   [?func(UnsafeFName, 3)]),
                                            ?clause([?tuple([?atom(false), ?atom(true)])], none,
-                                                   [?func(SafeBinaryKeyFName, 2)]),
+                                                   [?func(SafeBinaryKeyFName, 3)]),
                                            ?clause([?tuple([?atom(false), ?atom(false)])], none,
-                                                   [?func(SafeFName, 2)])])),
+                                                   [?func(SafeFName, 3)])])),
                             ?match(?var('Fun2'), ?func([?clause([?var('F')], none,
-                                                                [?apply_(?var('Fun'), [?var('F'), ?var('Model')])])])),
+                                                                [?apply_(?var('Fun'), [?var('F'), ?var('Model'), ?var('Opts')])])])),
                             ?apply(tq_transform_utils, error_writer_map,
                                    [?var('Fun2'), ?var('Fields')])])]),
     Ok = fun(#record_field{name=FieldName} = F, KeyFun) ->
-                 ?clause([KeyFun(FieldName), ?var('Model')], none,
+                 ?clause([KeyFun(FieldName), ?var('Model'), ?var('_Opts')], none,
                          [?ok(?tuple([?atom(FieldName), ArgModifierFun(F, ?apply(FieldName, [?var('Model')]))]))])
          end,
     Err = fun(FieldNameAst, Reason) ->
-                  ?clause([FieldNameAst, ?var('_Model')], none,
+                  ?clause([FieldNameAst, ?var('_Model'), ?var('_Opts')], none,
                           [?error(?tuple([FieldNameAst, ?atom(Reason)]))])
           end,
     AccessField = fun(#record_field{name=FieldName, mode=Mode} = F, Safe, KeyFun) ->
@@ -326,8 +326,19 @@ fields_function_(FName, DefaultOpts, #record_model{fields=Fields}, ArgModifierFu
     FieldsFun_ = fun(Name, Safe, KeyFun) ->
                          ?function(Name,
                                    [AccessField(F, Safe, KeyFun) || F <- Fields]
-                                   ++ [Err(?var('Field'), unknown)]
-                                  )
+                                   ++ [?clause(
+                                          [?var('Field'), ?var('_Model'), ?var('Opts')], none,
+                                          [?cases(
+                                              ?apply(lists, member, [?atom(ignore_unknown), ?var('Opts')]),
+                                              [?clause(
+                                                  [?atom(true)], none,
+                                                  [?atom(ok)]),
+                                               ?clause(
+                                                  [?atom(false)], none,
+                                                  [?error(?tuple([?var('Field'), ?atom(unknown)]))])
+                                              ])
+                                          ])
+                                      ])
                  end,
     FunSafe_ = FieldsFun_(SafeFName, safe, AtomFun),
     FunSafeBinaryKey_ = FieldsFun_(SafeBinaryKeyFName, safe, BinaryFun),
