@@ -347,13 +347,13 @@ fields_function_(FName, DefaultOpts, #record_model{fields=Fields}, ArgModifierFu
     {[Fun2, Fun3], [FunSafe_, FunSafeBinaryKey_, FunUnsafe_, FunUnsafeBinaryKey_]}.
 
 build_internal_functions(Model) ->
-    Funs = [changed_fields_function(Model),
-            field_from_ext(Model)
+    Funs = [
+            changed_fields_function(Model),
+            field_from_ext(Model),
+            field_to_ext(Model)
            ],
     Exports = ?export_funs(Funs),
     {Exports, Funs}.
-
-
 
 changed_fields_function(#record_model{module=Module, fields=Fields}) ->
     AllowedFields = [F#record_field.name || F <- Fields,
@@ -397,6 +397,10 @@ field_from_ext(#record_model{fields=Fields}) ->
                                                    [?var('Err')])])
                         end]) || F <- Fields]).
 
+field_to_ext(#record_model{fields=Fields}) ->
+    ?function(field_to_ext,
+              [?clause([?atom(F#record_field.name), ?var('Val')], none,
+                       [to_ext_hook(F, ?var('Val'))]) || F <- Fields]).
 
 build_validators(#record_model{module=Module, fields=Fields, validators=Validators}) ->
     ValidatorFun = ?function(validator,
