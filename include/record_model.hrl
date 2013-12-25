@@ -1,10 +1,3 @@
--record(access_mode,{
-		  r = true :: boolean(),
-		  sr = true :: boolean(),
-		  w = true :: boolean(),
-		  sw = true :: boolean()
-		 }).
-
 -record(record_field,{
 		  name :: binary(), % Field name which will be used to access property
 
