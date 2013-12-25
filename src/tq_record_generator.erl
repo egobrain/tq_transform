@@ -25,6 +25,7 @@
 -define(atom_join(A, B), list_to_atom(atom_to_list(A) ++ "_" ++ atom_to_list(B))).
 -define(prefix_set(A), ?atom_join(set, A)).
 -define(changed_suffix(A), ?atom_join(A, '$changed')).
+-define(MODES, [r, w, rw, sr, sw, srw, rsw, srsw]).
 
 %% Build result ast.
 
@@ -39,7 +40,8 @@ build_model(Model) ->
                 fun build_proplists/1,
                 fun build_internal_functions/1,
                 fun build_validators/1,
-                fun build_is_changed/1
+                fun build_is_changed/1,
+                fun build_get_field_name/1
                ],
     lists:foldl(fun(F, {IBlock, FBlock}) ->
                         {IB, FB} = F(Model),
@@ -402,6 +404,88 @@ field_to_ext(#record_model{fields=Fields}) ->
     ?function(field_to_ext,
               [?clause([?atom(F#record_field.name), ?var('Val')], none,
                        [to_ext_hook(F, ?var('Val'))]) || F <- Fields]).
+
+build_get_field_name(#record_model{fields=Fields}) ->
+    ErrorClause =
+        [?clause([?var('FieldName'), ?var('_Mode')], none,
+                 [?error(?tuple([?var('FieldName'), ?atom(unknown)]))])],
+    FieldClauses =
+        fun(Transform) ->
+                [
+                 begin
+                     Name = Transform(F#record_field.name),
+                     ?clause([Name, ?var('Mode')], none,
+                             [?cases(?var('Mode'),
+                                     [?clause([?atom(M)], none,
+                                              [?ok(?atom(F#record_field.name))])
+                                      || M <- ?MODES, tq_transform_utils:check_acl(
+                                                        F#record_field.mode,
+                                                        tq_transform_utils:mode_to_acl(M))
+                                     ] ++ [?clause([?var('_')], none,
+                                                   [?error(?tuple([Name, ?atom(unknown)]))])])]
+                            )
+                 end || F <- Fields
+                 ] ++ ErrorClause
+        end,
+    AtomFun =
+        ?function('$get_field_name',
+                  FieldClauses(fun(A) -> ?atom(A) end)),
+    BinaryFun =
+        ?function('$get_field_name_binary_key',
+                  FieldClauses(fun(A) -> ?abstract(atom_to_binary(A)) end)),
+    OptsFunc =
+        ?func(
+           [
+            ?clause(
+               [
+                ?tuple([?atom(mode), ?var('Mode')]),
+                ?tuple([?var('_OldMode'), ?var('BinKey')])
+               ], none,
+               [?ok(?tuple([?var('Mode'), ?var('BinKey')]))]),
+            ?clause(
+               [
+                ?atom(binary_key),
+                ?tuple([?var('Mode'), ?var('_BinKey')])
+               ], none,
+               [?ok(?tuple([?var('Mode'), ?atom(true)]))]),
+            ?clause(
+               [
+                ?var('Opt'),
+                ?var('_State')
+               ], none,
+               [?error(?tuple([?var('Opt'), ?atom(unknown_option)]))])
+           ]),
+    DefaultOpts = ?tuple([?atom(r), ?atom(false)]),
+
+    MainFun =
+        ?function(
+           get_field_name,
+           [?clause(
+               [?var('FieldName'), ?var('Opts')], none,
+               [
+                ?cases(?apply(tq_transform_utils, error_writer_foldl,
+                              [OptsFunc, DefaultOpts, ?var('Opts')]),
+                       [?clause(
+                           [?ok(?tuple([?var('AccessMode'), ?var('BinaryKey')]))], none,
+                           [?cases(?var('BinaryKey'),
+                                   [
+                                    ?clause([?atom(true)], none,
+                                            [?apply('$get_field_name_binary_key',
+                                                    [?var('FieldName'), ?var('AccessMode')])]),
+                                    ?clause([?atom(false)], none,
+                                            [?apply('$get_field_name',
+                                                    [?var('FieldName'), ?var('AccessMode')])])
+                                   ])]),
+                        ?clause([?var('Err')], none, [?var('Err')])
+                       ])
+               ])
+           ]),
+    Public = [MainFun],
+    Private = [AtomFun, BinaryFun],
+    Funs = Public ++ Private,
+
+    Exports = ?export_funs(Public),
+    {Exports, Funs}.
 
 build_validators(#record_model{module=Module, fields=Fields, validators=Validators}) ->
     ValidatorFun = ?function(validator,

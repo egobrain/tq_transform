@@ -247,9 +247,24 @@ is_changed/2
 
 ```Erlang
 -spec is_changed(FieldName, Model) -> true | false.
+
 ```
 
 Check that field is changed.
+
+get_field_name/2
+---
+
+```Erlang
+-spec get_field_name(FieldName, Opts) -> {ok, ModelFieldName} | {error, Reason} when
+    FieldName :: binary() | atom(),
+    Opts :: [Opt],
+    Opt :: binary_key | {mode, Mode},
+    Mode :: r | w | rw | sr | sw | srw | rsw | rsrw,
+    Reason :: {FieldName, unknown} | [{any(), unknown_option}].
+
+Check that field exists in model structure and accessable with 'mode' rights.
+Field name must be binary if binary_key option is set.
 
 Example
 =======

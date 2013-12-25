@@ -16,7 +16,9 @@
 
 -include("include/access_mode.hrl").
 
--export([mode_to_acl/1]).
+-export([mode_to_acl/1,
+         check_acl/2
+        ]).
 
 -export([error_writer_foldl/3,
          error_writer_map/2,
@@ -60,6 +62,18 @@ mode_to_acl(sw)   -> #access_mode{r=false, sr=false, w=false, sw=true};
 mode_to_acl(srsw) -> #access_mode{r=false, sr=true,  w=false, sw=true};
 mode_to_acl(rsw)  -> #access_mode{r=true,  sr=true,  w=false, sw=true};
 mode_to_acl(srw)  -> #access_mode{r=false, sr=true,  w=true,  sw=true}.
+
+-spec check_acl(FieldAcl, AccessAcl) -> boolean() when
+      FieldAcl :: Acl,
+      AccessAcl :: Acl,
+      Acl :: #access_mode{}.
+check_acl(FieldAcl, AccessAcl) ->
+    [_|L1] = tuple_to_list(FieldAcl),
+    [_|L2] = tuple_to_list(AccessAcl),
+    List = lists:zipwith(fun(_, false) -> true;
+                            (A1, true) -> A1
+                         end, L1, L2),
+    lists:foldl(fun(A1, A2) -> A1 andalso A2 end, true, List).
 
 -spec error_writer_foldl(Fun, State, List) -> {ok, NewState} | {error, Reasons} when
       List :: [Elem],
