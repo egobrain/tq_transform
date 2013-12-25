@@ -222,7 +222,7 @@ valid
 -spec valid(Model) -> ok | {error, Reasons}.
 ```
 
-[ToDo] Description
+Check that model is valid, by performing each field validator and whole model validators.
 
 get_changed_fields/1
 ---
@@ -231,7 +231,7 @@ get_changed_fields/1
 -spec get_changed_fields(Model) -> [{FieldName, FieldValue}, ...].
 ```
 
-[ToDo] Description
+Return the list that was changed.
 
 is_new/1
 ---
@@ -240,16 +240,31 @@ is_new/1
 -spec is_new(Model) -> true | false.
 ```
 
-[ToDo] Description
+Return true if model is new. Uses at most with db model generators.
 
 is_changed/2
 ---
 
 ```Erlang
 -spec is_changed(FieldName, Model) -> true | false.
+
 ```
 
-[ToDo] Description
+Check that field is changed.
+
+get_field_name/2
+---
+
+```Erlang
+-spec get_field_name(FieldName, Opts) -> {ok, ModelFieldName} | {error, Reason} when
+    FieldName :: binary() | atom(),
+    Opts :: [Opt],
+    Opt :: binary_key | {mode, Mode},
+    Mode :: r | w | rw | sr | sw | srw | rsw | rsrw,
+    Reason :: {FieldName, unknown} | [{any(), unknown_option}].
+
+Check that field exists in model structure and accessable with 'mode' rights.
+Field name must be binary if binary_key option is set.
 
 Example
 =======
