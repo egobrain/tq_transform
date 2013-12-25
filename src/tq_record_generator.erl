@@ -14,6 +14,7 @@
 
 -module(tq_record_generator).
 
+-include("include/access_mode.hrl").
 -include("include/record_model.hrl").
 -include("include/ast_helpers.hrl").
 

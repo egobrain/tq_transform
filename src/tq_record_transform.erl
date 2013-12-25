@@ -11,6 +11,7 @@
 
 -behavior(tq_transform_plugin).
 
+-include("include/access_mode.hrl").
 -include("include/record_model.hrl").
 
 -export([parse_transform/2]).
@@ -84,7 +85,7 @@ field_option(default, DefaultValue, Field) ->
     Field2 = Field#record_field{default_value=DefaultValue},
     {ok, Field2};
 field_option(mode, Mode, Field) ->
-    Field2 = Field#record_field{mode = mode_to_acl(Mode)},
+    Field2 = Field#record_field{mode = tq_transform_utils:mode_to_acl(Mode)},
     {ok, Field2};
 field_option(type, Type, Field) ->
     Field2 = Field#record_field{type = Type},
@@ -190,15 +191,6 @@ from_ext(date) -> {ok, {tq_transform_utils, to_date}};
 from_ext(time) -> {ok, {tq_transform_utils, to_time}};
 from_ext(datetime) -> {ok, {tq_transform_utils, to_datetime}};
 from_ext(_) -> {error, undefined}.
-
-mode_to_acl(r)    -> #access_mode{r=true,  sr=true,  w=false, sw=false};
-mode_to_acl(w)    -> #access_mode{r=false, sr=false, w=true,  sw=true};
-mode_to_acl(rw)   -> #access_mode{r=true,  sr=true,  w=true,  sw=true};
-mode_to_acl(sr)   -> #access_mode{r=false, sr=true,  w=false, sw=false};
-mode_to_acl(sw)   -> #access_mode{r=false, sr=false, w=false, sw=true};
-mode_to_acl(srsw) -> #access_mode{r=false, sr=true,  w=false, sw=true};
-mode_to_acl(rsw)  -> #access_mode{r=true,  sr=true,  w=false, sw=true};
-mode_to_acl(srw)  -> #access_mode{r=false, sr=true,  w=true,  sw=true}.
 
 -ifdef(TEST).
 -include_lib("eunit/include/eunit.hrl").

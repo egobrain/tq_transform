@@ -14,6 +14,10 @@
 
 -module(tq_transform_utils).
 
+-include("include/access_mode.hrl").
+
+-export([mode_to_acl/1]).
+
 -export([error_writer_foldl/3,
          error_writer_map/2,
          error_map_funs/2
@@ -45,6 +49,17 @@
 
 -export([print_module/1,
          pretty_print/1]).
+
+-spec mode_to_acl(Mode) -> #access_mode{} when
+      Mode :: r | w | rw | sr | sw | srsw | rsw | srw.
+mode_to_acl(r)    -> #access_mode{r=true,  sr=true,  w=false, sw=false};
+mode_to_acl(w)    -> #access_mode{r=false, sr=false, w=true,  sw=true};
+mode_to_acl(rw)   -> #access_mode{r=true,  sr=true,  w=true,  sw=true};
+mode_to_acl(sr)   -> #access_mode{r=false, sr=true,  w=false, sw=false};
+mode_to_acl(sw)   -> #access_mode{r=false, sr=false, w=false, sw=true};
+mode_to_acl(srsw) -> #access_mode{r=false, sr=true,  w=false, sw=true};
+mode_to_acl(rsw)  -> #access_mode{r=true,  sr=true,  w=false, sw=true};
+mode_to_acl(srw)  -> #access_mode{r=false, sr=true,  w=true,  sw=true}.
 
 -spec error_writer_foldl(Fun, State, List) -> {ok, NewState} | {error, Reasons} when
       List :: [Elem],
