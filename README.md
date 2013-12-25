@@ -222,7 +222,7 @@ valid
 -spec valid(Model) -> ok | {error, Reasons}.
 ```
 
-[ToDo] Description
+Check that model is valid, by performing each field validator and whole model validators.
 
 get_changed_fields/1
 ---
@@ -231,7 +231,7 @@ get_changed_fields/1
 -spec get_changed_fields(Model) -> [{FieldName, FieldValue}, ...].
 ```
 
-[ToDo] Description
+Return the list that was changed.
 
 is_new/1
 ---
@@ -240,7 +240,7 @@ is_new/1
 -spec is_new(Model) -> true | false.
 ```
 
-[ToDo] Description
+Return true if model is new. Uses at most with db model generators.
 
 is_changed/2
 ---
@@ -249,7 +249,7 @@ is_changed/2
 -spec is_changed(FieldName, Model) -> true | false.
 ```
 
-[ToDo] Description
+Check that field is changed.
 
 Example
 =======
