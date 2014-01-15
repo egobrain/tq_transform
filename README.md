@@ -34,6 +34,7 @@ Options:
   - **mode** :: r | w | rw | sr | sw | srsw | rsw | srw
   - **required** : true | false
   - **default** : any()
+  - **default_func** :: Fun | {Mod, Fun} | {Mod, Fun, Args}
   - **get** : true | false | custom
   - **set** : true | false | custom
   - **record** : true | false

@@ -61,18 +61,18 @@ meta_clauses(#record_model{module=Module, fields=Fields}) ->
 
 build_main_record(#record_model{module=Module, fields=Fields}) ->
     FieldsInRecord = [F || F <- Fields, F#record_field.stores_in_record],
-    RecordFieldNames = [case F#record_field.default_value of
+    RecordFieldNames = [case F#record_field.default of
                             undefined ->
                                 case is_write_only(F) of
-                                    true -> {F#record_field.name, '$write_only_stumb$'};
+                                    true -> {F#record_field.name, {value, '$write_only_stumb$'}};
                                     false -> F#record_field.name
                                 end;
                             Val -> {F#record_field.name, Val}
                         end || F <- Fields, F#record_field.stores_in_record],
     DbFieldNames =  [{?changed_suffix(F#record_field.name),
-                      F#record_field.default_value =/= undefined}
+                      {value, F#record_field.default =/= undefined}}
                      || F <- FieldsInRecord],
-    RecordFields = lists:flatten([{'$is_new$', true},
+    RecordFields = lists:flatten([{'$is_new$', {value, true}},
                                   RecordFieldNames,
                                   DbFieldNames]),
     Attribute = def_record(Module, RecordFields),
@@ -571,7 +571,13 @@ is_write_only(Field) ->
 def_record(Name, Fields) ->
     ?def_record(Name, [case F of
                            Atom when is_atom(F) -> ?field(Atom);
-                           {Atom, Value} when is_atom(Atom) -> ?field(Atom, ?abstract(Value))
+                           {Atom, Data} when is_atom(Atom) ->
+							   Value =
+								   case Data of
+									   {value, Val} -> ?abstract(Val);
+									   {func, MFA} -> function_call(MFA, [])
+								   end,
+							   ?field(Atom, Value)
                        end || F <- Fields]).
 
 atom_to_binary(Atom) ->

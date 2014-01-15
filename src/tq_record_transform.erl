@@ -82,7 +82,10 @@ field_option(required, Value, Field) ->
     Field2 = Field#record_field{is_required = Value},
     {ok, Field2};
 field_option(default, DefaultValue, Field) ->
-    Field2 = Field#record_field{default_value=DefaultValue},
+    Field2 = Field#record_field{default={value, DefaultValue}},
+    {ok, Field2};
+field_option(default_func, DefaultFunc, Field) ->
+    Field2 = Field#record_field{default={func, DefaultFunc}},
     {ok, Field2};
 field_option(mode, Mode, Field) ->
     Field2 = Field#record_field{mode = tq_transform_utils:mode_to_acl(Mode)},
