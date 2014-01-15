@@ -1,4 +1,4 @@
--module(db_init).
+-module(db_changed).
 
 -compile({parse_transform, tq_record_transform}).
 
