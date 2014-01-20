@@ -514,24 +514,61 @@ build_validators(#record_model{module=Module, fields=Fields, validators=Validato
                                     ?clause([?error(?var('Reason'))], none,
                                             [?error(?var('Reason'))])])
                     end,
-    ValidFun = ?function(valid,
-                         [?clause([?var('Model')], none,
-                                  [?match(?var('Data'),
-                                          ?list([?tuple(
-                                                    [?atom(F#record_field.name),
-                                                     ?apply(validator, [?atom(F#record_field.name)]),
-                                                     case F#record_field.stores_in_record of
-                                                         true ->
-                                                             ?access(?var('Model'), Module, F#record_field.name);
-                                                         false ->
-                                                             ?apply(F#record_field.name, [])
-                                                     end
-                                                    ])
-                                                 || F <- FieldsWithValidator,
-                                                    F#record_field.setter
-                                                ])),
-                                   ValidModelAst
-                                  ])]),
+    ValidFun =
+        ?function(valid,
+                  [?clause([?var('Model')], none,
+                           [?match(?var('Fields'),
+                                   ?list([?tuple(
+                                             [?atom(F#record_field.name),
+                                              case F#record_field.stores_in_record of
+                                                  true ->
+                                                      ?access(?var('Model'), Module, F#record_field.name);
+                                                  false ->
+                                                      ?apply(F#record_field.name, [])
+                                              end,
+                                              ?atom(F#record_field.is_required),
+                                              ?access(?var('Model'), Module, ?changed_suffix(F#record_field.name))
+                                             ])
+                                          || F <- FieldsWithValidator,
+                                             F#record_field.setter
+                                         ])),
+                            ?match(?var('Data'),
+                                   ?cases(?access(?var('Model'), Module, '$is_new$'),
+                                          [?clause([?atom(true)], none,
+                                                  [?list_comp(
+                                                      ?tuple([
+                                                              ?var('Name'),
+                                                              ?apply(validator, [?var('Name')]),
+                                                              ?var('Value')
+                                                             ]),
+                                                      [?generator(
+                                                          ?tuple([
+                                                                  ?var('Name'),
+                                                                  ?var('Value'),
+                                                                  ?var('IsRequired'),
+                                                                  ?var('IsChanged')
+                                                                 ]),
+                                                          ?var('Fields')),
+                                                       ?ORELSE(?var('IsRequired'), ?var('IsChanged'))
+                                                      ])]),
+                                           ?clause([?atom(false)], none,
+                                                   [?list_comp(
+                                                       ?tuple([
+                                                               ?var('Name'),
+                                                               ?apply(validator, [?var('Name')]),
+                                                               ?var('Value')
+                                                              ]),
+                                                       [?generator(
+                                                           ?tuple([
+                                                                   ?var('Name'),
+                                                                   ?var('Value'),
+                                                                   ?underscore,
+                                                                   ?atom(true)
+                                                                  ]),
+                                                           ?var('Fields'))])])
+                                          ])),
+                            ValidModelAst
+                           ])]),
     Funs = [ValidatorFun, ValidFun],
     Exports = ?export_funs(Funs),
     {Exports, Funs}.
