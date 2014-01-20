@@ -199,7 +199,7 @@ from_proplist_functions(#record_model{fields=Fields}) ->
                                  [?tuple([?atom(F#record_field.name), ?var('Val')]), ?var('Model'), ?underscore], none,
                                  [?ok(?apply(?prefix_set(F#record_field.name), [?var('Val'), ?var('Model')]))])
                               || F <- Fields,
-                                 F#record_field.setter =/= undefined,
+                                 F#record_field.setter =/= false,
                                  element(AccessModeOpt, F#record_field.mode)] ++ DefaultClasuse)
            end,
     FunUnsafe_ = Fun_(unsafe_, #access_mode.sw),
@@ -250,7 +250,7 @@ from_ext_proplist_function(#record_model{fields=Fields}) ->
                                           Cases(F, function_call(Fun, [?var('Bin')]))
                                   end])
                               || F <- Fields,
-                                 F#record_field.setter =/= undefined,
+                                 F#record_field.setter =/= false,
                                  element(AccessModeOpt, F#record_field.mode)] ++ DefaultClasuse)
            end,
     FunUnsafe_ = Fun_(unsafe_, #access_mode.sw),
@@ -304,11 +304,11 @@ fields_function_(FName, DefaultOpts, #record_model{fields=Fields}, ArgModifierFu
                   ?clause([FieldNameAst, ?var('_Model'), ?var('_Opts')], none,
                           [?error(?tuple([FieldNameAst, ?atom(Reason)]))])
           end,
-    AccessField = fun(#record_field{name=FieldName, mode=Mode} = F, Safe, KeyFun) ->
+    AccessField = fun(#record_field{name=FieldName, mode=Mode, getter=Getter} = F, Safe, KeyFun) ->
                           case Safe of
                               safe ->
                                   case Mode of
-                                      #access_mode{r=true} ->
+                                      #access_mode{r=true} when Getter =/= false ->
                                           Ok(F, KeyFun);
                                       #access_mode{w=true} ->
                                           Err(KeyFun(FieldName), forbidden);
@@ -317,7 +317,7 @@ fields_function_(FName, DefaultOpts, #record_model{fields=Fields}, ArgModifierFu
                                   end;
                               unsafe ->
                                   case Mode of
-                                      #access_mode{sr=true} ->
+                                      #access_mode{sr=true} when Getter =/= false ->
                                           Ok(F, KeyFun);
                                       _ ->
                                           Err(KeyFun(FieldName), forbidden)
@@ -491,13 +491,18 @@ build_validators(#record_model{module=Module, fields=Fields, validators=Validato
     FieldsWithValidator =
         [F || F <- Fields,
               F#record_field.getter orelse F#record_field.stores_in_record],
+    UnknownFieldClause =
+        ?clause([?var('F')], none,
+                [
+                 ?apply(throw, [?tuple([?atom(unknown_field), ?var('F')])])
+                ]),
     ValidatorFun = ?function(validator,
                              [?clause([?atom(F#record_field.name)], none,
                                       [validator(F#record_field.validators,
                                                  F#record_field.is_required,
                                                  is_write_only(F))])
                               || F <- FieldsWithValidator
-                             ]),
+                             ] ++ [UnknownFieldClause]),
     AppyUtilsValid = ?apply(tq_transform_utils, valid, [?var('Data')]),
     ValidModelAst = case Validators of
                         [] ->
@@ -557,10 +562,15 @@ fold_validators([Fun|Rest], Var) ->
                     [?error(?var('Reason'))])]).
 
 build_is_changed(#record_model{module=Module, fields=Fields}) ->
+    UnknownFieldClause =
+        ?clause([?var('F'), ?underscore], none,
+                [
+                 ?apply(throw, [?tuple([?atom(unknown_field), ?var('F')])])
+                ]),
     Fun = ?function(is_changed,
                     [?clause([?atom(F#record_field.name), ?var('Model')], none,
                              [?access(?var('Model'), Module, ?changed_suffix(F#record_field.name))])
-                     || F <- Fields, F#record_field.stores_in_record]),
+                     || F <- Fields, F#record_field.stores_in_record] ++ [UnknownFieldClause]),
     Export = ?export_fun(Fun),
     {[Export], [Fun]}.
 
