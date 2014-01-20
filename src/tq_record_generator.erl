@@ -488,11 +488,16 @@ build_get_field_name(#record_model{fields=Fields}) ->
     {Exports, Funs}.
 
 build_validators(#record_model{module=Module, fields=Fields, validators=Validators}) ->
+    FieldsWithValidator =
+        [F || F <- Fields,
+              F#record_field.getter orelse F#record_field.stores_in_record],
     ValidatorFun = ?function(validator,
                              [?clause([?atom(F#record_field.name)], none,
                                       [validator(F#record_field.validators,
                                                  F#record_field.is_required,
-                                                 is_write_only(F))]) || F <- Fields, F#record_field.setter]),
+                                                 is_write_only(F))])
+                              || F <- FieldsWithValidator
+                             ]),
     AppyUtilsValid = ?apply(tq_transform_utils, valid, [?var('Data')]),
     ValidModelAst = case Validators of
                         [] ->
@@ -510,9 +515,16 @@ build_validators(#record_model{module=Module, fields=Fields, validators=Validato
                                           ?list([?tuple(
                                                     [?atom(F#record_field.name),
                                                      ?apply(validator, [?atom(F#record_field.name)]),
-                                                     ?access(?var('Model'), Module, F#record_field.name)])
-                                                 || F <- Fields,
-                                                    F#record_field.stores_in_record])),
+                                                     case F#record_field.stores_in_record of
+                                                         true ->
+                                                             ?access(?var('Model'), Module, F#record_field.name);
+                                                         false ->
+                                                             ?apply(F#record_field.name, [])
+                                                     end
+                                                    ])
+                                                 || F <- FieldsWithValidator,
+                                                    F#record_field.setter
+                                                ])),
                                    ValidModelAst
                                   ])]),
     Funs = [ValidatorFun, ValidFun],
