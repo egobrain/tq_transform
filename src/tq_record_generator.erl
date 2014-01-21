@@ -393,9 +393,8 @@ changed_fields_function(#record_model{module=Module, fields=Fields}) ->
     ?function(get_changed_fields,
               [?clause([?var('Model')], none,
                        [?list_comp(?tuple([?var('Name'), ?var('Val')]),
-                                   [?generator(?tuple([?var('Name'), ?var('Val'), ?var('Changed')]),
-                                               ListAst),
-                                    ?var('Changed')]
+                                   [?generator(?tuple([?var('Name'), ?var('Val'), ?atom(true)]),
+                                               ListAst)]
                                   )])]).
 
 field_from_ext(#record_model{fields=Fields}) ->
