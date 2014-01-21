@@ -215,15 +215,14 @@ from_proplist_functions(#record_model{fields=Fields}) ->
                                                                    [?func(from_proplist_unsafe_, 3)]),
                                                            ?clause([?atom(false)], none,
                                                                    [?func(from_proplist_safe_, 3)])])),
+                               ?match(?var('IgnoreUnknown'), ?apply(lists, member, [?atom(ignore_unknown), ?var('Opts')])),
                                ?match(?var('Fun2'), ?func([?clause([?var('E'), ?var('M')], none,
-                                                                   [?apply_(?var('Fun'), [?var('E'), ?var('M'), ?var('Opts')])])])),
+                                                                   [?apply_(?var('Fun'), [?var('E'), ?var('M'), ?var('IgnoreUnknown')])])])),
                                ?apply(tq_transform_utils, error_writer_foldl, [?var('Fun2'), ?var('Model'), ?var('Proplist')])])]),
-    DefaultClasuse = [?clause([?tuple([?var('Field'), ?underscore]), ?var('Model'), ?var('Opts')], none,
-                              [?cases(?apply(lists, member, [?atom(ignore_unknown), ?var('Opts')]),
-                                      [?clause([?atom(true)], none,
-                                               [?ok(?var('Model'))]),
-                                       ?clause([?atom(false)], none,
-                                               [?error(?var('Field'), ?atom(unknown))])])])],
+    DefaultClasuse = [?clause([?tuple([?var('_Field'), ?underscore]), ?var('Model'), ?atom(true)], none,
+                              [?ok(?var('Model'))]),
+                      ?clause([?tuple([?var('Field'), ?underscore]), ?var('_Model'), ?atom(false)], none,
+                              [?error(?var('Field'), ?atom(unknown))])],
     Fun_ = fun(Suffix, AccessModeOpt) ->
                    ?function(?atom_join(from_proplist, Suffix),
                              [?clause(
@@ -254,15 +253,14 @@ from_ext_proplist_function(#record_model{fields=Fields}) ->
                                                                    [?func(from_ext_proplist_unsafe_, 3)]),
                                                            ?clause([?atom(false)], none,
                                                                    [?func(from_ext_proplist_safe_, 3)])])),
+                               ?match(?var('IgnoreUnknown'), ?apply(lists, member, [?atom(ignore_unknown), ?var('Opts')])),
                                ?match(?var('Fun2'), ?func([?clause([?var('E'), ?var('M')], none,
-                                                                   [?apply_(?var('Fun'), [?var('E'), ?var('M'), ?var('Opts')])])])),
+                                                                   [?apply_(?var('Fun'), [?var('E'), ?var('M'), ?var('IgnoreUnknown')])])])),
                                ?apply(tq_transform_utils, error_writer_foldl, [?var('Fun2'), ?var('Model'), ?var('BinProplist')])])]),
-    DefaultClasuse = [?clause([?tuple([?var('Field'), ?underscore]), ?var('Model'), ?var('Opts')], none,
-                              [?cases(?apply(lists, member, [?atom(ignore_unknown), ?var('Opts')]),
-                                      [?clause([?atom(true)], none,
-                                               [?ok(?var('Model'))]),
-                                       ?clause([?atom(false)], none,
-                                               [?error(?var('Field'), ?atom(unknown))])])])],
+    DefaultClasuse = [?clause([?tuple([?var('_Field'), ?underscore]), ?var('Model'), ?atom(true)], none,
+                              [?ok(?var('Model'))]),
+                      ?clause([?tuple([?var('Field'), ?underscore]), ?var('_Model'), ?atom(false)], none,
+                              [?error(?var('Field'), ?atom(unknown))])],
     SetterClause = fun(F, Var) -> ?ok(?apply(?prefix_set(F#record_field.name), [Var, ?var('Model')])) end,
     Cases = fun(F, A) -> ?cases(A,
                                 [?clause([?ok(?var('Val'))], none,
@@ -323,8 +321,9 @@ fields_function_(FName, DefaultOpts, #record_model{fields=Fields}, ArgModifierFu
                                                    [?func(SafeBinaryKeyFName, 3)]),
                                            ?clause([?tuple([?atom(false), ?atom(false)])], none,
                                                    [?func(SafeFName, 3)])])),
+                            ?match(?var('IgnoreUnknown'), ?apply(lists, member, [?atom(ignore_unknown), ?var('Opts')])),
                             ?match(?var('Fun2'), ?func([?clause([?var('F')], none,
-                                                                [?apply_(?var('Fun'), [?var('F'), ?var('Model'), ?var('Opts')])])])),
+                                                                [?apply_(?var('Fun'), [?var('F'), ?var('Model'), ?var('IgnoreUnknown')])])])),
                             ?apply(tq_transform_utils, error_writer_map,
                                    [?var('Fun2'), ?var('Fields')])])]),
     Ok = fun(#record_field{name=FieldName} = F, KeyFun) ->
@@ -357,22 +356,14 @@ fields_function_(FName, DefaultOpts, #record_model{fields=Fields}, ArgModifierFu
                   end,
     AtomFun = fun(A) -> ?atom(A) end,
     BinaryFun = fun(A) -> ?abstract(list_to_binary(atom_to_list(A))) end,
+    DefaultClause = [?clause([?var('_Field'), ?var('_Model'), ?atom(true)], none,
+                              [?atom(ok)]),
+                      ?clause([?var('Field'), ?var('_Model'), ?atom(false)], none,
+                              [?error(?tuple([?var('Field'), ?atom(unknown)]))])],
     FieldsFun_ = fun(Name, Safe, KeyFun) ->
                          ?function(Name,
                                    [AccessField(F, Safe, KeyFun) || F <- Fields]
-                                   ++ [?clause(
-                                          [?var('Field'), ?var('_Model'), ?var('Opts')], none,
-                                          [?cases(
-                                              ?apply(lists, member, [?atom(ignore_unknown), ?var('Opts')]),
-                                              [?clause(
-                                                  [?atom(true)], none,
-                                                  [?atom(ok)]),
-                                               ?clause(
-                                                  [?atom(false)], none,
-                                                  [?error(?tuple([?var('Field'), ?atom(unknown)]))])
-                                              ])
-                                          ])
-                                      ])
+                                   ++ DefaultClause)
                  end,
     FunSafe_ = FieldsFun_(SafeFName, safe, AtomFun),
     FunSafeBinaryKey_ = FieldsFun_(SafeBinaryKeyFName, safe, BinaryFun),
