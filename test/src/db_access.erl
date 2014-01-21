@@ -29,8 +29,8 @@
 write_only_stumb_test_() ->
     Model = new(),
     Tests = [
-             {{w, #?MODULE.w}, '$write_only_stumb$'},
-             {{sw, #?MODULE.sw}, '$write_only_stumb$'},
+             {{w, #?MODULE.w}, undefined},
+             {{sw, #?MODULE.sw}, undefined},
              {{w_default, #?MODULE.w_default}, 200},
              {{sw_default, #?MODULE.sw_default}, 500}
             ],

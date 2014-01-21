@@ -36,6 +36,7 @@
 build_model(Model) ->
     Builders = [
                 fun build_main_record/1,
+                fun build_new/1,
                 fun build_getter_and_setters/1,
                 fun build_proplists/1,
                 fun build_internal_functions/1,
@@ -60,27 +61,57 @@ meta_clauses(#record_model{module=Module, fields=Fields}) ->
     [RecordIndexClause].
 
 build_main_record(#record_model{module=Module, fields=Fields}) ->
-    FieldsInRecord = [F || F <- Fields, F#record_field.stores_in_record],
-    RecordFieldNames = [case F#record_field.default of
-                            undefined ->
-                                case is_write_only(F) of
-                                    true -> {F#record_field.name, {value, '$write_only_stumb$'}};
-                                    false -> F#record_field.name
-                                end;
-                            Val -> {F#record_field.name, Val}
-                        end || F <- Fields, F#record_field.stores_in_record],
-    DbFieldNames =  [{?changed_suffix(F#record_field.name),
-                      {value, F#record_field.default =/= undefined}}
-                     || F <- FieldsInRecord],
-    RecordFields = lists:flatten([{'$is_new$', {value, true}},
-                                  RecordFieldNames,
-                                  DbFieldNames]),
-    Attribute = def_record(Module, RecordFields),
+    RecordFields =
+        [
+         [
+          Name,
+          {?changed_suffix(Name), {value, false}}
+         ]
+         || #record_field{
+               name=Name,
+               stores_in_record=true
+              } <- Fields],
+    RecordFields2 =
+        lists:flatten([{'$is_new$', {value, false}},
+                       RecordFields]),
+    RecordFieldsAst =
+        [case F of
+             Atom when is_atom(F) -> ?field(Atom);
+             {Atom, Data} when is_atom(Atom) ->
+                 ?field(Atom,
+                        case Data of
+                            {value, Val} -> ?abstract(Val);
+                            {func, MFA} -> function_call(MFA, [])
+                        end)
+         end || F <- RecordFields2],
+    Attribute = ?def_record(Module, RecordFieldsAst),
     {[Attribute], []}.
 
-build_getter_and_setters(#record_model{module=Module, fields=Fields}) ->
-    NewFun = ?function(new, [?clause([], none, [?record(Module, [])])]),
+build_new(#record_model{module=Module, fields=Fields}) ->
+    DefaultFields =
+        [
+         [
+          {Name, Default},
+          {?changed_suffix(Name), {value, true}}
+         ] || #record_field{name=Name, default=Default} <- Fields,
+              Default =/= undefined
+        ],
+    FieldsData = lists:flatten([{'$is_new$', {value, true}},
+                                DefaultFields]),
+    RecordFieldsAst =
+        [
+         ?field(Name,
+                case Data of
+                    {value, Val} -> ?abstract(Val);
+                    {func, MFA} -> function_call(MFA, [])
+                end)
+         || {Name, Data} <- FieldsData
+        ],
+    NewFun = ?function(new, [?clause([], none, [?record(Module, RecordFieldsAst)])]),
     NewExport = ?export(new, 0),
+    {[NewExport], [NewFun]}.
+
+build_getter_and_setters(#record_model{module=Module, fields=Fields}) ->
     GetterFields = [F || F <- Fields, F#record_field.getter =:= true],
     GetterFuns = [getter(Module, F) || F <- GetterFields],
     GetterExports = ?export_funs(GetterFuns),
@@ -93,8 +124,8 @@ build_getter_and_setters(#record_model{module=Module, fields=Fields}) ->
 
     IsNewFun = ?function(is_new, [?clause([?var('Model')], none, [?access(?var('Model'), Module, '$is_new$')])]),
     IsNewExport = ?export(is_new, 1),
-    Funs = [NewFun, GetterFuns, SetterFuns, IsNewFun],
-    Exports = [NewExport, GetterExports, CustomGettersExports, SetterExports, CustomSettersExports, IsNewExport],
+    Funs = [GetterFuns, SetterFuns, IsNewFun],
+    Exports = [GetterExports, CustomGettersExports, SetterExports, CustomSettersExports, IsNewExport],
     {Exports, Funs}.
 
 getter(Module, #record_field{name=Name}) ->
@@ -499,8 +530,7 @@ build_validators(#record_model{module=Module, fields=Fields, validators=Validato
     ValidatorFun = ?function(validator,
                              [?clause([?atom(F#record_field.name)], none,
                                       [validator(F#record_field.validators,
-                                                 F#record_field.is_required,
-                                                 is_write_only(F))])
+                                                 F#record_field.is_required)])
                               || F <- FieldsWithValidator
                              ] ++ [UnknownFieldClause]),
     AppyUtilsValid = ?apply(tq_transform_utils, valid, [?var('Data')]),
@@ -573,21 +603,23 @@ build_validators(#record_model{module=Module, fields=Fields, validators=Validato
     Exports = ?export_funs(Funs),
     {Exports, Funs}.
 
-validator(Validators, IsRequired, IsWriteOnly) ->
-    WO_clause = ?clause([?atom('$write_only_stumb$')], none, [?atom(ok)]),
+validator(Validators, IsRequired) ->
     Req_clause = ?clause([?atom(undefined)], none, [?error(?atom(required))]),
-                               Main_clause = case Validators of
-                                                 [] ->
-                                                     ?clause([?underscore], none, [?atom(ok)]);
-                                                 _ ->
-                                                     Var = ?var('Val'),
-                                                     ?clause([Var], none, [fold_validators(Validators, Var)])
-                                             end,
-                               ClausesOpts = [{IsWriteOnly, WO_clause},
-                                              {IsRequired, Req_clause},
-                                              {true, Main_clause}],
-                               Clauses = [Val || {true, Val} <- ClausesOpts],
-                               ?func(Clauses).
+    Main_clause =
+        case Validators of
+            [] ->
+                ?clause([?underscore], none, [?atom(ok)]);
+            _ ->
+                Var = ?var('Val'),
+                ?clause([Var], none, [fold_validators(Validators, Var)])
+        end,
+    ClausesOpts =
+        [
+         {IsRequired, Req_clause},
+         {true, Main_clause}
+        ],
+    Clauses = [Val || {true, Val} <- ClausesOpts],
+    ?func(Clauses).
 
 fold_validators([Fun], Var) ->
     function_call(Fun, [Var]);
@@ -622,22 +654,6 @@ function_call({Mod, Fun}, Args) ->
     ?apply(Mod, Fun, Args);
 function_call(Fun, Args) ->
     ?apply(Fun, Args).
-
-is_write_only(Field) ->
-    AccessMode = Field#record_field.mode,
-    not AccessMode#access_mode.sr.
-
-def_record(Name, Fields) ->
-    ?def_record(Name, [case F of
-                           Atom when is_atom(F) -> ?field(Atom);
-                           {Atom, Data} when is_atom(Atom) ->
-							   Value =
-								   case Data of
-									   {value, Val} -> ?abstract(Val);
-									   {func, MFA} -> function_call(MFA, [])
-								   end,
-							   ?field(Atom, Value)
-                       end || F <- Fields]).
 
 atom_to_binary(Atom) ->
     list_to_binary(atom_to_list(Atom)).

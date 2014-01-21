@@ -59,9 +59,6 @@ custom_not_in_record(_Model) ->
 -define(join(A, B), list_to_atom(atom_to_list(A)++"_"++atom_to_list(B))).
 -define(prefix_set(A), ?join(set, A)).
 
-new_test() ->
-    ?assertEqual(#?MODULE{}, new()).
-
 getter_setters_test_() ->
     Model = new(),
     Tests = [{id, 1},
