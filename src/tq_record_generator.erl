@@ -58,7 +58,13 @@ meta_clauses(#record_model{module=Module, fields=Fields}) ->
                          || F <- Fields, F#record_field.stores_in_record]
                        )
                 ]),
-    [RecordIndexClause].
+    ModuleClause =
+        ?clause([?atom(module)], none,
+                [?atom(Module)]),
+    [
+     RecordIndexClause,
+     ModuleClause
+    ].
 
 build_main_record(#record_model{module=Module, fields=Fields}) ->
     RecordFields =
