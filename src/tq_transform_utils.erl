@@ -168,7 +168,7 @@ to_float(Int) when is_integer(Int) ->
 to_float(Float) when is_float(Float) ->
     {ok, Float};
 to_float(Bin) when is_binary(Bin) ->
-    bin_to_integer(Bin);
+    bin_to_float(Bin);
 to_float(_) ->
     {error, wrong_format}.
 
