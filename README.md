@@ -263,6 +263,7 @@ get_field_name/2
     Opt :: binary_key | {mode, Mode},
     Mode :: r | w | rw | sr | sw | srw | rsw | rsrw,
     Reason :: {FieldName, unknown} | [{any(), unknown_option}].
+```
 
 Check that field exists in model structure and accessable with 'mode' rights.
 Field name must be binary if binary_key option is set.
