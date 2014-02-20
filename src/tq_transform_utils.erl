@@ -244,7 +244,7 @@ to_time({Hh, Mm, Ss}=Time) when is_integer(Hh), is_integer(Mm), is_integer(Ss) -
             {ok, Time}
     end;
 to_time(Bin) when is_binary(Bin) ->
-    bin_to_date(Bin);
+    bin_to_time(Bin);
 to_time(_) ->
     {error, wrong_format}.
 
