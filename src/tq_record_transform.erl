@@ -160,7 +160,8 @@ from_ext_rule(#record_field{from_ext=undefined, type=Type}=Field) ->
 from_ext_rule(Field) ->
     {ok, Field}.
 
-default_validators_rule(#record_field{type=non_neg_integer, validators=Validators}=Field) ->
+default_validators_rule(#record_field{type=Type, validators=Validators}=Field)
+  when Type =:= non_neg_integer orelse Type =:= non_neg_float ->
     NonNegValidator = {tq_transform_utils, more_or_eq, [0]},
     Field2 = Field#record_field{validators=[NonNegValidator|Validators]},
     {ok, Field2};
