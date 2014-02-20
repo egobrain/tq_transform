@@ -1,7 +1,7 @@
 -module(db_validators).
 -compile({parse_transform, tq_record_transform}).
 
--export([more_then/2,
+-export([more_than/2,
          fail_on_2/1,
          fail_on/2]).
 
@@ -12,22 +12,22 @@
          {type, non_neg_integer}
         ]}).
 
--field({more_then_10,
+-field({more_than_10,
         [
          {type, non_neg_integer},
          {validators,
           [
-           {more_then, [10]}
+           {more_than, [10]}
           ]}
         ]}).
 
--field({more_then_100,
+-field({more_than_100,
         [
          {type, non_neg_integer},
          {validators,
           [
-           {more_then, [10]},
-           {?MODULE, more_then, [100]}
+           {more_than, [10]},
+           {?MODULE, more_than, [100]}
           ]}
         ]}).
 
@@ -57,12 +57,12 @@
          ]
         }]).
 
-more_then(A, Val) ->
+more_than(A, Val) ->
     case Val > A of
         true ->
             ok;
         false ->
-            {error, {less_then, A}}
+            {error, {less_than, A}}
     end.
 
 fail_on_1(Model) ->
@@ -82,7 +82,7 @@ fail_on(A, Model) ->
 -include_lib("eunit/include/eunit.hrl").
 
 non_neg_integer_test_() ->
-    Tests = [{-1, {error, [{non_neg_integer, {less_then, 0}}]}},
+    Tests = [{-1, {error, [{non_neg_integer, {less_than, 0}}]}},
              {0, ok},
              {1, ok}
             ],
@@ -91,28 +91,28 @@ non_neg_integer_test_() ->
              ?assertEqual(Model:valid(), R)
      end || {D, R} <- Tests].
 
-more_then_10_test_() ->
-    Tests = [{-1, {error, [{more_then_10, {less_then, 0}}]}},
-             {0, {error, [{more_then_10, {less_then, 10}}]}},
-             {1, {error, [{more_then_10, {less_then, 10}}]}},
-             {10, {error, [{more_then_10, {less_then, 10}}]}},
+more_than_10_test_() ->
+    Tests = [{-1, {error, [{more_than_10, {less_than, 0}}]}},
+             {0, {error, [{more_than_10, {less_than, 10}}]}},
+             {1, {error, [{more_than_10, {less_than, 10}}]}},
+             {10, {error, [{more_than_10, {less_than, 10}}]}},
              {100, ok}
             ],
     [fun() ->
-             {ok, Model} = from_proplist([{more_then_10, D}]),
+             {ok, Model} = from_proplist([{more_than_10, D}]),
              ?assertEqual(Model:valid(), R)
      end || {D, R} <- Tests].
 
-more_then_100_test_() ->
-    Tests = [{-1, {error, [{more_then_100, {less_then, 0}}]}},
-             {0, {error, [{more_then_100, {less_then, 10}}]}},
-             {1, {error, [{more_then_100, {less_then, 10}}]}},
-             {10, {error, [{more_then_100, {less_then, 10}}]}},
-             {100, {error, [{more_then_100, {less_then, 100}}]}},
+more_than_100_test_() ->
+    Tests = [{-1, {error, [{more_than_100, {less_than, 0}}]}},
+             {0, {error, [{more_than_100, {less_than, 10}}]}},
+             {1, {error, [{more_than_100, {less_than, 10}}]}},
+             {10, {error, [{more_than_100, {less_than, 10}}]}},
+             {100, {error, [{more_than_100, {less_than, 100}}]}},
              {1000, ok}
             ],
     [fun() ->
-             {ok, Model} = from_proplist([{more_then_100, D}]),
+             {ok, Model} = from_proplist([{more_than_100, D}]),
              ?assertEqual(Model:valid(), R)
      end || {D, R} <- Tests].
 
@@ -134,10 +134,10 @@ empty_test_() ->
 
 field_from_ext_test_() ->
     Tests = [
-             {<<"">>, more_then_10, {error, wrong_format}},
-             {<<"a">>, more_then_10, {error, wrong_format}},
-             {<<"-11">>, more_then_10, {error, {less_then, 0}}},
-             {<<"1">>, more_then_10, {error, {less_then, 10}}}
+             {<<"">>, more_than_10, {error, wrong_format}},
+             {<<"a">>, more_than_10, {error, wrong_format}},
+             {<<"-11">>, more_than_10, {error, {less_than, 0}}},
+             {<<"1">>, more_than_10, {error, {less_than, 10}}}
             ],
     [fun() -> R = field_from_ext(F, D) end || {D, F, R} <- Tests].
 

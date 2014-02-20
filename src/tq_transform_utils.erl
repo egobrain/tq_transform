@@ -341,16 +341,16 @@ valid_time({Hh, Mm, Ss}) ->
 %% Default validators
 
 more(A, Val) when Val > A -> ok;
-more(A, _Val) -> {error, {less_then, A}}.
+more(A, _Val) -> {error, {less_than, A}}.
 
 more_or_eq(A, Val) when Val >= A -> ok;
-more_or_eq(A, _Val) -> {error, {less_then, A}}.
+more_or_eq(A, _Val) -> {error, {less_than, A}}.
 
 less(A, Val) when Val < A -> ok;
-less(A, _Val) -> {error, {more_then, A}}.
+less(A, _Val) -> {error, {more_than, A}}.
 
 less_or_eq(A, Val) when Val =< A -> ok;
-less_or_eq(A, _Val) -> {error, {more_then, A}}.
+less_or_eq(A, _Val) -> {error, {more_than, A}}.
 
 non_empty_binary(<<"">>) -> {error, empty};
 non_empty_binary(_Val) -> ok.
