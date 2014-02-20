@@ -137,6 +137,7 @@ fields(Fields, Opts, Model) ->
 **Opts**:
   - **unsafe** - put variables which access_mode marked as ```sr``` in result proplist too
   - **binary_key** - Fields are represented as binaries.
+  - **ignore_unknown** - ignore unknown options
 
 ext_fields/[2,3]
 ----
