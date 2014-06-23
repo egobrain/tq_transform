@@ -11,7 +11,7 @@ deps:
 clean:
 	@rm -Rf ebin .eunit log
 
-eunit: all
+test: all
 	@rebar eunit skip_deps=true
 
-.PHONY: deps compile all test eunit
+.PHONY: deps compile all test clean
