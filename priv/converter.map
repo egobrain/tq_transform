@@ -1,0 +1,53 @@
+%% -*- erlang -*-
+
+%% In this file you can specify rules for type convertions
+%% and default validators for each type.
+%% This options will e use to generate from/to ext converters
+%% in model description
+%%
+%% Format
+%%    {Type, {FromConverter, ToConverter, ValidationRules}}
+{binary,
+ {tq_converter, to_binary},
+ none,
+ []}.
+
+{non_empty_binary,
+ {tq_converter, to_binary},
+ none,
+ [{tq_validators, non_empty}]}.
+
+{integer,
+ {tq_converter, to_integer},
+ none,
+ []}.
+
+{non_neg_integer,
+ {tq_converter, to_integer},
+ none,
+ [{tq_validators, ge, [0]}]}.
+
+{float,
+ {tq_converter, to_float},
+ none,
+ []}.
+
+{non_neg_float,
+ {tq_converter, to_float},
+ none,
+ [{tq_validators, ge, [0]}]}.
+
+{date,
+ {tq_converter, to_date},
+ none,
+ []}.
+
+{time,
+ {tq_converter, to_time},
+ none,
+ []}.
+
+{datetime,
+ {tq_converter, to_datetime},
+ none,
+ []}.

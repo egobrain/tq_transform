@@ -14,7 +14,11 @@
 
 -module(tq_transform_plugin).
 
--callback create_model(Name :: atom()) -> {ok, Model :: any()} | false.
+-callback create_model(Name, Opts) -> {ok, Model} | {error, Reason} when
+      Name :: module(),
+      Opts :: [any()],
+      Model :: any(),
+      Reason :: any().
 -callback model_option(Option, Value, Model) -> {ok, Model} | {error, Reason} | false when
       Option :: atom(),
       Value :: any(),
@@ -25,13 +29,12 @@
       Option :: atom(),
       Value :: any(),
       Reason :: any().
--callback normalize_field(Field) -> {ok, Field} | {error, Reason :: any()}.
+-callback normalize_field(Field, Model :: any()) -> {ok, Field} | {error, Reason :: any()}.
 -callback set_field(Field :: any(), Model) -> {ok, Model}.
 
 -callback normalize_model(Model) -> {ok, Model} | {error, Reasons :: any()}.
 -callback build_model(Model :: any()) -> {Exports :: [erl_syntax:forms()], Funs :: [erl_syntax:forms()]}.
 
 -callback meta_clauses(Model :: any()) -> [Clauses :: erl_syntax:forms()].
-
 
 -callback set_globals(Globals :: tq_transform:globals() , Model) -> Model.

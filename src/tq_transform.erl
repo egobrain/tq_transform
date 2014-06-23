@@ -14,7 +14,7 @@
 
 -module(tq_transform).
 
--export([parse_transform/3]).
+-export([parse_transform/4]).
 
 -export([g/3]).
 
@@ -22,7 +22,8 @@
 
 -record(state, {
           module,
-          plugins
+          plugins,
+          options
          }).
 
 -record(globals, {
@@ -35,11 +36,12 @@
 
 -define(DBG(F, D), io:format("~p:~p "++F++"~n", [?FILE, ?LINE | D])).
 
-parse_transform(Ast, _Options, [])->
+parse_transform(Ast, _CompileOpts, [], _ModelOpts)->
     Ast;
-parse_transform(Ast, _Options, Plugins) ->
+parse_transform(Ast, _CompileOpts, Plugins, ModelOpts) ->
     try
-        State = #state{plugins=Plugins},
+        ok = application:ensure_started(tq_transform),
+        State = #state{plugins=Plugins, options=ModelOpts},
         %% ?DBG("~n~p~n=======~n", [Ast]),
         %% ?DBG("~n~s~n=======~n", [tq_transform_utils:pretty_print(Ast)]),
         case error_map_foldl(fun transform_node/2, State, Ast) of
@@ -91,7 +93,6 @@ g(plugin, Plugin, Globals) ->
             {error, undefined}
     end.
 
-
 error_map_foldl(Fun, State, List) ->
     FoldFun = fun(A, {St, IsError}) ->
                       {Res, {Data, St2}} = Fun(A, St),
@@ -130,11 +131,24 @@ transform_node(Node={attribute, Line, model, Opts}, State) ->
             {ok, {Node2, State}}
     end;
 
-transform_node(Node={attribute, _Line, module, Module},
-               #state{plugins=Plugins}=State) ->
-    Plugins2 = [{P, P:create_model(Module)} || P <- Plugins],
-    State2 = State#state{plugins = Plugins2},
-    {ok, {Node, State2}};
+transform_node(Node={attribute, Line, module, Module},
+               #state{plugins=Plugins, options=Options}=State) ->
+    Result =
+        tq_transform_utils:error_writer_map(
+          fun(P) ->
+                  case P:create_model(Module, Options) of
+                      {ok, M} -> {ok, {P, M}};
+                      {error, Reason} -> {error, {P, Reason}}
+                  end
+          end,
+          Plugins),
+    case Result of
+        {ok, Plugins2} ->
+            State2 = State#state{plugins = Plugins2},
+            {ok, {Node, State2}};
+        {error, Reason} ->
+            {error, {global_error_ast(Line, Reason), State}}
+    end;
 transform_node(Node={attribute, Line, field, FieldOpts}, State) ->
     case FieldOpts of
         {Name, Opts} when is_atom(Name) andalso is_list(Opts) ->
@@ -145,7 +159,6 @@ transform_node(Node={attribute, Line, field, FieldOpts}, State) ->
                     {ok, {Node, State2}};
                 {error, Reasons} ->
                     Node2 = [begin
-                                 io:format("ERROR: ~s~n", [R]),
                                  global_error_ast(Line, R)
                              end || R <- Reasons],
                     {error, {Node2, State}}
@@ -227,7 +240,6 @@ try_model_option(Option, Data, [{P, M} | Rest], Acc, IsOptionKnown) ->
         {error, _} = Err -> Err
     end.
 
-
 normalize_option({Name, Value}) when is_atom(Name) ->
     {ok, {Name, Value}};
 normalize_option(Name) when is_atom(Name) ->
@@ -239,7 +251,7 @@ normalize_option(Val) ->
 
 normalize_fields(Fields) ->
     NormalizeFun = fun({P, F, S}) ->
-                           case P:normalize_field(F) of
+                           case P:normalize_field(F, S) of
                                {ok, F2} ->
                                    {ok, {P, F2, S}};
                                {error, _} = Err ->

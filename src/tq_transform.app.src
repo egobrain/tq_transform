@@ -1,7 +1,7 @@
 {application, tq_transform,
  [
   {description, "Easy models generator"},
-  {vsn, "0.2.1"},
+  {vsn, git},
   {registered, []},
   {applications, []},
   {module, []},
