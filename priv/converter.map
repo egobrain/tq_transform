@@ -12,6 +12,11 @@
  none,
  []}.
 
+{boolean,
+ {tq_converter, to_boolean},
+ none,
+ []}.
+
 {non_empty_binary,
  {tq_converter, to_binary},
  none,

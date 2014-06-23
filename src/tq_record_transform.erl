@@ -67,7 +67,7 @@ set_global_opts(Model, Opts) ->
     tq_transform_utils:error_writer_foldl(
       fun set_global_opt/2,
       Model,
-      [Opts]).
+      Opts).
 
 set_global_opt({converter_rules, ConverterRules}, Model) ->
     {ok, Model#record_model{converter_rules=ConverterRules}};
