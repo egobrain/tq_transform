@@ -16,25 +16,25 @@
 -field({def2,
         [
          {type, integer},
-         {default_call, def_value}
+         {default_func, def_value}
         ]}).
 
 -field({def3,
         [
          {type, integer},
-         {default_call, {def_value, [3]}}
+         {default_func, {def_value, [3]}}
         ]}).
 
 -field({def4,
         [
          {type, integer},
-         {default_call, {?MODULE, def_value, [4]}}
+         {default_func, {?MODULE, def_value, [4]}}
         ]}).
 
 -field({def5,
         [
          {type, integer},
-         {default_call, {?MODULE, def_value}}
+         {default_func, {?MODULE, def_value}}
         ]}).
 
 def_value() -> 2.
