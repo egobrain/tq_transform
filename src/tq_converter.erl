@@ -15,11 +15,15 @@
 %%% Internal functions
 %% =============================================================================
 
+to_binary(null) ->
+    {ok, null};
 to_binary(Bin) when is_binary(Bin) ->
     {ok, Bin};
 to_binary(_) ->
     {error, wrong_format}.
 
+to_integer(null) ->
+    {ok, null};
 to_integer(Int) when is_integer(Int) ->
     {ok, Int};
 to_integer(Bin) when is_binary(Bin)  ->
@@ -33,6 +37,8 @@ bin_to_integer(Bin) ->
         _ -> {error, wrong_format}
     end.
 
+to_float(null) ->
+    {ok, null};
 to_float(Int) when is_integer(Int) ->
     {ok, Int*1.0};
 to_float(Float) when is_float(Float) ->
@@ -54,6 +60,8 @@ bin_to_float(Bin) ->
             end
     end.
 
+to_boolean(null) ->
+    {ok, null};
 to_boolean(Bool) when is_boolean(Bool) ->
     {ok, Bool};
 to_boolean(Bin) when is_binary(Bin) ->
@@ -77,6 +85,8 @@ bin_to_boolean(<<F,A,L,S,E>>) when
 bin_to_boolean(_) ->
     {error, wrong_format}.
 
+to_date(null) ->
+    {ok, null};
 to_date({Y, M, D} = Date) when is_integer(Y), is_integer(M), is_integer(D) ->
     case calendar:valid_date(Date) of
         false ->
@@ -106,6 +116,8 @@ bin_to_date(Re, Bin) when is_binary(Bin) ->
             {error, wrong_format}
     end.
 
+to_time(null) ->
+    {ok, null};
 to_time({Hh, Mm, Ss}=Time) when is_integer(Hh), is_integer(Mm), is_integer(Ss) ->
     case valid_time(Time) of
         false ->
@@ -135,6 +147,8 @@ bin_to_time(Re, Bin) when is_binary(Bin) ->
             {error, wrong_format}
     end.
 
+to_datetime(null) ->
+    {ok, null};
 to_datetime({{Y, M, D}=Date, {Hh, Mm, Ss}=Time}=DateTime) when
       is_integer(Y), is_integer(M), is_integer(D),
       is_integer(Hh), is_integer(Mm), is_integer(Ss) ->

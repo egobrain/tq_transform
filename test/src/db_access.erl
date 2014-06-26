@@ -29,8 +29,8 @@
 write_only_stumb_test_() ->
     Model = new(),
     Tests = [
-             {{w, #?MODULE.w}, undefined},
-             {{sw, #?MODULE.sw}, undefined},
+             {{w, #?MODULE.w}, null},
+             {{sw, #?MODULE.sw}, null},
              {{w_default, #?MODULE.w_default}, 200},
              {{sw_default, #?MODULE.sw_default}, 500}
             ],
@@ -97,10 +97,10 @@ test_model() ->
 
 to_proplist_test() ->
     {ok, Model} = test_model(),
-    ROpts = [{r, undefined}, %% field is read only
+    ROpts = [{r, null}, %% field is read only
              %% {w, 2},
              {rw, 3},
-             {sr, undefined}, %% field is read only
+             {sr, null}, %% field is read only
              %% {sw, 5},
              {srsw, 6},
              {rsw, 7},
@@ -119,14 +119,14 @@ to_proplist_test() ->
 
 fields_tests() ->
     [
-     {[r], {ok, [{r, undefined}]}, [safe]},
-     {[r], {ok, [{r, undefined}]}, [unsafe]},
+     {[r], {ok, [{r, null}]}, [safe]},
+     {[r], {ok, [{r, null}]}, [unsafe]},
      {[w], {error, [{w, forbidden}]}, [safe]},
      {[w], {error, [{w, forbidden}]}, [unsafe]},
      {[rw], {ok, [{rw, 3}]}, [safe]},
      {[rw], {ok, [{rw, 3}]}, [unsafe]},
      {[sr], {error, [{sr, unknown}]}, [safe]},
-     {[sr], {ok, [{sr, undefined}]}, [unsafe]},
+     {[sr], {ok, [{sr, null}]}, [unsafe]},
      {[sw], {error, [{sw, unknown}]}, [safe]},
      {[sw], {error, [{sw, forbidden}]}, [unsafe]},
      {[srsw], {error, [{srsw, unknown}]}, [safe]},
@@ -141,10 +141,10 @@ fields_tests() ->
      {[unknown_field], {ok, []}, [safe, ignore_unknown]},
      {[unknown_field], {ok, []}, [unsafe, ignore_unknown]},
 
-     {[r, rw], {ok, [{r, undefined}, {rw, 3}]}, [safe]},
-     {[r, rw], {ok, [{r, undefined}, {rw, 3}]}, [unsafe]},
+     {[r, rw], {ok, [{r, null}, {rw, 3}]}, [safe]},
+     {[r, rw], {ok, [{r, null}, {rw, 3}]}, [unsafe]},
      {[r, srw], {error, [{srw, forbidden}]}, [safe]},
-     {[r, srw], {ok, [{r, undefined}, {srw, 8}]}, [unsafe]}
+     {[r, srw], {ok, [{r, null}, {srw, 8}]}, [unsafe]}
     ].
 
 binary_fields_tests() ->

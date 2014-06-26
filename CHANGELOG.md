@@ -1,3 +1,16 @@
+0.3.1 Changelog
+====
+
+Features
+---
+
+- null's in from/to converters allowed
+
+Breaking Changes
+---
+
+- null instead of undefined on empty model creation
+
 0.3.0 Changelog
 =====
 

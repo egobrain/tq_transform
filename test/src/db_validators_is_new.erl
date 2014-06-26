@@ -37,14 +37,14 @@ old_test_() ->
       end},
      {"Changed field required",
       fun() ->
-              Model3 = Model2:set_req2(undefined),
+              Model3 = Model2:set_req2(null),
               ?assertEqual({error, [{req2, required}]}, Model3:valid())
       end},
      {"Changed field required 2",
       fun() ->
               Model3 = Model2:set_req(1),
               ?assertEqual(ok, Model3:valid()),
-              Model4 = Model3:set_req(undefined),
+              Model4 = Model3:set_req(null),
               ?assertEqual({error, [{req, required}]}, Model4:valid())
       end}
     ].

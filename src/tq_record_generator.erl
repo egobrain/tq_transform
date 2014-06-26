@@ -83,7 +83,7 @@ build_main_record(#record_model{module=Module, fields=Fields}) ->
                        RecordFields]),
     RecordFieldsAst =
         [case F of
-             Atom when is_atom(F) -> ?field(Atom);
+             Atom when is_atom(F) -> ?field(Atom, ?atom(null));
              {Atom, Data} when is_atom(Atom) ->
                  ?field(Atom,
                         case Data of
@@ -605,7 +605,8 @@ build_validators(#record_model{module=Module, fields=Fields, validators=Validato
     {Exports, Funs}.
 
 validator(Validators, IsRequired) ->
-    Req_clause = ?clause([?atom(undefined)], none, [?error(?atom(required))]),
+    UndefReq_clause = ?clause([?atom(undefined)], none, [?error(?atom(required))]),
+    NullReq_clause = ?clause([?atom(null)], none, [?error(?atom(required))]),
     Main_clause =
         case Validators of
             [] ->
@@ -616,7 +617,8 @@ validator(Validators, IsRequired) ->
         end,
     ClausesOpts =
         [
-         {IsRequired, Req_clause},
+         {IsRequired, UndefReq_clause},
+         {IsRequired, NullReq_clause},
          {true, Main_clause}
         ],
     Clauses = [Val || {true, Val} <- ClausesOpts],

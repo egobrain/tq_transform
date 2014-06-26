@@ -117,7 +117,7 @@ more_than_100_test_() ->
      end || {D, R} <- Tests].
 
 required_test_() ->
-    Tests = [{undefined, {error, [{required, required}]}},
+    Tests = [{null, {error, [{required, required}]}},
              {100, ok}],
     [fun() ->
              {ok, Model} = from_proplist([{required, D}]),
