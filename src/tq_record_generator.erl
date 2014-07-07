@@ -177,9 +177,18 @@ to_ext_proplist_function(Model) ->
       Model,
       fun to_ext_hook/2).
 
-to_ext_hook(#record_field{to_ext=none}, Ast) ->
+to_ext_hook(#record_field{is_required=true}=F, Ast) ->
+    to_ext_hook_(F, Ast);
+to_ext_hook(F, Ast) ->
+    ?cases(Ast,
+           [
+            ?clause([?atom(null)], none, [?atom(null)]),
+            ?clause([?var('NotNull')], none, [to_ext_hook_(F, ?var('NotNull'))])
+           ]).
+
+to_ext_hook_(#record_field{to_ext=none}, Ast) ->
     Ast;
-to_ext_hook(#record_field{to_ext=ToExt}, Ast) ->
+to_ext_hook_(#record_field{to_ext=ToExt}, Ast) ->
     function_call(ToExt, [Ast]).
 
 to_proplist_function_(FName, #record_model{fields=Fields}, ArgModifierFun) ->
@@ -275,16 +284,30 @@ from_ext_proplist_function(#record_model{fields=Fields}) ->
                                  ?clause([?error(?var('Reason'))], none,
                                          [?error(?tuple([?atom(F#record_field.name), ?var('Reason')]))])])
             end,
+    IgnoreNullHook =
+        fun(#record_field{is_required=true}=F, Var, Ast) ->
+                ?cases(Var,
+                       [?clause([?atom(null)], none, [?error(?tuple([?atom(F#record_field.name), ?atom(required)]))]),
+                        ?clause([?underscore], none, [Ast])]);
+           (F, Var, Ast) ->
+                ?cases(Var,
+                       [?clause([?atom(null)], none, [SetterClause(F, Var)]),
+                        ?clause([?underscore], none, [Ast])])
+        end,
     Fun_ = fun(Suffix, AccessModeOpt) ->
                    ?function(?atom_join(from_ext_proplist, Suffix),
                              [?clause(
                                  [?tuple([?abstract(atom_to_binary(F#record_field.name)), ?var('Bin')]), ?var('Model'), ?underscore], none,
-                                 [case F#record_field.from_ext of
-                                      none ->
-                                          SetterClause(F, ?var('Bin'));
-                                      FromExt ->
-                                          Cases(F, function_call(FromExt, [?var('Bin')]))
-                                  end])
+                                 [IgnoreNullHook(
+                                    F,
+                                    ?var('Bin'),
+                                    case F#record_field.from_ext of
+                                        none ->
+                                            SetterClause(F, ?var('Bin'));
+                                        FromExt ->
+                                            Cases(F, function_call(FromExt, [?var('Bin')]))
+                                    end
+                                   )])
                               || F <- Fields,
                                  F#record_field.setter =/= false,
                                  element(AccessModeOpt, F#record_field.mode)] ++ DefaultClasuse)
@@ -417,19 +440,32 @@ field_from_ext(#record_model{fields=Fields}) ->
                                             [?var('Err')])])
                     end
             end,
+    IgnoreNullHook =
+        fun(#record_field{is_required = true}, Var, Ast) ->
+                ?cases(Var,
+                       [?clause([?atom(null)], none, [?error(?atom(required))]),
+                        ?clause([?underscore], none, [Ast])]);
+           (F, Var, Ast) ->
+                ?cases(Var,
+                       [?clause([?atom(null)], none, [Valid(F, Var)]),
+                        ?clause([?underscore], none, [Ast])])
+        end,
     ?function(field_from_ext,
               [?clause([?atom(F#record_field.name), ?var('Bin')], none,
                        [
-                        case F#record_field.from_ext of
-                            none ->
-                                Valid(F, ?var('Bin'));
-                            FromExt ->
-                                ?cases(function_call(FromExt, [?var('Bin')]),
-                                       [?clause([?ok(?var('Val'))], none,
-                                                [Valid(F, ?var('Val'))]),
-                                        ?clause([?var('Err')], none,
-                                                [?var('Err')])])
-                        end
+                        IgnoreNullHook(
+                          F,
+                          ?var('Bin'),
+                          case F#record_field.from_ext of
+                              none ->
+                                  Valid(F, ?var('Bin'));
+                              FromExt ->
+                                  ?cases(function_call(FromExt, [?var('Bin')]),
+                                         [?clause([?ok(?var('Val'))], none,
+                                                  [Valid(F, ?var('Val'))]),
+                                          ?clause([?var('Err')], none,
+                                                  [?var('Err')])])
+                          end)
                        ]) || F <- Fields]).
 
 field_to_ext(#record_model{fields=Fields}) ->
@@ -607,6 +643,7 @@ build_validators(#record_model{module=Module, fields=Fields, validators=Validato
 validator(Validators, IsRequired) ->
     UndefReq_clause = ?clause([?atom(undefined)], none, [?error(?atom(required))]),
     NullReq_clause = ?clause([?atom(null)], none, [?error(?atom(required))]),
+    IgnoreNull_clause = ?clause([?atom(null)], none, [?atom(ok)]),
     Main_clause =
         case Validators of
             [] ->
@@ -619,6 +656,7 @@ validator(Validators, IsRequired) ->
         [
          {IsRequired, UndefReq_clause},
          {IsRequired, NullReq_clause},
+         {not IsRequired, IgnoreNull_clause},
          {true, Main_clause}
         ],
     Clauses = [Val || {true, Val} <- ClausesOpts],
