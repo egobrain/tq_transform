@@ -631,7 +631,6 @@ build_validators(#record_model{module=Module, fields=Fields, validators=Validato
     {Exports, Funs}.
 
 validator(Validators, IsRequired) ->
-    UndefReq_clause = ?clause([?atom(undefined)], none, [?error(?atom(required))]),
     NullReq_clause = ?clause([?atom(null)], none, [?error(?atom(required))]),
     IgnoreNull_clause = ?clause([?atom(null)], none, [?atom(ok)]),
     Main_clause =
@@ -644,7 +643,6 @@ validator(Validators, IsRequired) ->
         end,
     ClausesOpts =
         [
-         {IsRequired, UndefReq_clause},
          {IsRequired, NullReq_clause},
          {not IsRequired, IgnoreNull_clause},
          {true, Main_clause}

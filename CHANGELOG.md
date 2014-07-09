@@ -6,6 +6,7 @@ Breaking Changes
 
 - case field is null all converters and validators for this field will be ignore.
 - no more needed to handle nulls in from/to converters.
+- required validators ignores 'undefined' atom.
 
 0.3.1 Changelog
 ====
