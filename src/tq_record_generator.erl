@@ -177,8 +177,6 @@ to_ext_proplist_function(Model) ->
       Model,
       fun to_ext_hook/2).
 
-to_ext_hook(#record_field{is_required=true}=F, Ast) ->
-    to_ext_hook_(F, Ast);
 to_ext_hook(F, Ast) ->
     ?cases(Ast,
            [
@@ -285,11 +283,7 @@ from_ext_proplist_function(#record_model{fields=Fields}) ->
                                          [?error(?tuple([?atom(F#record_field.name), ?var('Reason')]))])])
             end,
     IgnoreNullHook =
-        fun(#record_field{is_required=true}=F, Var, Ast) ->
-                ?cases(Var,
-                       [?clause([?atom(null)], none, [?error(?tuple([?atom(F#record_field.name), ?atom(required)]))]),
-                        ?clause([?underscore], none, [Ast])]);
-           (F, Var, Ast) ->
+        fun (F, Var, Ast) ->
                 ?cases(Var,
                        [?clause([?atom(null)], none, [SetterClause(F, Var)]),
                         ?clause([?underscore], none, [Ast])])
@@ -441,11 +435,7 @@ field_from_ext(#record_model{fields=Fields}) ->
                     end
             end,
     IgnoreNullHook =
-        fun(#record_field{is_required = true}, Var, Ast) ->
-                ?cases(Var,
-                       [?clause([?atom(null)], none, [?error(?atom(required))]),
-                        ?clause([?underscore], none, [Ast])]);
-           (F, Var, Ast) ->
+        fun (F, Var, Ast) ->
                 ?cases(Var,
                        [?clause([?atom(null)], none, [Valid(F, Var)]),
                         ?clause([?underscore], none, [Ast])])

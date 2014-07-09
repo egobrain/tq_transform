@@ -39,7 +39,11 @@ null_test() ->
     _ = field_to_ext(date, Date),
 
     {error, [{int, required}]} = (M:set_int(null)):valid(),
-    {error, [{int, required}]} = M:from_ext_proplist([{<<"int">>, null}]),
-    {error, required} = field_from_ext(int, null).
+    {ok, M2} = M:from_ext_proplist([{<<"int">>, null}]),
+    {error, [{int, required}]} = M2:valid(),
+
+    {error, required} = field_from_ext(int, null),
+
+    null = field_to_ext(int, null).
 
 -endif.
