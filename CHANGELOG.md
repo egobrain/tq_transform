@@ -1,3 +1,16 @@
+0.3.3 Changelog
+====
+
+Features
+---
+
+- New ext_name option allows to set extarnal field name, that uses in *ext* functions.
+
+Breaking Changes
+---
+
+- ```binary_key``` option renamed to ```ext_key```
+
 0.3.2 Changelog
 ====
 

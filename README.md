@@ -29,6 +29,7 @@ Field name must be valid atom.
 
 Options:
   - **type**
+  - **ext_name** :: binary()
   - **to_ext** :: Fun | {Mod, Fun} | {Mod, Fun, Args}
   - **from_ext** :: Fun | {Mod, Fun} | {Mod, Fun, Args} | none
   - **mode** :: r | w | rw | sr | sw | srsw | rsw | srw
@@ -125,7 +126,7 @@ Same as to_proplist, but you need to specify fields, and function verifies field
   Field :: atom(),
   Proplist :: [{atom(), any()}, ...],
   Opts :: [Option],
-  Option :: unsafe | binary_key,
+  Option :: unsafe | ext_key,
   Reasons :: [{field(), Reason}],
   Reason :: unknown | forbidden.
 
@@ -136,7 +137,7 @@ fields(Fields, Opts, Model) ->
 ```
 **Opts**:
   - **unsafe** - put variables which access_mode marked as ```sr``` in result proplist too
-  - **binary_key** - Fields are represented as binaries.
+  - **ext_key** - Fields are represented as binaries.
   - **ignore_unknown** - ignore unknown options
 
 ext_fields/[2,3]
@@ -149,7 +150,7 @@ Same as to_ext_proplist, but you need to specify fields, and function verifies f
   Field :: atom(),
   Proplist :: [{atom(), any()}, ...],
   Opts :: [Option],
-  Option :: unsafe | binary_key,
+  Option :: unsafe | ext_key,
   Reasons :: [{field(), Reason}],
   Reason :: unknown | forbidden.
 
@@ -160,7 +161,7 @@ ext_fields(Fields, Opts, Model) ->
 ```
 **Opts**:
   - **unsafe** - put variables which access_mode marked as ```sr``` in result proplist too
-  - **binary_key** - Fields are represented as binaries.
+  - **ext_key** - Fields are represented as binaries.
 
 from_proplist/[1,2,3]
 ----
@@ -261,13 +262,13 @@ get_field_name/2
 -spec get_field_name(FieldName, Opts) -> {ok, ModelFieldName} | {error, Reason} when
     FieldName :: binary() | atom(),
     Opts :: [Opt],
-    Opt :: binary_key | {mode, Mode},
+    Opt :: ext_key | {mode, Mode},
     Mode :: r | w | rw | sr | sw | srw | rsw | rsrw,
     Reason :: {FieldName, unknown} | [{any(), unknown_option}].
 ```
 
 Check that field exists in model structure and accessable with 'mode' rights.
-Field name must be binary if binary_key option is set.
+Field name must be binary if ext_key option is set.
 
 Example
 =======
