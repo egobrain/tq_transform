@@ -341,9 +341,9 @@ ext_fields_function(Model) ->
 
 fields_function_(FName, DefaultOpts, #record_model{fields=Fields}, ArgModifierFun, ResultKeyFun) ->
     SafeFName = ?atom_join(FName, safe),
-    SafeBinaryKeyFName = ?atom_join(SafeFName, binary_key),
+    SafeBinaryKeyFName = ?atom_join(SafeFName, ext_key),
     UnsafeFName = ?atom_join(FName, unsafe),
-    UnsafeBinaryKeyFName = ?atom_join(UnsafeFName, binary_key),
+    UnsafeBinaryKeyFName = ?atom_join(UnsafeFName, ext_key),
     Fun2 = ?function(FName,
                      [?clause([?var('Fields'), ?var('Model')], none,
                               [?apply(FName, [?var('Fields'), ?abstract(DefaultOpts), ?var('Model')])])]),
@@ -351,7 +351,7 @@ fields_function_(FName, DefaultOpts, #record_model{fields=Fields}, ArgModifierFu
         ?function(FName,
                   [?clause([?var('Fields'), ?var('Opts'), ?var('Model')], none,
                            [?match(?var('IsUnsafe'), ?apply(lists, member, [?atom(unsafe), ?var('Opts')])),
-                            ?match(?var('KeyIsBinary'), ?apply(lists, member, [?atom(binary_key), ?var('Opts')])),
+                            ?match(?var('KeyIsBinary'), ?apply(lists, member, [?atom(ext_key), ?var('Opts')])),
                             ?match(?var('Fun'),
                                    ?cases(?tuple([?var('IsUnsafe'), ?var('KeyIsBinary')]),
                                           [?clause([?tuple([?atom(true), ?atom(true)])], none,
@@ -503,7 +503,7 @@ build_get_field_name(#record_model{fields=Fields}) ->
     AtomFun =
         ?function('$get_field_name', FieldClauses(fun int_key/1)),
     BinaryFun =
-        ?function('$get_field_name_binary_key', FieldClauses(fun ext_key/1)),
+        ?function('$get_field_name_ext_key', FieldClauses(fun ext_key/1)),
     OptsFunc =
         ?func(
            [
@@ -515,7 +515,7 @@ build_get_field_name(#record_model{fields=Fields}) ->
                [?ok(?tuple([?var('Mode'), ?var('BinKey')]))]),
             ?clause(
                [
-                ?atom(binary_key),
+                ?atom(ext_key),
                 ?tuple([?var('Mode'), ?var('_BinKey')])
                ], none,
                [?ok(?tuple([?var('Mode'), ?atom(true)]))]),
@@ -541,7 +541,7 @@ build_get_field_name(#record_model{fields=Fields}) ->
                            [?cases(?var('BinaryKey'),
                                    [
                                     ?clause([?atom(true)], none,
-                                            [?apply('$get_field_name_binary_key',
+                                            [?apply('$get_field_name_ext_key',
                                                     [?var('FieldName'), ?var('AccessMode')])]),
                                     ?clause([?atom(false)], none,
                                             [?apply('$get_field_name',

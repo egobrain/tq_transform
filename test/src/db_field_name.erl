@@ -51,7 +51,7 @@ binary_test_() ->
     Tests = test_fields(T),
     [{lists:flatten(io_lib:format("~s/~p", [F, M])),
       fun() ->
-              R = get_field_name(F, [{mode, M}, binary_key])
+              R = get_field_name(F, [{mode, M}, ext_key])
       end} || {F, M, R} <- Tests].
 
 atom_success_test_() ->

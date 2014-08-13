@@ -155,7 +155,7 @@ binary_fields_tests() ->
           _ ->
               R
       end,
-      Opts ++ [binary_key]}
+      Opts ++ [ext_key]}
      || {Fields, R, Opts} <- fields_tests()].
 
 test_fields_function(Tests) ->
