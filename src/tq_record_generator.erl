@@ -54,9 +54,17 @@ meta_clauses(#record_model{module=Module, fields=Fields}) ->
     RecordIndexClause =
         ?clause([?tuple([?atom(record_index), ?var('Field')])], none,
                 [?cases(?var('Field'),
-                        [?clause([?atom(F#record_field.name)], none,
+                        [?clause([int_key(F)], none,
                                  [?record_index(Module, F#record_field.name)])
                          || F <- Fields, F#record_field.stores_in_record]
+                       )
+                ]),
+    ExtKeys =
+        ?clause([?tuple([?atom(ext_key), ?var('Field')])], none,
+                [?cases(?var('Field'),
+                        [?clause([int_key(F)], none,
+                                 [ext_key(F)])
+                         || F <- Fields]
                        )
                 ]),
     ModuleClause =
@@ -64,7 +72,8 @@ meta_clauses(#record_model{module=Module, fields=Fields}) ->
                 [?atom(Module)]),
     [
      RecordIndexClause,
-     ModuleClause
+     ModuleClause,
+     ExtKeys
     ].
 
 build_main_record(#record_model{module=Module, fields=Fields}) ->
@@ -169,13 +178,17 @@ to_proplist_function(Model) ->
     to_proplist_function_(
       to_proplist,
       Model,
-      fun(_F, Ast) -> Ast end).
+      fun(_F, Ast) -> Ast end,
+      fun int_key/1
+     ).
 
 to_ext_proplist_function(Model) ->
     to_proplist_function_(
       to_ext_proplist,
       Model,
-      fun to_ext_hook/2).
+      fun to_ext_hook/2,
+      fun ext_key/1
+     ).
 
 to_ext_hook(F, Ast) ->
     ?cases(Ast,
@@ -189,10 +202,10 @@ to_ext_hook_(#record_field{to_ext=none}, Ast) ->
 to_ext_hook_(#record_field{to_ext=ToExt}, Ast) ->
     function_call(ToExt, [Ast]).
 
-to_proplist_function_(FName, #record_model{fields=Fields}, ArgModifierFun) ->
+to_proplist_function_(FName, #record_model{fields=Fields}, ArgModifierFun, KeyFun) ->
     Fun_ = fun(AccessModeOpt) ->
                    ?list([?tuple(
-                             [?atom(F#record_field.name),
+                             [KeyFun(F),
                               ArgModifierFun(F, ?apply(F#record_field.name, [?var('Model')]))]
                             ) ||
                              F <- Fields,
@@ -240,7 +253,7 @@ from_proplist_functions(#record_model{fields=Fields}) ->
     Fun_ = fun(Suffix, AccessModeOpt) ->
                    ?function(?atom_join(from_proplist, Suffix),
                              [?clause(
-                                 [?tuple([?atom(F#record_field.name), ?var('Val')]), ?var('Model'), ?underscore], none,
+                                 [?tuple([int_key(F), ?var('Val')]), ?var('Model'), ?underscore], none,
                                  [?ok(?apply(?prefix_set(F#record_field.name), [?var('Val'), ?var('Model')]))])
                               || F <- Fields,
                                  F#record_field.setter =/= false,
@@ -280,7 +293,7 @@ from_ext_proplist_function(#record_model{fields=Fields}) ->
                                 [?clause([?ok(?var('Val'))], none,
                                          [SetterClause(F, ?var('Val'))]),
                                  ?clause([?error(?var('Reason'))], none,
-                                         [?error(?tuple([?atom(F#record_field.name), ?var('Reason')]))])])
+                                         [?error(?tuple([int_key(F), ?var('Reason')]))])])
             end,
     IgnoreNullHook =
         fun (F, Var, Ast) ->
@@ -291,7 +304,7 @@ from_ext_proplist_function(#record_model{fields=Fields}) ->
     Fun_ = fun(Suffix, AccessModeOpt) ->
                    ?function(?atom_join(from_ext_proplist, Suffix),
                              [?clause(
-                                 [?tuple([?abstract(atom_to_binary(F#record_field.name)), ?var('Bin')]), ?var('Model'), ?underscore], none,
+                                 [?tuple([ext_key(F), ?var('Bin')]), ?var('Model'), ?underscore], none,
                                  [IgnoreNullHook(
                                     F,
                                     ?var('Bin'),
@@ -314,15 +327,19 @@ fields_function(Model) ->
     fields_function_(
       fields, [unsafe],
       Model,
-      fun(_F, Ast) -> Ast end).
+      fun(_F, Ast) -> Ast end,
+      fun int_key/1
+     ).
 
 ext_fields_function(Model) ->
     fields_function_(
       ext_fields, [],
       Model,
-      fun to_ext_hook/2).
+      fun to_ext_hook/2,
+      fun ext_key/1
+     ).
 
-fields_function_(FName, DefaultOpts, #record_model{fields=Fields}, ArgModifierFun) ->
+fields_function_(FName, DefaultOpts, #record_model{fields=Fields}, ArgModifierFun, ResultKeyFun) ->
     SafeFName = ?atom_join(FName, safe),
     SafeBinaryKeyFName = ?atom_join(SafeFName, binary_key),
     UnsafeFName = ?atom_join(FName, unsafe),
@@ -351,35 +368,33 @@ fields_function_(FName, DefaultOpts, #record_model{fields=Fields}, ArgModifierFu
                             ?apply(tq_transform_utils, error_writer_map,
                                    [?var('Fun2'), ?var('Fields')])])]),
     Ok = fun(#record_field{name=FieldName} = F, KeyFun) ->
-                 ?clause([KeyFun(FieldName), ?var('Model'), ?var('_Opts')], none,
-                         [?ok(?tuple([?atom(FieldName), ArgModifierFun(F, ?apply(FieldName, [?var('Model')]))]))])
+                 ?clause([KeyFun(F), ?var('Model'), ?var('_Opts')], none,
+                         [?ok(?tuple([ResultKeyFun(F), ArgModifierFun(F, ?apply(FieldName, [?var('Model')]))]))])
          end,
     Err = fun(FieldNameAst, Reason) ->
                   ?clause([FieldNameAst, ?var('_Model'), ?var('_Opts')], none,
                           [?error(?tuple([FieldNameAst, ?atom(Reason)]))])
           end,
-    AccessField = fun(#record_field{name=FieldName, mode=Mode, getter=Getter} = F, Safe, KeyFun) ->
+    AccessField = fun(#record_field{mode=Mode, getter=Getter} = F, Safe, KeyFun) ->
                           case Safe of
                               safe ->
                                   case Mode of
                                       #access_mode{r=true} when Getter =/= false ->
                                           Ok(F, KeyFun);
                                       #access_mode{w=true} ->
-                                          Err(KeyFun(FieldName), forbidden);
+                                          Err(KeyFun(F), forbidden);
                                       _ ->
-                                          Err(KeyFun(FieldName), unknown)
+                                          Err(KeyFun(F), unknown)
                                   end;
                               unsafe ->
                                   case Mode of
                                       #access_mode{sr=true} when Getter =/= false ->
                                           Ok(F, KeyFun);
                                       _ ->
-                                          Err(KeyFun(FieldName), forbidden)
+                                          Err(KeyFun(F), forbidden)
                                   end
                           end
                   end,
-    AtomFun = fun(A) -> ?atom(A) end,
-    BinaryFun = fun(A) -> ?abstract(list_to_binary(atom_to_list(A))) end,
     DefaultClause = [?clause([?var('_Field'), ?var('_Model'), ?atom(true)], none,
                               [?atom(ok)]),
                       ?clause([?var('Field'), ?var('_Model'), ?atom(false)], none,
@@ -389,10 +404,10 @@ fields_function_(FName, DefaultOpts, #record_model{fields=Fields}, ArgModifierFu
                                    [AccessField(F, Safe, KeyFun) || F <- Fields]
                                    ++ DefaultClause)
                  end,
-    FunSafe_ = FieldsFun_(SafeFName, safe, AtomFun),
-    FunSafeBinaryKey_ = FieldsFun_(SafeBinaryKeyFName, safe, BinaryFun),
-    FunUnsafe_ = FieldsFun_(UnsafeFName, unsafe, AtomFun),
-    FunUnsafeBinaryKey_ = FieldsFun_(UnsafeBinaryKeyFName, unsafe, BinaryFun),
+    FunSafe_ = FieldsFun_(SafeFName, safe, fun int_key/1),
+    FunSafeBinaryKey_ = FieldsFun_(SafeBinaryKeyFName, safe, fun ext_key/1),
+    FunUnsafe_ = FieldsFun_(UnsafeFName, unsafe, fun int_key/1),
+    FunUnsafeBinaryKey_ = FieldsFun_(UnsafeBinaryKeyFName, unsafe, fun ext_key/1),
     {[Fun2, Fun3], [FunSafe_, FunSafeBinaryKey_, FunUnsafe_, FunUnsafeBinaryKey_]}.
 
 build_internal_functions(Model) ->
@@ -427,7 +442,7 @@ field_from_ext(#record_model{fields=Fields}) ->
                         true ->
                             ?ok(Var);
                         false ->
-                            ?cases(?apply_(?apply(validator, [?atom(F#record_field.name)]), [Var]),
+                            ?cases(?apply_(?apply(validator, [int_key(F)]), [Var]),
                                    [?clause([?atom('ok')], none,
                                             [?ok(Var)]),
                                     ?clause([?var('Err')], none,
@@ -441,7 +456,7 @@ field_from_ext(#record_model{fields=Fields}) ->
                         ?clause([?underscore], none, [Ast])])
         end,
     ?function(field_from_ext,
-              [?clause([?atom(F#record_field.name), ?var('Bin')], none,
+              [?clause([int_key(F), ?var('Bin')], none,
                        [
                         IgnoreNullHook(
                           F,
@@ -460,7 +475,7 @@ field_from_ext(#record_model{fields=Fields}) ->
 
 field_to_ext(#record_model{fields=Fields}) ->
     ?function(field_to_ext,
-              [?clause([?atom(F#record_field.name), ?var('Val')], none,
+              [?clause([int_key(F), ?var('Val')], none,
                        [to_ext_hook(F, ?var('Val'))]) || F <- Fields]).
 
 build_get_field_name(#record_model{fields=Fields}) ->
@@ -471,11 +486,11 @@ build_get_field_name(#record_model{fields=Fields}) ->
         fun(Transform) ->
                 [
                  begin
-                     Name = Transform(F#record_field.name),
+                     Name = Transform(F),
                      ?clause([Name, ?var('Mode')], none,
                              [?cases(?var('Mode'),
                                      [?clause([?atom(M)], none,
-                                              [?ok(?atom(F#record_field.name))])
+                                              [?ok(int_key(F))])
                                       || M <- ?MODES, tq_transform_utils:check_acl(
                                                         F#record_field.mode,
                                                         tq_transform_utils:mode_to_acl(M))
@@ -486,11 +501,9 @@ build_get_field_name(#record_model{fields=Fields}) ->
                  ] ++ ErrorClause
         end,
     AtomFun =
-        ?function('$get_field_name',
-                  FieldClauses(fun(A) -> ?atom(A) end)),
+        ?function('$get_field_name', FieldClauses(fun int_key/1)),
     BinaryFun =
-        ?function('$get_field_name_binary_key',
-                  FieldClauses(fun(A) -> ?abstract(atom_to_binary(A)) end)),
+        ?function('$get_field_name_binary_key', FieldClauses(fun ext_key/1)),
     OptsFunc =
         ?func(
            [
@@ -555,7 +568,7 @@ build_validators(#record_model{module=Module, fields=Fields, validators=Validato
                  ?apply(throw, [?tuple([?atom(unknown_field), ?var('F')])])
                 ]),
     ValidatorFun = ?function(validator,
-                             [?clause([?atom(F#record_field.name)], none,
+                             [?clause([int_key(F)], none,
                                       [validator(F#record_field.validators,
                                                  F#record_field.is_required)])
                               || F <- FieldsWithValidator
@@ -576,7 +589,7 @@ build_validators(#record_model{module=Module, fields=Fields, validators=Validato
                   [?clause([?var('Model')], none,
                            [?match(?var('Fields'),
                                    ?list([?tuple(
-                                             [?atom(F#record_field.name),
+                                             [int_key(F),
                                               case F#record_field.stores_in_record of
                                                   true ->
                                                       ?access(?var('Model'), Module, F#record_field.name);
@@ -666,13 +679,16 @@ build_is_changed(#record_model{module=Module, fields=Fields}) ->
                  ?apply(throw, [?tuple([?atom(unknown_field), ?var('F')])])
                 ]),
     Fun = ?function(is_changed,
-                    [?clause([?atom(F#record_field.name), ?var('Model')], none,
+                    [?clause([int_key(F), ?var('Model')], none,
                              [?access(?var('Model'), Module, ?changed_suffix(F#record_field.name))])
                      || F <- Fields, F#record_field.stores_in_record] ++ [UnknownFieldClause]),
     Export = ?export_fun(Fun),
     {[Export], [Fun]}.
 
 %% Internal helpers.
+int_key(F) -> ?atom(F#record_field.name).
+ext_key(F) -> ?abstract(F#record_field.ext_name).
+
 function_call({Mod, Fun, FunArgs}, Args) ->
     FunArgs2 = [erl_syntax:abstract(A) || A <- FunArgs],
     ?apply(Mod, Fun, FunArgs2++Args);
@@ -683,6 +699,3 @@ function_call({Mod, Fun}, Args) ->
     ?apply(Mod, Fun, Args);
 function_call(Fun, Args) ->
     ?apply(Fun, Args).
-
-atom_to_binary(Atom) ->
-    list_to_binary(atom_to_list(Atom)).

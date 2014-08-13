@@ -1,7 +1,8 @@
 -type hook() :: atom() | {atom(), atom()} | {atom(), list()} | {atom(), atom(), list()}.
 
 -record(record_field,{
-          name :: binary(), % Field name which will be used to access property
+          name :: atom(), % Field name which will be used to access property
+          ext_name :: binary(),
 
           is_required = false :: boolean(),
 

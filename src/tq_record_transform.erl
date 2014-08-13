@@ -118,6 +118,9 @@ build_model(Model) ->
 create_field(Name) ->
     #record_field{name=Name}.
 
+field_option(ext_name, ExtName, Field) ->
+    Field2 = Field#record_field{ext_name = ExtName},
+    {ok, Field2};
 field_option(required, Value, Field) ->
     Field2 = Field#record_field{is_required = Value},
     {ok, Field2};
@@ -156,6 +159,7 @@ field_option(_Option, _Val, _Field) ->
 
 normalize_field(Field, #record_model{converter_rules=ConverterRules}) ->
     Rules = [
+             fun default_ext_name/1,
              fun access_mode_getter_rule/1,
              fun access_mode_setter_rule/1,
              fun get_set_record_rule/1,
@@ -216,6 +220,12 @@ get_set_record_rule(Field=#record_field{stores_in_record=false, getter=Getter, s
 get_set_record_rule(Field) ->
     {ok, Field#record_field{stores_in_record=true}}.
 
+default_ext_name(Field=#record_field{ext_name=undefined, name=Name}) ->
+    ExtName = atom_to_binary(Name),
+    {ok, Field#record_field{ext_name=ExtName}};
+default_ext_name(Field) ->
+    {ok, Field}.
+
 access_mode_getter_rule(Field=#record_field{mode=#access_mode{sr=false}}) ->
     {ok, Field#record_field{getter=false}};
 access_mode_getter_rule(Field) ->
@@ -227,6 +237,9 @@ access_mode_setter_rule(Field) ->
     {ok, Field}.
 
 %% Internal helpers.
+
+atom_to_binary(Atom) ->
+    list_to_binary(atom_to_list(Atom)).
 
 -ifdef(TEST).
 -include_lib("eunit/include/eunit.hrl").

@@ -158,22 +158,35 @@ binary_fields_tests() ->
       Opts ++ [binary_key]}
      || {Fields, R, Opts} <- fields_tests()].
 
-test_fields_function(Tests, Fun) ->
+test_fields_function(Tests) ->
     {ok, Model} = test_model(),
     [fun() ->
-             ?assertEqual(R, Fun(F, Opts, Model))
+             ?assertEqual(R, fields(F, Opts, Model))
      end || {F, R, Opts} <- Tests].
 
+test_ext_fields_function(Tests) ->
+    {ok, Model} = test_model(),
+    [fun() ->
+             R2 =
+                 case R of
+                     {ok, List} ->
+                         {ok, [{'$meta'({ext_key, K}), V} || {K, V} <- List]};
+                     _ -> R
+                 end,
+             ?assertEqual(R2, ext_fields(F, Opts, Model))
+     end || {F, R, Opts} <- Tests].
+
+
 fields_test_() ->
-    test_fields_function(fields_tests(), fun fields/3).
+    test_fields_function(fields_tests()).
 
 ext_fields_test_() ->
-    test_fields_function(fields_tests(), fun ext_fields/3).
+    test_ext_fields_function(fields_tests()).
 
 binary_fields_test_() ->
-    test_fields_function(binary_fields_tests(), fun fields/3).
+    test_fields_function(binary_fields_tests()).
 
 ext_binary_fields_test_() ->
-    test_fields_function(binary_fields_tests(), fun ext_fields/3).
+    test_ext_fields_function(binary_fields_tests()).
 
 -endif.

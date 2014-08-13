@@ -23,7 +23,7 @@
 -define(string(Str),erl_syntax:string(Str)).
 -define(nil,erl_syntax:nil()).
 -define(func(Module,Name,Arity),erl_syntax:implicit_fun(?atom(Module),?atom(Name),?int(Arity))).
--define(func(Name,Arity),erl_syntax:implicit_fun(?atom(Name),?int(Arity))).
+-define(func(Name,Arity),erl_syntax:implicit_fun(Name,Arity)).
 -define(func(Clauses),erl_syntax:fun_expr(Clauses)).
 -define(access(Value,Record,Field),erl_syntax:record_access(Value,?atom(Record),?atom(Field))).
 -define(record_index(Record,Field),erl_syntax:record_index_expr(?atom(Record),?atom(Field))).

@@ -1,16 +1,19 @@
--module(db_simple).
+-module(db_ext).
+
 -compile({parse_transform, tq_record_transform}).
 
 %% Test
 
 -field({id,
         [
+         {ext_name, <<"Id">>},
          {type, integer},
          {to_ext, {tag, [id]}}
         ]}).
 -field({name,
         [
          required,
+         {ext_name, <<"Name">>},
          {type, binary},
          {to_ext, {tag, [name]}},
          record, get, set,
@@ -20,6 +23,7 @@
 
 -field({custom_in_record,
         [
+         {ext_name, <<"CustomInRecord">>},
          {type, integer},
          {to_ext, {tag, [custom_in_record]}},
          {record, true},
@@ -29,6 +33,7 @@
 
 -field({custom_not_in_record,
         [
+         {ext_name, <<"CustomNotInRecord">>},
          {type, integer},
          {to_ext, {tag, [custom_not_in_record]}},
          {record, false},
@@ -58,37 +63,17 @@ custom_not_in_record(_Model) ->
 
 -define(join(A, B), list_to_atom(atom_to_list(A)++"_"++atom_to_list(B))).
 -define(prefix_set(A), ?join(set, A)).
-
-getter_setters_test_() ->
-    Model = new(),
-    Tests = [{id, 1},
-             {name, 2},
-             {custom_in_record, 3},
-             {custom_not_in_record, 4}],
-    [{atom_to_list(F), fun() ->
-                               SF = ?prefix_set(F),
-                               Model2 = Model:SF(V),
-                               V = Model2:F()
-                       end} || {F, V} <- Tests].
-
-proplist_test() ->
-    Proplist = lists:keysort(1, [{id, 1},
-                                 {name, <<"test">>},
-                                 {custom_in_record, 10},
-                                 {custom_not_in_record, 20}]),
-
-    {ok, Model} = from_proplist(Proplist),
-    Proplist = lists:keysort(1, Model:to_proplist()).
+-define(KEYS, [id, name, custom_in_record, custom_not_in_record]).
 
 from_ext_proplist_test() ->
     Proplist = lists:keysort(1, [{id, 1},
                                  {name, <<"test">>},
                                  {custom_in_record, 10},
                                  {custom_not_in_record, 20}]),
-    BinProplist = lists:keysort(1, [{<<"id">>, <<"1">>},
-                                    {<<"name">>, <<"test">>},
-                                    {<<"custom_in_record">>, <<"10">>},
-                                    {<<"custom_not_in_record">>, <<"20">>}]),
+    BinProplist = lists:keysort(1, [{<<"Id">>, <<"1">>},
+                                    {<<"Name">>, <<"test">>},
+                                    {<<"CustomInRecord">>, <<"10">>},
+                                    {<<"CustomNotInRecord">>, <<"20">>}]),
     {ok, Model} = from_ext_proplist(BinProplist),
     Proplist = lists:keysort(1, Model:to_proplist()).
 
@@ -97,11 +82,28 @@ to_ext_proplist_test() ->
                                  {name, <<"test">>},
                                  {custom_in_record, 10},
                                  {custom_not_in_record, 20}]),
-    ExtProplist = [{atom_to_binary(K), {K, V}} || {K, V} <- Proplist],
+    ExtProplist = [{'$meta'({ext_key, K}), {K, V}} || {K, V} <- Proplist],
     {ok, Model} = from_proplist(Proplist),
     ?assertEqual(ExtProplist, lists:keysort(1, Model:to_ext_proplist())).
 
-atom_to_binary(Atom) ->
-    list_to_binary(atom_to_list(Atom)).
+meta_test() ->
+    ExtKeys = [key_to_ext(K) || K <- ?KEYS],
+    Result = ['$meta'({ext_key, K}) || K <- ?KEYS],
+    ?assertEqual(ExtKeys, Result).
+
+ext_fields_test() ->
+    Proplist = lists:keysort(1, [{id, 1},
+                                 {name, <<"test">>},
+                                 {custom_in_record, 10},
+                                 {custom_not_in_record, 20}]),
+    ExtProplist = [{'$meta'({ext_key, K}), {K, V}} || {K, V} <- Proplist],
+    {ok, Model} = from_proplist(Proplist),
+    {ok, ExtFields} = Model:ext_fields([ K || {K, _} <- Proplist]),
+    ?assertEqual(ExtProplist, ExtFields).
+
+key_to_ext(id) -> <<"Id">>;
+key_to_ext(name) -> <<"Name">>;
+key_to_ext(custom_in_record) -> <<"CustomInRecord">>;
+key_to_ext(custom_not_in_record) -> <<"CustomNotInRecord">>.
 
 -endif.
