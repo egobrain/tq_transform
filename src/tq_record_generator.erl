@@ -239,9 +239,9 @@ from_proplist_functions(#record_model{fields=Fields}) ->
                      [?clause([?var('Proplist'), ?var('Opts'), ?var('Model')], none,
                               [?match(?var('Fun'), ?cases(?apply(lists, member, [?atom(unsafe), ?var('Opts')]),
                                                           [?clause([?atom(true)], none,
-                                                                   [?func(from_proplist_unsafe_, 3)]),
+                                                                   [implicit_func(from_proplist_unsafe_, 3)]),
                                                            ?clause([?atom(false)], none,
-                                                                   [?func(from_proplist_safe_, 3)])])),
+                                                                   [implicit_func(from_proplist_safe_, 3)])])),
                                ?match(?var('IgnoreUnknown'), ?apply(lists, member, [?atom(ignore_unknown), ?var('Opts')])),
                                ?match(?var('Fun2'), ?func([?clause([?var('E'), ?var('M')], none,
                                                                    [?apply_(?var('Fun'), [?var('E'), ?var('M'), ?var('IgnoreUnknown')])])])),
@@ -277,9 +277,9 @@ from_ext_proplist_function(#record_model{fields=Fields}) ->
                      [?clause([?var('BinProplist'), ?var('Opts'), ?var('Model')], none,
                               [?match(?var('Fun'), ?cases(?apply(lists, member, [?atom(unsafe), ?var('Opts')]),
                                                           [?clause([?atom(true)], none,
-                                                                   [?func(from_ext_proplist_unsafe_, 3)]),
+                                                                   [implicit_func(from_ext_proplist_unsafe_, 3)]),
                                                            ?clause([?atom(false)], none,
-                                                                   [?func(from_ext_proplist_safe_, 3)])])),
+                                                                   [implicit_func(from_ext_proplist_safe_, 3)])])),
                                ?match(?var('IgnoreUnknown'), ?apply(lists, member, [?atom(ignore_unknown), ?var('Opts')])),
                                ?match(?var('Fun2'), ?func([?clause([?var('E'), ?var('M')], none,
                                                                    [?apply_(?var('Fun'), [?var('E'), ?var('M'), ?var('IgnoreUnknown')])])])),
@@ -355,13 +355,13 @@ fields_function_(FName, DefaultOpts, #record_model{fields=Fields}, ArgModifierFu
                             ?match(?var('Fun'),
                                    ?cases(?tuple([?var('IsUnsafe'), ?var('KeyIsBinary')]),
                                           [?clause([?tuple([?atom(true), ?atom(true)])], none,
-                                                   [?func(UnsafeBinaryKeyFName, 3)]),
+                                                   [implicit_func(UnsafeBinaryKeyFName, 3)]),
                                            ?clause([?tuple([?atom(true), ?atom(false)])], none,
-                                                   [?func(UnsafeFName, 3)]),
+                                                   [implicit_func(UnsafeFName, 3)]),
                                            ?clause([?tuple([?atom(false), ?atom(true)])], none,
-                                                   [?func(SafeBinaryKeyFName, 3)]),
+                                                   [implicit_func(SafeBinaryKeyFName, 3)]),
                                            ?clause([?tuple([?atom(false), ?atom(false)])], none,
-                                                   [?func(SafeFName, 3)])])),
+                                                   [implicit_func(SafeFName, 3)])])),
                             ?match(?var('IgnoreUnknown'), ?apply(lists, member, [?atom(ignore_unknown), ?var('Opts')])),
                             ?match(?var('Fun2'), ?func([?clause([?var('F')], none,
                                                                 [?apply_(?var('Fun'), [?var('F'), ?var('Model'), ?var('IgnoreUnknown')])])])),
@@ -699,3 +699,8 @@ function_call({Mod, Fun}, Args) ->
     ?apply(Mod, Fun, Args);
 function_call(Fun, Args) ->
     ?apply(Fun, Args).
+
+%% Ast diff bugfix
+implicit_func(FunName, Arity) ->
+    Args = [?var("A"++integer_to_list(I)) || I <- lists:seq(1, Arity)],
+    ?func([?clause(Args, none, [?apply(FunName, Args)])]).
