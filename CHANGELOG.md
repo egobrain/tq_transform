@@ -1,3 +1,12 @@
+0.3.4 Changelog
+===
+
+Fixes
+---
+
+- Fields order
+- OSX ast issue
+
 0.3.3 Changelog
 ====
 
