@@ -109,8 +109,9 @@ normalize_model(Model) ->
 set_globals(_Globals, Model) ->
     {ok, Model}.
 
-build_model(Model) ->
-    {Exports, Funs} = tq_record_generator:build_model(Model),
+build_model(#record_model{fields=Fields} = Model) ->
+    Model2 = Model#record_model{fields=lists:reverse(Fields)},
+    {Exports, Funs} = tq_record_generator:build_model(Model2),
     {lists:reverse(Exports), lists:reverse(Funs)}.
 
 %% Fields.
