@@ -14,9 +14,9 @@
 
 -module(tq_record_generator).
 
--include("include/access_mode.hrl").
--include("include/record_model.hrl").
--include("include/ast_helpers.hrl").
+-include_lib("tq_transform/include/access_mode.hrl").
+-include_lib("tq_transform/include/record_model.hrl").
+-include_lib("tq_transform/include/ast_helpers.hrl").
 
 -export([build_model/1,
          meta_clauses/1

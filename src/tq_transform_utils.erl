@@ -14,7 +14,7 @@
 
 -module(tq_transform_utils).
 
--include("include/access_mode.hrl").
+-include_lib("tq_transform/include/access_mode.hrl").
 
 -export([
          mode_to_acl/1,

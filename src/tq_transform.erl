@@ -18,7 +18,7 @@
 
 -export([g/3]).
 
--include("include/ast_helpers.hrl").
+-include_lib("tq_transform/include/ast_helpers.hrl").
 
 -record(state, {
           module,

@@ -11,8 +11,8 @@
 
 -behavior(tq_transform_plugin).
 
--include("include/access_mode.hrl").
--include("include/record_model.hrl").
+-include_lib("tq_transform/include/access_mode.hrl").
+-include_lib("tq_transform/include/record_model.hrl").
 
 -export([parse_transform/2]).
 
